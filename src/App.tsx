@@ -264,6 +264,17 @@ export default function App() {
           console.log('Realtime reaction:', payload);
           refreshAppData();
         },
+        users: (payload) => {
+          // New account registered or existing profile changed elsewhere (e.g. photo).
+          // Must re-pull from Supabase, not just re-read local storage, or new
+          // users/updated photos never appear in community, chats, or search.
+          console.log('Realtime user profile change:', payload);
+          StorageService.syncUsersWithRemote().catch(() => {});
+        },
+        profilePictures: (payload) => {
+          console.log('Realtime profile picture change:', payload);
+          StorageService.syncUsersWithRemote().catch(() => {});
+        },
         onBroadcastEvent: (event) => {
           console.log('Realtime live broadcast event:', event);
           refreshAppData();
