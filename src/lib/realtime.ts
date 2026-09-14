@@ -8,6 +8,8 @@ export type RealtimeHandlers = {
   prayers?: (payload: unknown) => void;
   liveStreams?: (payload: unknown) => void;
   reactions?: (payload: unknown) => void;
+  users?: (payload: unknown) => void;
+  profilePictures?: (payload: unknown) => void;
   onPresenceSync?: (activeMembers: Array<{ id: string; full_name: string; handle?: string }>) => void;
   onBroadcastEvent?: (event: { type: string; payload: unknown }) => void;
 };
@@ -87,14 +89,32 @@ export function subscribeToRealtime(
     }
   );
 
-  // 8. Ephemeral Broadcast Events (Amen reactions, live chat bursts, pulpit scriptures)
+  // 8a. New / Updated User Accounts (fixes new signups & profile photo changes not appearing)
+  channel.on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'users' },
+    (payload) => {
+      handlers.users?.(payload);
+    }
+  );
+
+  // 8b. Profile Picture Changes
+  channel.on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'profile_pictures' },
+    (payload) => {
+      handlers.profilePictures?.(payload);
+    }
+  );
+
+  // 9. Ephemeral Broadcast Events (Amen reactions, live chat bursts, pulpit scriptures)
   channel.on('broadcast', { event: 'live_event' }, (envelope: any) => {
     if (envelope?.payload) {
       handlers.onBroadcastEvent?.(envelope.payload);
     }
   });
 
-  // 9. Member Presence Tracking
+  // 10. Member Presence Tracking
   channel.on('presence', { event: 'sync' }, () => {
     const presenceState = channel.presenceState();
     const members: Array<{ id: string; full_name: string; handle?: string }> = [];
