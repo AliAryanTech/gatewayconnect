@@ -258,6 +258,42 @@ export class SupabaseSyncService {
   }
 
   /**
+   * Pulls stories posted by ALL users (any device) from Supabase within the
+   * last 24 hours. Previously nothing ever read this table back — syncStory()
+   * was write-only, so a story only ever appeared on the poster's own device.
+   */
+  static async pullStoriesFromSupabase(): Promise<CommunityStory[]> {
+    const supabase = getSupabase();
+    if (!supabase) return [];
+    try {
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('community_stories')
+        .select('*')
+        .gte('created_at', cutoff)
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return [];
+
+      return data.map((row: any) => ({
+        id: row.id,
+        user_id: row.user_id,
+        user_name: row.user_name || 'Church Member',
+        user_handle: row.user_handle || '',
+        user_avatar: row.avatar_url || '',
+        avatar_url: row.avatar_url || null,
+        badge_type: row.badge_type || 'none',
+        image_url: row.image_url || '',
+        caption: row.caption || '',
+        scripture: row.scripture || null,
+        created_at: row.created_at
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Pulls latest remote rows from Supabase into local cache if tables exist
    */
   static async pullRemoteData(): Promise<{ prayersCount: number; sermonsCount: number; postsCount: number }> {
