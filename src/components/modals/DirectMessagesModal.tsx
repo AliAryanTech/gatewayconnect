@@ -1312,11 +1312,11 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4 overscroll-none"
       onClick={onClose}
     >
       <div 
-        className="bg-card border-0 sm:border sm:border-border rounded-none sm:rounded-xl w-full max-w-4xl h-full sm:h-[92vh] sm:max-h-[780px] flex flex-col shadow-2xl overflow-hidden text-card-foreground animate-in zoom-in-95 duration-150"
+        className="gcz-modal-shell gcz-mobile-dvh bg-card border-0 sm:border sm:border-border rounded-none sm:rounded-xl w-full max-w-4xl h-full sm:h-[92vh] sm:max-h-[780px] flex flex-col shadow-2xl overflow-hidden text-card-foreground animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         

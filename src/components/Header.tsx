@@ -118,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 h-16 sm:h-20 bg-background/85 backdrop-blur-xl border-b border-border flex items-center justify-between px-3 sm:px-6 shrink-0 transition-all shadow-sm">
+    <header className="sticky top-0 z-40 h-14 sm:h-20 bg-background/85 backdrop-blur-xl border-b border-border flex items-center justify-between px-3 sm:px-6 shrink-0 transition-all shadow-sm">
       
       {/* Brand & Ministry Logo */}
       <div className="flex items-center gap-2.5 sm:gap-3">

@@ -58,7 +58,7 @@ export const FloatingCommentReply: React.FC<FloatingCommentReplyProps> = ({ curr
   };
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 w-[calc(100vw-32px)] max-w-sm bg-card/95 backdrop-blur-md border border-primary/40 rounded-2xl p-3.5 shadow-2xl animate-in slide-in-from-bottom-5 duration-200">
+    <div className="gcz-floating-surface fixed bottom-[72px] sm:bottom-20 right-2.5 sm:right-4 z-50 bg-card/95 backdrop-blur-md border border-primary/40 rounded-2xl p-3 shadow-2xl animate-in slide-in-from-bottom-5 duration-200">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">

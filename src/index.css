@@ -279,3 +279,134 @@ body {
     border-color: var(--primary) !important;
   }
 }
+
+
+/* ================================================================
+   MOBILE-FIRST UI HARDENING
+   Gateway Connect is primarily used on phones. Keep dialogs, floats,
+   navigation and content inside the visual viewport and prevent layout
+   jumps caused by oversized children or mobile browser UI.
+   ================================================================ */
+html {
+  width: 100%;
+  min-height: 100%;
+  background: var(--background);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  width: 100%;
+  min-width: 0;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+#root {
+  width: 100%;
+  min-height: 100dvh;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+}
+
+button, input, textarea, select {
+  max-width: 100%;
+  font: inherit;
+}
+
+/* Prevent long URLs/usernames/messages from creating horizontal overflow. */
+button, a, p, h1, h2, h3, h4, h5, h6, span, label, div {
+  overflow-wrap: anywhere;
+}
+
+/* Better mobile scrolling and keyboard behavior. */
+.scroll-touch,
+.overflow-y-auto,
+.overflow-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Small, predictable floating surfaces. */
+.gcz-floating-surface {
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(42dvh, 420px);
+  overflow: auto;
+}
+
+/* Modal shells can safely use the dynamic viewport on modern mobile browsers. */
+.gcz-modal-shell {
+  width: min(100%, 960px);
+  max-height: calc(100dvh - 24px);
+  min-height: 0;
+}
+
+@media (max-width: 639px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Keep the app header compact; don't let action controls stretch it. */
+  header {
+    min-height: 56px;
+  }
+
+  /* Main content must never sit underneath the fixed bottom navigation. */
+  main {
+    min-width: 0;
+    padding-bottom: max(76px, calc(64px + env(safe-area-inset-bottom))) !important;
+  }
+
+  /* Fixed bottom navigation: compact but comfortable touch targets. */
+  nav.fixed.bottom-0 {
+    padding-top: 5px;
+    padding-bottom: max(5px, env(safe-area-inset-bottom));
+  }
+
+  nav.fixed.bottom-0 button {
+    min-height: 46px;
+  }
+
+  /* Avoid giant full-screen desktop modal proportions on phones. */
+  [role="dialog"] {
+    max-width: 100vw;
+  }
+
+  /* Generic fixed surfaces: keep them away from screen edges and the nav. */
+  .gcz-floating-surface {
+    width: calc(100vw - 20px);
+    max-height: min(38dvh, 340px);
+  }
+
+  /* iOS/Android keyboard can shrink the viewport; use dvh rather than vh. */
+  .gcz-mobile-dvh {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+}
+
+@media (min-width: 640px) {
+  .gcz-mobile-dvh {
+    max-height: 92vh;
+  }
+}
+
+/* Respect reduced-motion accessibility and save battery on phones. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -85,6 +85,7 @@ export const StoreTab: React.FC<StoreTabProps> = ({ products, onDonationSuccess 
   const [orderPhone, setOrderPhone] = useState<string>(currentUser?.phone || '0772123456');
   const [orderPaymentMethod, setOrderPaymentMethod] = useState<PaymentGateway>('EcoCash');
   const [confirmedOrder, setConfirmedOrder] = useState<any | null>(null);
+  const [isCheckoutProcessing, setIsCheckoutProcessing] = useState(false);
 
   // Hydrate cart from Supabase and listen for external updates
   useEffect(() => {
@@ -331,47 +332,62 @@ export const StoreTab: React.FC<StoreTabProps> = ({ products, onDonationSuccess 
     });
   };
 
-  const handleProcessOrderCheckout = (e?: React.FormEvent) => {
+  const handleProcessOrderCheckout = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (cart.length === 0) return;
-    const finalAddress = deliveryMethod === 'courier' 
-      ? (deliveryAddress.trim() || 'Harare Residential Delivery') 
+    if (cart.length === 0 || isCheckoutProcessing) return;
+
+    const finalAddress = deliveryMethod === 'courier'
+      ? (deliveryAddress.trim() || 'Harare Residential Delivery')
       : 'Main Church Pick-up Desk / Belvedere Cathedral Hub';
-      
-    const processCheckout = async () => {
+
+    setIsCheckoutProcessing(true);
+    setCartToast(null);
+
+    try {
       const payment = await PaynowService.initiateTransaction({
         reference: `GCZ-ORDER-${Date.now().toString().slice(-8)}`,
         amount: totalCartUsd,
         additionalInfo: `Kingdom Store order - ${cart.length} item(s)`,
         phone: orderPhone,
-        paymentMethod: orderPaymentMethod === 'OneMoney' ? 'OneMoney' : orderPaymentMethod === 'EcoCash' ? 'EcoCash' : 'Card'
+        paymentMethod: orderPaymentMethod === 'OneMoney'
+          ? 'OneMoney'
+          : orderPaymentMethod === 'EcoCash'
+            ? 'EcoCash'
+            : orderPaymentMethod === 'InnBucks'
+              ? 'InnBucks'
+              : 'Paynow'
       });
+
       if (!payment.success || !payment.pollUrl) {
         setCartToast(payment.error || 'Payment could not be started. The order was not created.');
         return;
       }
+
       if (payment.browserUrl) window.open(payment.browserUrl, '_blank', 'noopener,noreferrer');
       const result = await PaynowService.waitForPayment(payment.pollUrl);
       if (!result.isPaid) {
-        setCartToast(`Payment status: ${result.status}. The order was not created.`);
+        setCartToast(result.error || `Payment status: ${result.status}. The order was not created.`);
         return;
       }
 
       const newOrder = StorageService.createOrder({
-      user_name: orderName.trim() || 'Church Member',
-      user_phone: orderPhone.trim() || '+263772123456',
-      items: [...cart],
-      total_usd: totalCartUsd,
-      payment_method: orderPaymentMethod,
-      delivery_address: finalAddress
+        user_name: orderName.trim() || 'Church Member',
+        user_phone: orderPhone.trim() || '+263772123456',
+        items: [...cart],
+        total_usd: totalCartUsd,
+        payment_method: orderPaymentMethod,
+        delivery_address: finalAddress
       });
 
       setConfirmedOrder(newOrder);
       setCart([]);
       setShowCartModal(false);
       confetti({ particleCount: 50, spread: 80, origin: { y: 0.5 } });
-    };
-    void processCheckout();
+    } catch (error) {
+      setCartToast(error instanceof Error ? error.message : 'Checkout failed. No order was created.');
+    } finally {
+      setIsCheckoutProcessing(false);
+    }
   };
 
   return (
@@ -602,18 +618,14 @@ export const StoreTab: React.FC<StoreTabProps> = ({ products, onDonationSuccess 
                     <div className="mt-2 p-2.5 rounded-lg bg-secondary border border-border flex items-center justify-between text-[11px]">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-muted-foreground">
-                          {PaynowService.getConfig().isConfigured 
-                            ? `Paynow Active (ID: ${PaynowService.getConfig().integrationId})` 
-                            : 'Paynow Gateway Ready (Click to enter your ID & Auth Key)'}
-                        </span>
+                        <span className="text-muted-foreground">Paynow payment server is protected by Vercel environment variables.</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setShowPaynowConfigModal(true)}
                         className="text-primary font-bold hover:underline"
                       >
-                        {PaynowService.getConfig().isConfigured ? 'Edit Keys' : 'Enter Credentials'}
+                        Check Configuration
                       </button>
                     </div>
                   )}
@@ -1423,6 +1435,7 @@ export const StoreTab: React.FC<StoreTabProps> = ({ products, onDonationSuccess 
                         type="tel"
                         value={orderPhone}
                         onChange={(e) => setOrderPhone(e.target.value)}
+                        placeholder="0771234567 or +263771234567"
                         className="w-full bg-secondary border border-border rounded-lg p-2 text-xs text-foreground focus:outline-none focus:border-primary"
                       />
                     </div>
@@ -1472,10 +1485,11 @@ export const StoreTab: React.FC<StoreTabProps> = ({ products, onDonationSuccess 
                 <button
                   type="button"
                   onClick={handleProcessOrderCheckout}
-                  className="w-full py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg text-xs uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  disabled={isCheckoutProcessing}
+                  className="w-full py-3.5 disabled:opacity-60 disabled:cursor-not-allowed bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg text-xs uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Place Order • {getPrice(totalCartUsd)} ({orderPaymentMethod})</span>
+                  <span>{isCheckoutProcessing ? 'Processing payment…' : `Place Order • ${getPrice(totalCartUsd)} (${orderPaymentMethod})`}</span>
                 </button>
               </div>
             )}
