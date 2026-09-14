@@ -19,7 +19,7 @@ import { NotificationsModal } from './components/modals/NotificationsModal';
 import { FloatingNotificationToast } from './components/common/FloatingNotificationToast';
 import { FloatingCommentReply } from './components/common/FloatingCommentReply';
 import { InstagramProfileModal } from './components/modals/InstagramProfileModal';
-import { StorageService } from './services/storageService';
+import { StorageService, arePhoneNumbersEqual } from './services/storageService';
 import { liveSyncService } from './services/liveSyncService';
 import { 
   TabType, 
@@ -181,15 +181,33 @@ export default function App() {
         setGlobalProfileUserId(e.detail.userId);
       }
     };
-    window.addEventListener('gcz_banned_users_updated', refreshLiveState);
-    window.addEventListener('gcz_current_user_banned', refreshLiveState);
+    window.addEventListener('gcz_banned_users_updated', refreshAppData);
+    window.addEventListener('gcz_current_user_banned', refreshAppData);
     window.addEventListener('gcz_open_user_profile', handleOpenProfile);
+    window.addEventListener('gcz_direct_messages_updated', refreshAppData);
+    window.addEventListener('gcz_dms_updated', refreshAppData);
+    window.addEventListener('gcz_new_notification', refreshAppData);
+    window.addEventListener('gcz_notifications_updated', refreshAppData);
+    window.addEventListener('gcz_live_state_updated', refreshAppData);
+    window.addEventListener('gcz_user_registered', refreshAppData);
+    window.addEventListener('gcz_users_synced', refreshAppData);
+    window.addEventListener('gcz_user_profile_updated', refreshAppData);
+    window.addEventListener('gcz_groups_updated', refreshAppData);
     return () => {
       unbind();
       liveSyncService.disconnect();
-      window.removeEventListener('gcz_banned_users_updated', refreshLiveState);
-      window.removeEventListener('gcz_current_user_banned', refreshLiveState);
+      window.removeEventListener('gcz_banned_users_updated', refreshAppData);
+      window.removeEventListener('gcz_current_user_banned', refreshAppData);
       window.removeEventListener('gcz_open_user_profile', handleOpenProfile);
+      window.removeEventListener('gcz_direct_messages_updated', refreshAppData);
+      window.removeEventListener('gcz_dms_updated', refreshAppData);
+      window.removeEventListener('gcz_new_notification', refreshAppData);
+      window.removeEventListener('gcz_notifications_updated', refreshAppData);
+      window.removeEventListener('gcz_live_state_updated', refreshAppData);
+      window.removeEventListener('gcz_user_registered', refreshAppData);
+      window.removeEventListener('gcz_users_synced', refreshAppData);
+      window.removeEventListener('gcz_user_profile_updated', refreshAppData);
+      window.removeEventListener('gcz_groups_updated', refreshAppData);
     };
   }, [currentUser?.id]);
   useEffect(() => {
@@ -345,10 +363,15 @@ export default function App() {
 
   // Check if current user is banned - blocks entire app and renders dedicated Banned Screen
   const bannedMap = StorageService.getBannedUsers();
-  const isUserBanned = currentUser?.is_banned || Boolean(
+  const isPrivileged = currentUser?.role === 'developer' || 
+    currentUser?.role === 'super_admin' || 
+    currentUser?.id === 'usr_developer' || 
+    currentUser?.id === 'usr_apostle_joe' || 
+    (currentUser?.phone && arePhoneNumbersEqual(currentUser.phone, '0780699988'));
+  const isUserBanned = !isPrivileged && (currentUser?.is_banned || Boolean(
     (currentUser?.id && bannedMap[currentUser.id]) ||
     (currentUser?.phone && bannedMap[currentUser.phone])
-  );
+  ));
   if (isUserBanned) {
     return (
       <BannedScreen
