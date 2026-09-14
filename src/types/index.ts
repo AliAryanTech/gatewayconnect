@@ -395,7 +395,7 @@ export interface DirectMessage {
   deleted_for_users?: string[];
   reactions?: MessageReaction[];
   media_url?: string;
-  media_type?: 'image' | 'video' | 'audio' | 'document';
+  media_type?: 'image' | 'video' | 'audio';
 }
 
 export const SUPPORTED_CITIES = [

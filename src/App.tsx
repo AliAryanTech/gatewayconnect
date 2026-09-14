@@ -20,6 +20,7 @@ import { FloatingNotificationToast } from './components/common/FloatingNotificat
 import { FloatingCommentReply } from './components/common/FloatingCommentReply';
 import { InstagramProfileModal } from './components/modals/InstagramProfileModal';
 import { StorageService } from './services/storageService';
+import { liveSyncService } from './services/liveSyncService';
 import { 
   TabType, 
   User, 
@@ -167,20 +168,27 @@ export default function App() {
   useEffect(() => {
     StorageService.syncUsersWithRemote().catch(() => {});
     if (!currentUser) {
+      liveSyncService.disconnect();
       return;
     }
     if (currentUser?.id && currentUser?.role !== 'guest') {
       StorageService.hydrateFollowsFromSupabase(currentUser.id).catch(() => {});
     }
-    const unbind = () => {};
-    const handleOpenProfile = (e: any) => {
+    liveSyncService.connect(currentUser);
+    const unbind = liveSyncService.bindLocalEvents();
+      const handleOpenProfile = (e: any) => {
       if (e?.detail?.userId) {
         setGlobalProfileUserId(e.detail.userId);
       }
     };
+    window.addEventListener('gcz_banned_users_updated', refreshLiveState);
+    window.addEventListener('gcz_current_user_banned', refreshLiveState);
     window.addEventListener('gcz_open_user_profile', handleOpenProfile);
     return () => {
       unbind();
+      liveSyncService.disconnect();
+      window.removeEventListener('gcz_banned_users_updated', refreshLiveState);
+      window.removeEventListener('gcz_current_user_banned', refreshLiveState);
       window.removeEventListener('gcz_open_user_profile', handleOpenProfile);
     };
   }, [currentUser?.id]);
@@ -370,6 +378,7 @@ export default function App() {
         pushNotifications={pushNotifications}
       />
 
+      {/* 2. Main Content Area */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 py-3">
         {activeTab === 'home' && (
           <HomeTab
@@ -427,7 +436,7 @@ export default function App() {
               setDirectMessageGroupId(undefined);
               setShowDirectMessagesModal(true);
             }}
-               onRefreshData={refreshAppData}
+                onRefreshData={refreshAppData}
           />
         )}
 
@@ -597,7 +606,7 @@ export default function App() {
         <NotificationsModal
           isOpen={showNotificationsModal}
           onClose={() => setShowNotificationsModal(false)}
-           onOpenDirectChat={(recipientId) => {
+            onOpenDirectChat={(recipientId) => {
             if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
               setAuthMode('login');
               setShowAuthModal(true);
