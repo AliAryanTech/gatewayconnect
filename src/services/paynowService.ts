@@ -114,8 +114,6 @@ export class PaynowService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            integrationId: id,
-            integrationKey: config.integrationKey.trim(),
             reference,
             amount: params.amount,
             additionalInfo: additionalinfo,
