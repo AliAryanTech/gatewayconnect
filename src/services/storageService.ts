@@ -166,6 +166,43 @@ function setLocal<T>(key: string, data: T): void {
   }
 }
 
+/**
+ * WhatsApp-style subtle 2-tone chime using Web Audio API (sine wave 880Hz -> 1174Hz)
+ */
+export function playNotificationChime(): void {
+  try {
+    if (typeof window === 'undefined') return;
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, now);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1174.66, now + 0.08);
+
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.18, now + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.005, now + 0.28);
+
+    osc1.connect(gainNode);
+    osc2.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    osc1.start(now);
+    osc1.stop(now + 0.08);
+    osc2.start(now + 0.08);
+    osc2.stop(now + 0.28);
+  } catch {
+    // AudioContext blocked or not supported
+  }
+}
+
 export class StorageService {
   // Permanent Custom User Avatars store
   static getPermanentCustomAvatars(): Record<string, string> {
@@ -322,9 +359,16 @@ export class StorageService {
 
   static async syncUsersWithRemote(): Promise<void> {
     try {
+      // 1. Ensure developer account is synced to Supabase
+      const localUsers = this.getAllUsers();
+      const devUser = localUsers.find(u => u.role === 'developer' || arePhoneNumbersEqual(u.phone, '0780699988'));
+      if (devUser) {
+        SupabaseSyncService.syncUser(devUser).catch(() => {});
+      }
+
+      // 2. Pull remote users from Supabase
       const remoteUsers = await SupabaseSyncService.pullUsersFromSupabase();
       if (!remoteUsers || remoteUsers.length === 0) return;
-      const localUsers = this.getAllUsers();
       let changed = false;
       for (const ru of remoteUsers) {
         const localIdx = localUsers.findIndex(u => u.id === ru.id || arePhoneNumbersEqual(u.phone, ru.phone));
@@ -335,6 +379,8 @@ export class StorageService {
             full_name: ru.full_name || localUsers[localIdx].full_name,
             handle: ru.handle || localUsers[localIdx].handle,
             role: ru.role || localUsers[localIdx].role,
+            is_verified: ru.is_verified !== undefined ? ru.is_verified : localUsers[localIdx].is_verified,
+            badge_type: ru.badge_type || localUsers[localIdx].badge_type,
             followers_count: ru.followers_count || localUsers[localIdx].followers_count,
             following_count: ru.following_count || localUsers[localIdx].following_count
           };
@@ -351,6 +397,116 @@ export class StorageService {
         }
       }
     } catch {}
+  }
+
+  /**
+   * Complete ecosystem bidirectional synchronization with Supabase
+   * Synchronizes developer account, leader accounts, registered members, and pulls remote database
+   */
+  static async syncAllEcosystemAccountsWithRemote(): Promise<{
+    success: boolean;
+    localCount: number;
+    remoteCount: number;
+    syncedCount: number;
+    devAccountSynced: boolean;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    const localUsers = this.getAllUsers();
+    let devAccountSynced = false;
+
+    // 1. Ensure Developer Account is properly formatted & pushed to Supabase
+    let devUser = localUsers.find(u => u.role === 'developer' || arePhoneNumbersEqual(u.phone, '0780699988'));
+    if (!devUser) {
+      devUser = {
+        id: 'usr_developer',
+        phone: '0780699988',
+        password: 'juice2026',
+        full_name: 'mr_juice7',
+        handle: '@mr_juice7',
+        role: 'developer',
+        badge_type: 'gold',
+        is_verified: true,
+        is_premium: true,
+        cell_group: 'Gateway Tech Ministry',
+        location: 'Harare, Zimbabwe',
+        city_location: 'Harare',
+        member_id: 'GCZ-DEV-007',
+        created_at: new Date().toISOString(),
+        followers_count: 50,
+        following_count: 5
+      };
+      this.saveUser(devUser);
+    }
+
+    try {
+      devAccountSynced = await SupabaseSyncService.syncUser(devUser);
+      if (!devAccountSynced) {
+        errors.push('Supabase offline or table schema pending (local developer account active)');
+      }
+    } catch (e: any) {
+      errors.push(`Developer sync notice: ${e.message}`);
+    }
+
+    // 2. Push all local leader & registered accounts to Supabase
+    for (const u of localUsers) {
+      if (u.id === 'usr_developer' || arePhoneNumbersEqual(u.phone, '0780699988')) continue;
+      try {
+        await SupabaseSyncService.syncUser(u);
+      } catch {
+        // Safe skip
+      }
+    }
+
+    // 3. Pull remote users from Supabase and merge
+    let remoteCount = 0;
+    try {
+      const remoteUsers = await SupabaseSyncService.pullUsersFromSupabase();
+      remoteCount = remoteUsers.length;
+      if (remoteUsers.length > 0) {
+        let changed = false;
+        for (const ru of remoteUsers) {
+          const localIdx = localUsers.findIndex(u => u.id === ru.id || arePhoneNumbersEqual(u.phone, ru.phone));
+          if (localIdx >= 0) {
+            localUsers[localIdx] = {
+              ...localUsers[localIdx],
+              avatar_url: ru.avatar_url || localUsers[localIdx].avatar_url,
+              full_name: ru.full_name || localUsers[localIdx].full_name,
+              handle: ru.handle || localUsers[localIdx].handle,
+              role: ru.role || localUsers[localIdx].role,
+              is_verified: ru.is_verified !== undefined ? ru.is_verified : localUsers[localIdx].is_verified,
+              badge_type: ru.badge_type || localUsers[localIdx].badge_type,
+              followers_count: ru.followers_count !== undefined ? ru.followers_count : localUsers[localIdx].followers_count,
+              following_count: ru.following_count !== undefined ? ru.following_count : localUsers[localIdx].following_count
+            };
+            changed = true;
+          } else {
+            localUsers.push(ru);
+            changed = true;
+          }
+        }
+        if (changed) {
+          setLocal(KEYS.ALL_USERS, localUsers);
+        }
+      }
+    } catch (e: any) {
+      errors.push(`Remote pull notice: ${e.message}`);
+    }
+
+    // 4. Dispatch synchronization events across the app
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_users_synced', { detail: localUsers }));
+      window.dispatchEvent(new CustomEvent('gcz_user_profile_updated', { detail: devUser }));
+    }
+
+    return {
+      success: errors.length === 0,
+      localCount: localUsers.length,
+      remoteCount,
+      syncedCount: localUsers.length,
+      devAccountSynced,
+      errors
+    };
   }
 
   static updateUserRole(userId: string, newRole: UserRole): void {
@@ -4298,10 +4454,66 @@ export class StorageService {
     if (!exists) {
       allMsgs[message.group_id].push(message);
       setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
+
+      const current = this.getCurrentUser();
+      if (current && current.id !== message.sender_id) {
+        const groups = this.getChatGroups();
+        const grp = groups.find(g => g.id === message.group_id);
+        const isMember = grp && (grp.member_ids?.includes(current.id) || current.role === 'super_admin' || current.role === 'developer');
+        if (isMember) {
+          const senderName = message.sender_name || 'Church Member';
+          const groupTitle = grp?.name || 'Fellowship Group';
+          const textPreview = (message.text || (message.media_type ? `Sent a ${message.media_type}` : 'New message')).slice(0, 100);
+          this.addAppNotification({
+            title: groupTitle,
+            message: `${senderName}: ${textPreview}`,
+            type: 'chat',
+            target_type: 'group',
+            target_id: message.group_id,
+            recipient_id: current.id,
+            actor_id: message.sender_id,
+            actor_name: senderName,
+            actor_avatar: message.sender_avatar
+          });
+          playNotificationChime();
+        }
+      }
+
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', { detail: { groupId: message.group_id, message } }));
       }
     }
+  }
+
+  static getUnreadGroupMessagesCount(groupId: string, userId?: string): number {
+    const curUserId = userId || this.getCurrentUser()?.id;
+    if (!curUserId) return 0;
+    const allMsgs = getLocal<Record<string, ChatGroupMessage[]>>(KEYS.CHAT_GROUP_MESSAGES, INITIAL_CHAT_GROUP_MESSAGES);
+    const msgs = allMsgs[groupId] || [];
+    return msgs.filter(m => {
+      if (m.sender_id === curUserId) return false;
+      if (!m.read_by_user_ids) return true;
+      return !m.read_by_user_ids.includes(curUserId);
+    }).length;
+  }
+
+  static getTotalUnreadGroupMessagesCount(userId?: string): number {
+    const curUserId = userId || this.getCurrentUser()?.id;
+    if (!curUserId) return 0;
+    const groups = this.getChatGroups();
+    const myGroups = groups.filter(g => g.member_ids?.includes(curUserId) || curUserId === 'usr_developer' || curUserId === 'usr_apostle_joe');
+    const allMsgs = getLocal<Record<string, ChatGroupMessage[]>>(KEYS.CHAT_GROUP_MESSAGES, INITIAL_CHAT_GROUP_MESSAGES);
+    let total = 0;
+    for (const g of myGroups) {
+      const msgs = allMsgs[g.id] || [];
+      const unread = msgs.filter(m => {
+        if (m.sender_id === curUserId) return false;
+        if (!m.read_by_user_ids) return true;
+        return !m.read_by_user_ids.includes(curUserId);
+      }).length;
+      total += unread;
+    }
+    return total;
   }
 
   static markGroupMessagesAsRead(groupId: string, currentUserId: string): void {
@@ -4321,6 +4533,9 @@ export class StorageService {
     if (changed) {
       allMsgs[groupId] = msgs;
       setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', { detail: { groupId } }));
+      }
     }
   }
 

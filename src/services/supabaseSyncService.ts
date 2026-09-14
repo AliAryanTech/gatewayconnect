@@ -679,6 +679,24 @@ export class SupabaseSyncService {
     onBanStatusUpdated?: (detail: { userId: string; isBanned: boolean; reason?: string }) => void;
   }>();
 
+  static subscribeToSocialEvents(subscriber: {
+    onNewGroupMessage?: (msg: ChatGroupMessage) => void;
+    onNewDirectMessage?: (msg: DirectMessage) => void;
+    onUserProfileUpdated?: (user: Partial<User>) => void;
+    onGroupMemberChanged?: (detail: { groupId: string; userId: string; isJoining: boolean }) => void;
+    onFollowUpdated?: (detail: { followerId: string; followingId: string; isFollowing: boolean }) => void;
+    onStreamerJoined?: (viewer: LiveStreamViewer) => void;
+    onStreamerLeft?: (userId: string) => void;
+    onNotificationCreated?: (notification: AppNotification) => void;
+    onBanStatusUpdated?: (detail: { userId: string; isBanned: boolean; reason?: string }) => void;
+  }): () => void {
+    this.socialSubscribers.add(subscriber);
+    this.getSocialChannel();
+    return () => {
+      this.socialSubscribers.delete(subscriber);
+    };
+  }
+
   static getSocialChannel() {
     const supabase = getSupabase();
     if (!supabase) return null;
@@ -830,17 +848,18 @@ export class SupabaseSyncService {
    */
   static async syncUser(user: User): Promise<boolean> {
     const supabase = getSupabase();
-    if (!supabase || !user) return false;
+    if (!supabase || !user || !user.phone) return false;
     try {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+      
       const userPayload: any = {
-        id: user.id,
         phone: user.phone,
-        full_name: user.full_name,
+        full_name: user.full_name || 'Church Member',
         role: user.role || 'member',
         referral_code: user.handle || user.referral_code || null,
         avatar_url: user.avatar_url || null,
         cell_group: user.cell_group || null,
-        is_verified: user.is_verified || false,
+        is_verified: Boolean(user.is_verified),
         member_id: user.member_id || null,
         location: user.location || 'Harare, Zimbabwe',
         city_location: user.city_location || 'Harare',
@@ -850,15 +869,38 @@ export class SupabaseSyncService {
         offline_sermon_ids: user.offline_sermon_ids || [],
         updated_at: new Date().toISOString()
       };
+
+      if (isUUID) {
+        userPayload.id = user.id;
+      } else {
+        // Query existing UUID by phone to prevent Postgres invalid UUID syntax error
+        const { data: existing } = await supabase
+          .from('users')
+          .select('id')
+          .eq('phone', user.phone)
+          .maybeSingle();
+        if (existing?.id) {
+          userPayload.id = existing.id;
+        }
+      }
+
       if (user.password) {
         userPayload.password_hash = user.password;
       }
 
-      await supabase.from('users').upsert(userPayload, { onConflict: 'id' });
+      // Upsert by phone number (guaranteed unique column in schema) or fallback to id
+      let upsertRes = await supabase.from('users').upsert(userPayload, { onConflict: 'phone' });
+      if (upsertRes.error && userPayload.id) {
+        upsertRes = await supabase.from('users').upsert(userPayload, { onConflict: 'id' });
+      }
 
-      if (user.avatar_url) {
+      if (upsertRes.error) {
+        console.warn('Supabase syncUser upsert notice:', upsertRes.error.message);
+      }
+
+      if (user.avatar_url && userPayload.id) {
         await supabase.from('profile_pictures').upsert({
-          user_id: user.id,
+          user_id: userPayload.id,
           avatar_url: user.avatar_url,
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
@@ -873,9 +915,9 @@ export class SupabaseSyncService {
         });
       }
 
-      return true;
-    } catch (err) {
-      console.warn('Supabase syncUser notice:', err);
+      return !upsertRes.error;
+    } catch (err: any) {
+      console.warn('Supabase syncUser notice:', err?.message || err);
       return false;
     }
   }
