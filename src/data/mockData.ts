@@ -622,12 +622,25 @@ export const MOCK_COMMUNITY_GROUPS: CommunityGroup[] = [
     name: 'Gymstars Foundation',
     category: 'Youth',
     location: 'Youth Arena & Harare West',
-    leader_name: 'Minister Kuda & Youth Directorate',
+    leader_name: 'Apostle Joe Daniels & Youth Directorate',
     leader_phone: '+263 77 144 5642',
     meeting_time: 'Saturdays @ 2:00 PM CAT',
     member_count: 7,
     image_url: '/assets/apostle_joe_daniels_preach.jpg',
     description: 'Foundation for youth and juniors where we groom and teach the youth to find God at an early age, build character, and excel.',
+    joined: false
+  },
+  {
+    id: 'group_isn_mentorship',
+    name: 'ISN International School of Mentorship',
+    category: 'School',
+    location: 'Apostolic Academy & Global Portal',
+    leader_name: 'Apostle Joe Daniels & Apostolic Leadership',
+    leader_phone: '+263 77 144 5642',
+    meeting_time: 'Mondays @ 7:00 PM CAT & Virtual Modules',
+    member_count: 12,
+    image_url: '/assets/images/apostle_grad_dark_1788354117156.jpg',
+    description: 'International School of Mentorship (ISN) - Intensive apostolic mentorship, prophetic impartation, and global kingdom leadership academy.',
     joined: false
   }
 ];
@@ -1212,7 +1225,7 @@ export const INITIAL_CHAT_GROUPS: ChatGroup[] = [
     admin_ids: ['usr_apostle_joe', 'usr_developer'],
     avatar_url: '/assets/apostle_joe_daniels_preach.jpg',
     created_at: '2026-01-10T00:00:00Z',
-    member_ids: ['usr_apostle_joe', 'usr_prophetess_melinda', 'usr_pastor_grace', 'usr_chipo', 'usr_tinashe', 'usr_tatenda', 'usr_nyasha', 'usr_farai'],
+    member_ids: ['usr_apostle_joe', 'usr_developer', 'usr_prophetess_melinda', 'usr_pastor_grace', 'usr_chipo', 'usr_tinashe', 'usr_tatenda', 'usr_nyasha', 'usr_farai'],
     pinned_notice: 'Worship rehearsals and atmospheric prayer every Thursday at 6:00 PM.'
   },
   {
@@ -1227,7 +1240,7 @@ export const INITIAL_CHAT_GROUPS: ChatGroup[] = [
     admin_ids: ['usr_apostle_joe', 'usr_pastor_easter', 'usr_developer'],
     avatar_url: '/assets/apostle_joe_daniels_main.jpg',
     created_at: '2026-01-15T00:00:00Z',
-    member_ids: ['usr_apostle_joe', 'usr_pastor_easter', 'usr_pastor_tendai', 'usr_developer', 'usr_tinashe', 'usr_tatenda', 'usr_kuda', 'usr_farai'],
+    member_ids: ['usr_apostle_joe', 'usr_developer', 'usr_pastor_easter', 'usr_pastor_tendai', 'usr_tinashe', 'usr_tatenda', 'usr_kuda', 'usr_farai'],
     pinned_notice: 'Iron sharpens iron. Monthly brotherhood prayer & leadership symposium.'
   },
   {
@@ -1242,7 +1255,7 @@ export const INITIAL_CHAT_GROUPS: ChatGroup[] = [
     admin_ids: ['usr_prophetess_melinda', 'usr_apostle_joe', 'usr_developer'],
     avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
     created_at: '2026-02-01T00:00:00Z',
-    member_ids: ['usr_prophetess_melinda', 'usr_pastor_grace', 'usr_chipo', 'usr_nyasha'],
+    member_ids: ['usr_prophetess_melinda', 'usr_apostle_joe', 'usr_developer', 'usr_pastor_grace', 'usr_chipo', 'usr_nyasha'],
     pinned_notice: 'Welcome Daughters of Zion! Grace and honor are your portion.'
   },
   {
@@ -1259,7 +1272,7 @@ export const INITIAL_CHAT_GROUPS: ChatGroup[] = [
     admin_ids: ['usr_apostle_joe', 'usr_developer'],
     avatar_url: '/assets/apostle_joe_daniels_grad.jpg',
     created_at: '2026-02-10T00:00:00Z',
-    member_ids: ['usr_apostle_joe', 'usr_prophetess_melinda', 'usr_pastor_easter', 'usr_developer', 'usr_pastor_tendai', 'usr_chipo', 'usr_tinashe', 'usr_kuda'],
+    member_ids: ['usr_apostle_joe', 'usr_developer', 'usr_prophetess_melinda', 'usr_pastor_easter', 'usr_pastor_tendai', 'usr_chipo', 'usr_tinashe', 'usr_kuda'],
     pinned_notice: 'Apostolic curriculum term enrolled. Term duration: 3 months ($150 membership).'
   },
   {
@@ -1274,8 +1287,25 @@ export const INITIAL_CHAT_GROUPS: ChatGroup[] = [
     admin_ids: ['usr_apostle_joe', 'usr_developer'],
     avatar_url: 'https://images.unsplash.com/photo-1526976668912-1a811878dd37?w=200&auto=format&fit=crop&q=80',
     created_at: '2026-02-15T00:00:00Z',
-    member_ids: ['usr_apostle_joe', 'usr_kuda', 'usr_tinashe', 'usr_nyasha', 'usr_tatenda', 'usr_farai', 'usr_chipo'],
+    member_ids: ['usr_apostle_joe', 'usr_developer', 'usr_kuda', 'usr_tinashe', 'usr_nyasha', 'usr_tatenda', 'usr_farai', 'usr_chipo'],
     pinned_notice: 'Raising a generation without compromise! Junior fellowship every Saturday morning.'
+  },
+  {
+    id: 'group_isn_mentorship',
+    name: 'ISN International School of Mentorship',
+    description: 'International School of Mentorship (ISN) - Intensive apostolic mentorship, prophetic impartation, and global kingdom leadership academy.',
+    category: 'School',
+    is_paid: true,
+    price_usd: 150,
+    duration_months: 3,
+    invite_code: 'isn-mentorship-2026',
+    created_by: 'usr_apostle_joe',
+    creator_name: 'Apostle Joe Daniels',
+    admin_ids: ['usr_apostle_joe', 'usr_developer', 'usr_prophetess_melinda'],
+    avatar_url: '/assets/images/apostle_grad_dark_1788354117156.jpg',
+    created_at: '2026-03-01T00:00:00Z',
+    member_ids: ['usr_apostle_joe', 'usr_developer', 'usr_prophetess_melinda', 'usr_pastor_easter', 'usr_pastor_tendai'],
+    pinned_notice: 'Welcome to ISN International School of Mentorship. Classes, live modules, and prophetic assignments begin every Monday.'
   }
 ];
 
@@ -1369,6 +1399,26 @@ export const INITIAL_CHAT_GROUP_MESSAGES: Record<string, ChatGroupMessage[]> = {
       sender_role: 'super_admin',
       text: 'Remember now thy Creator in the days of thy youth! Gymstars, let your light shine boldly in school and community. 🌟',
       created_at: new Date(Date.now() - 3600000 * 7).toISOString()
+    }
+  ],
+  group_isn_mentorship: [
+    {
+      id: 'msg_isn_1',
+      group_id: 'group_isn_mentorship',
+      sender_id: 'usr_apostle_joe',
+      sender_name: 'Apostle Joe Daniels',
+      sender_role: 'super_admin',
+      text: 'Welcome to the ISN International School of Mentorship. This portal is consecrated for discipleship, leadership calibration, and spiritual acceleration. Prepare your spirits for deep revelation.',
+      created_at: new Date(Date.now() - 3600000 * 6).toISOString()
+    },
+    {
+      id: 'msg_isn_2',
+      group_id: 'group_isn_mentorship',
+      sender_id: 'usr_developer',
+      sender_name: 'mr_juice7',
+      sender_role: 'developer',
+      text: 'ISN Mentorship portal and secure curriculum channels are online. All enrolled ministers and students have synchronized access.',
+      created_at: new Date(Date.now() - 3600000 * 3).toISOString()
     }
   ]
 };
