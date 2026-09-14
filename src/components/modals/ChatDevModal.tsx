@@ -10,7 +10,7 @@ import {
   Sparkles,
   Bot
 } from 'lucide-react';
-import { StorageService } from '../../services/storageService';
+import { StorageService, arePhoneNumbersEqual } from '../../services/storageService';
 import { liveSyncService } from '../../services/liveSyncService';
 
 interface ChatDevModalProps {
@@ -30,36 +30,50 @@ export const ChatDevModal: React.FC<ChatDevModalProps> = ({ isOpen, onClose }) =
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [inputText, setInputText] = useState('');
 
-  // Listen for incoming live events
+  // Hydrate messages from StorageService
+  const loadMessages = () => {
+    if (!currentUser) return;
+    const dms = StorageService.getDirectMessages(currentUser.id, 'usr_developer', currentUser.id);
+    const mapped: ChatMsg[] = dms.map(d => {
+      const isDev = d.sender_id === 'usr_developer' || arePhoneNumbersEqual(d.sender_id, '0780699988');
+      return {
+        id: d.id,
+        sender: isDev ? 'dev' : 'user',
+        text: d.text,
+        time: new Date(d.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+    });
+    setMessages(mapped);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadMessages();
+    }
+  }, [isOpen, currentUser?.id]);
+
+  // Listen for incoming live direct messages and app sync events
   useEffect(() => {
     const handler = (e: any) => {
-      const event = e.detail;
-      if (event.type === 'direct_message') {
-        const msg = event.payload as ChatMsg;
-        setMessages(prev => [...prev, msg]);
-      }
+      loadMessages();
     };
+    window.addEventListener('gcz_direct_messages_updated', handler);
+    window.addEventListener('gcz_dms_updated', handler);
     window.addEventListener('gcz_live_event_received', handler);
-    return () => window.removeEventListener('gcz_live_event_received', handler);
-  }, []);
+    return () => {
+      window.removeEventListener('gcz_direct_messages_updated', handler);
+      window.removeEventListener('gcz_dms_updated', handler);
+      window.removeEventListener('gcz_live_event_received', handler);
+    };
+  }, [currentUser?.id]);
 
   if (!isOpen) return null;
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !currentUser) return;
 
-    const userMsg: ChatMsg = {
-      id: `usr_${Date.now()}`,
-      sender: 'user',
-      text: inputText.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    // Update local state
-    setMessages(prev => [...prev, userMsg]);
-
-    // Dispatch message to developer's inbox and trigger real notification on his bell
+    // Dispatch message to developer's inbox and trigger notification
     StorageService.sendDirectMessage(currentUser.id, 'usr_developer', inputText.trim());
     StorageService.addAppNotification({
       type: 'chat',
@@ -71,6 +85,7 @@ export const ChatDevModal: React.FC<ChatDevModalProps> = ({ isOpen, onClose }) =
       recipient_id: 'usr_developer'
     });
 
+    loadMessages();
     setInputText('');
   };
 
