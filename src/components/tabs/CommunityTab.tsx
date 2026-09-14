@@ -228,6 +228,25 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
   const [newStoryScripture, setNewStoryScripture] = useState<string>('');
   const [newStoryText, setNewStoryText] = useState<string>('');
   const storyFileInputRef = useRef<HTMLInputElement>(null);
+  const [storyLocalImagePreview, setStoryLocalImagePreview] = useState<string | null>(null);
+
+  const handleStoryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please choose an image for your story.');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) setStoryLocalImagePreview(result);
+    };
+    reader.onerror = () => alert('Could not read that image. Please try another file.');
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const canModeratePosts = currentUser.role === 'super_admin' || currentUser.role === 'developer';
 
@@ -339,12 +358,12 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
 
   const handleCreateStory = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStoryImageUrl && !localImagePreview) {
+    if (!newStoryImageUrl && !storyLocalImagePreview) {
       alert('Please upload or provide an image for your story.');
       return;
     }
     const currUser = StorageService.getCurrentUser() || currentUser;
-    const finalStoryImg = newStoryImageUrl || localImagePreview || '/assets/apostle_joe_daniels_main.jpg';
+    const finalStoryImg = newStoryImageUrl || storyLocalImagePreview || '/assets/apostle_joe_daniels_main.jpg';
     
     StorageService.addStory({
       user_id: currUser.id,
@@ -364,7 +383,8 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
     setNewStoryImageUrl('');
     setNewStoryScripture('');
     setNewStoryText('');
-    setLocalImagePreview(null);
+    setStoryLocalImagePreview(null);
+    if (storyFileInputRef.current) storyFileInputRef.current.value = '';
     confetti({ particleCount: 35, spread: 60 });
   };
 
@@ -1603,13 +1623,8 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                     </span>
                     <span className="text-[11px] text-muted-foreground">{group.member_count} Members</span>
                   </div>
-<<<<<<< HEAD
-                  <h4 className="font-bold text-sm text-foreground mb-1">{group.name}</h4>
-                  <p className="text-xs text-muted-foreground mb-2">{group.description}</p>
-=======
                   <h4 className="font-bold text-xs text-foreground mb-1">{group.name}</h4>
                   <p className="text-[11px] text-muted-foreground mb-2">{group.description}</p>
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
                   
                   <div className="space-y-1 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5">
@@ -1827,17 +1842,10 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                   <div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{event.category}</span>
-                      {countdown.isInSession ? (
-                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                          <span>Service Live Now</span>
-                        </span>
-                      ) : (
-                        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-secondary border border-border text-foreground font-mono text-xs font-bold">
-                          <Timer className="w-3.5 h-3.5 text-primary" />
-                          <span>{countdown.formatted}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-secondary border border-border text-foreground font-mono text-xs font-bold">
+                        <Timer className="w-3.5 h-3.5 text-primary" />
+                        <span>{countdown.formatted}</span>
+                      </div>
                     </div>
 
                     <h4 className="font-bold text-base text-foreground mt-1.5">{event.title}</h4>
@@ -1861,21 +1869,6 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                     </span>
 
                     <div className="flex flex-wrap items-center gap-2">
-<<<<<<< HEAD
-                      {/* If in session, show Join Stream button */}
-                      {countdown.isInSession && (
-                        <button
-                          id={`btn-join-stream-${event.id}`}
-                          onClick={() => handleJoinStream(event)}
-                          className="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-                        >
-                          <Radio className="w-4 h-4" />
-                          <span>Join Stream</span>
-                        </button>
-                      )}
-
-=======
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
                       {/* For the 2 permanent events (Sunday & Wednesday): Request Location and Go Virtual */}
                       {isPermanent && (
                         <>
@@ -1889,15 +1882,6 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                             <span>Request Location</span>
                           </button>
 
-                          <button
-                            id={`btn-go-virtual-${event.id}`}
-                            onClick={() => handleGoVirtual(event)}
-                            className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-secondary hover:bg-secondary/80 border border-border text-foreground flex items-center gap-1.5 transition-all shadow-sm"
-                            title="Set reminder to stream online when service starts"
-                          >
-                            <Radio className="w-3.5 h-3.5 text-primary" />
-                            <span>Go Virtual</span>
-                          </button>
                         </>
                       )}
                     </div>
@@ -2392,6 +2376,8 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                   setNewStoryImageUrl('');
                   setNewStoryScripture('');
                   setNewStoryText('');
+                  setStoryLocalImagePreview(null);
+                  if (storyFileInputRef.current) storyFileInputRef.current.value = '';
                 }} 
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -2409,13 +2395,14 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                 className="hidden"
               />
 
-              {newStoryImageUrl ? (
+              {newStoryImageUrl || storyLocalImagePreview ? (
                 <div className="relative rounded-xl overflow-hidden border border-border max-h-48 bg-black flex items-center justify-center">
-                  <img src={newStoryImageUrl} alt="Story Preview" className="w-full object-cover max-h-48" />
+                  <img src={newStoryImageUrl || storyLocalImagePreview || ''} alt="Story Preview" className="w-full object-cover max-h-48" />
                   <button
                     type="button"
                     onClick={() => {
                       setNewStoryImageUrl('');
+                      setStoryLocalImagePreview(null);
                       if (storyFileInputRef.current) storyFileInputRef.current.value = '';
                     }}
                     className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-destructive rounded-full text-white text-xs transition-colors"
@@ -2435,7 +2422,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
               )}
 
               {/* Or Direct Image URL */}
-              {!newStoryImageUrl && (
+              {!newStoryImageUrl && !storyLocalImagePreview && (
                 <input
                   type="url"
                   value={newStoryImageUrl}
@@ -2484,7 +2471,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={!newStoryImageUrl}
+                  disabled={!newStoryImageUrl && !storyLocalImagePreview}
                   className="px-4 py-1.5 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-40 text-primary-foreground text-xs font-bold flex items-center gap-1.5 shadow-sm"
                 >
                   <Send className="w-3.5 h-3.5" />

@@ -142,23 +142,6 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Action Controls & User Identity */}
       <div className="flex items-center gap-1.5 sm:gap-2">
         
-<<<<<<< HEAD
-        {/* Live Sermon Broadcast Button */}
-        {isLiveSermon && notifSettings.liveStreams && onOpenLiveSermon && (
-          <button
-            id="btn-live-sermon-header"
-            onClick={onOpenLiveSermon}
-            title="Apostle Joe Daniels Live Service • Tap to Stream"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500/15 text-rose-500 border border-rose-500/30 hover:bg-rose-500/25 transition-all text-xs font-semibold shadow-sm cursor-pointer"
-          >
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-            <Radio className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-bold uppercase tracking-wider hidden sm:inline">LIVE SERVICE</span>
-          </button>
-        )}
-
-=======
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
         {/* Direct Messages Button */}
         {!isGuest && onOpenDirectMessages && (
           <button

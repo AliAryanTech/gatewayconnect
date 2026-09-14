@@ -243,17 +243,11 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   const [groupMediaFilter, setGroupMediaFilter] = useState<'all' | 'image' | 'video' | 'audio'>('all');
   const [stagedLocalMedia, setStagedLocalMedia] = useState<{
     url: string;
-<<<<<<< HEAD
-    type: 'image' | 'video' | 'audio';
-=======
     type: 'image' | 'video' | 'audio' | 'document';
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
     name: string;
     size: string;
   } | null>(null);
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
-<<<<<<< HEAD
-=======
   const directAttachmentInputRef = useRef<HTMLInputElement | null>(null);
   const [stagedDirectAttachment, setStagedDirectAttachment] = useState<{
     url: string;
@@ -291,18 +285,14 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
     refreshThreads();
   };
 
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
 
   const handleLocalMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-<<<<<<< HEAD
-    let mType: 'image' | 'video' | 'audio' = 'image';
-=======
     let mType: 'image' | 'video' | 'audio' | 'document' = 'document';
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
-    if (file.type.startsWith('video/')) mType = 'video';
+    if (file.type.startsWith('image/')) mType = 'image';
+    else if (file.type.startsWith('video/')) mType = 'video';
     else if (file.type.startsWith('audio/')) mType = 'audio';
 
     const sizeStr = file.size > 1024 * 1024
@@ -338,11 +328,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       sender_name: currentUser.full_name,
       sender_avatar: currentUser.avatar_url,
       sender_role: currentUser.role,
-<<<<<<< HEAD
-      text: shareMediaCaption.trim() || (stagedLocalMedia.type === 'video' ? 'Shared a video' : stagedLocalMedia.type === 'audio' ? 'Shared an audio note' : 'Shared a photo'),
-=======
       text: shareMediaCaption.trim() || (stagedLocalMedia.type === 'video' ? 'Shared a video' : stagedLocalMedia.type === 'audio' ? 'Shared an audio note' : stagedLocalMedia.type === 'document' ? stagedLocalMedia.name : 'Shared a photo'),
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
       media_url: stagedLocalMedia.url,
       media_type: stagedLocalMedia.type
     });
@@ -2063,8 +2049,6 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                     : 'bg-card border border-border text-card-foreground rounded-bl-none'
                               }`}
                             >
-<<<<<<< HEAD
-=======
                               {msg.media_url && !isDeleted && (
                                 <div className="mb-2 rounded-lg overflow-hidden border border-white/10">
                                   {msg.media_type === 'image' ? (
@@ -2081,7 +2065,6 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                   )}
                                 </div>
                               )}
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
                               {renderMessageContent(msg)}
                             </div>
 
@@ -2143,8 +2126,6 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                   </div>
 
                   {/* Message Input Box */}
-<<<<<<< HEAD
-=======
                   {stagedDirectAttachment && (
                     <div className="px-3 py-2 bg-card border-t border-border flex items-center justify-between gap-3 text-xs">
                       <div className="flex items-center gap-2 min-w-0">
@@ -2157,7 +2138,6 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                       </div>
                     </div>
                   )}
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -2165,13 +2145,10 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     }}
                     className="p-3 bg-card border-t border-border flex items-center gap-2"
                   >
-<<<<<<< HEAD
-=======
                     <input ref={directAttachmentInputRef} type="file" className="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onChange={handleDirectAttachmentSelect} />
                     <button type="button" onClick={() => directAttachmentInputRef.current?.click()} title="Attach media or document" className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary border border-border shrink-0">
                       <Paperclip className="w-4 h-4" />
                     </button>
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
                     <input
                       type="text"
                       value={inputText}
@@ -2273,7 +2250,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                             )}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-xs sm:text-sm text-foreground group-hover/hdr:text-primary flex items-center gap-1.5 truncate transition-colors">
+                            <h3 className="font-semibold text-[13px] sm:text-sm text-foreground group-hover/hdr:text-primary flex items-center gap-1 truncate transition-colors">
                               <span className="truncate">{activeGroup.name}</span>
                               {activeGroup.is_paid && (
                                 <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20 shrink-0">
@@ -2287,7 +2264,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                 <span className="truncate font-mono">{groupTypingUserName} is typing...</span>
                               </p>
                             ) : (
-                              <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 truncate">
+                              <p className="text-[9px] sm:text-[10px] text-muted-foreground flex items-center gap-1 truncate">
                                 <span>{activeGroup.member_ids.length} members</span>
                                 <span>•</span>
                                 <span className="text-primary font-medium">Group Info</span>
@@ -2681,18 +2658,6 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                       }}
                                       className="mb-2 rounded-lg overflow-hidden max-w-xs cursor-pointer group/media relative border border-border shadow-sm"
                                     >
-<<<<<<< HEAD
-                                      <img
-                                        src={msg.media_url}
-                                        alt="Group Media"
-                                        className="w-full max-h-60 object-cover group-hover/media:scale-105 transition-transform duration-200"
-                                      />
-                                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
-                                        <span className="p-1 px-2.5 rounded-full bg-black/75 text-white text-[10px] flex items-center gap-1 font-semibold">
-                                          <ImageIcon className="w-3 h-3" /> View Photo
-                                        </span>
-                                      </div>
-=======
                                       {msg.media_type === 'image' ? (
                                         <img src={msg.media_url} alt="Group Media" className="w-full max-h-60 object-cover group-hover/media:scale-105 transition-transform duration-200" />
                                       ) : msg.media_type === 'video' ? (
@@ -2704,7 +2669,6 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                           <FileText className="w-4 h-4" /> <span className="truncate">{msg.text || 'Download document'}</span>
                                         </a>
                                       )}
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
                                     </div>
                                   )}
 
@@ -2888,10 +2852,14 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                             }}
                             className="p-3 bg-card border-t border-border flex items-center gap-2"
                           >
-<<<<<<< HEAD
-=======
                             {/* Media / document attachment */}
-                            <input ref={mediaFileInputRef} type="file" className="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onChange={handleLocalMediaSelect} />
+                            <input
+                              ref={mediaFileInputRef}
+                              type="file"
+                              className="hidden"
+                              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+                              onChange={handleLocalMediaSelect}
+                            />
                             <button
                               type="button"
                               onClick={() => mediaFileInputRef.current?.click()}
@@ -2901,7 +2869,26 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                               <Paperclip className="w-4 h-4" />
                             </button>
 
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
+                            {/* Share Link button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const url = window.prompt('Paste a link to share in this group');
+                                if (!url) return;
+                                const trimmed = url.trim();
+                                if (!/^https?:\/\//i.test(trimmed)) {
+                                  alert('Please enter a valid link starting with http:// or https://');
+                                  return;
+                                }
+                                setGroupInputText(prev => prev ? `${prev} ${trimmed}` : trimmed);
+                                setTimeout(() => groupInputRef.current?.focus(), 50);
+                              }}
+                              title="Add link"
+                              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary border border-border shrink-0"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </button>
+
                             {/* Quick @ Tag button */}
                             <button
                               type="button"
@@ -2977,7 +2964,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       {/* ========================================================================= */}
       {showPaymentModal && paymentTargetGroup && (
         <div 
-          className="fixed inset-0 z-60 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3"
+          className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={() => setShowPaymentModal(false)}
         >
           <div 
@@ -3428,22 +3415,25 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
 
         return (
           <div 
-            className="fixed inset-0 z-60 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3"
+            className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={() => {
               setShowGroupInfoModal(false);
               setIsEditingGroupDetails(false);
             }}
           >
             <div 
-              className="bg-card border border-border rounded-2xl max-w-sm w-full p-4 space-y-3 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150 max-h-[85vh] flex flex-col"
+              className="bg-[#071018] text-white border border-white/10 sm:rounded-[28px] rounded-t-[28px] max-w-md w-full p-0 space-y-0 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-150 max-h-[92vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between border-b border-border pb-2">
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-primary" />
-                  <h3 className="font-serif-church font-bold text-sm text-foreground">
-                    Group Info
-                  </h3>
+              <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-[#101b24] shrink-0">
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => { setShowGroupInfoModal(false); setIsEditingGroupDetails(false); }} className="p-1.5 rounded-full hover:bg-white/10 text-white/70">
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <div>
+                    <h3 className="font-bold text-sm text-white">Group info</h3>
+                    <p className="text-[9px] text-white/40">Gateway fellowship</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5">
                   {isUserGroupAdmin && !isEditingGroupDetails && (
@@ -3453,7 +3443,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                         setEditGroupDesc(activeGroup.description);
                         setIsEditingGroupDetails(true);
                       }}
-                      className="p-1 px-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                      className="p-1 px-2 rounded-lg bg-white/5 hover:bg-white/10 text-white text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                     >
                       <Edit3 className="w-3 h-3 text-primary" />
                       <span>Edit</span>
@@ -3464,13 +3454,14 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                       setShowGroupInfoModal(false);
                       setIsEditingGroupDetails(false);
                     }}
-                    className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    className="p-1.5 rounded-full hover:bg-white/10 text-white/60 transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
+              <div className="overflow-y-auto p-3 sm:p-4 space-y-3">
               {/* Group Header Info / Edit Form */}
               {isEditingGroupDetails ? (
                 <div className="p-2.5 rounded-xl bg-secondary/30 border border-border space-y-2 text-xs">
@@ -3515,21 +3506,22 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="text-center space-y-1 py-0.5">
-                  <div className="w-12 h-12 rounded-xl border border-border overflow-hidden bg-secondary mx-auto flex items-center justify-center text-base font-bold text-primary shadow-sm">
+                <div className="rounded-2xl bg-[#101b24] border border-white/7 p-4 text-center space-y-2">
+                  <div className="w-20 h-20 rounded-full border-4 border-[#00a884]/30 overflow-hidden bg-[#17232c] mx-auto flex items-center justify-center text-xl font-black text-[#63d9bb] shadow-lg">
                     {activeGroup.avatar_url ? (
                       <img src={activeGroup.avatar_url} alt={activeGroup.name} className="w-full h-full object-cover" />
                     ) : (
                       activeGroup.name.slice(0, 2).toUpperCase()
                     )}
                   </div>
-                  <h4 className="font-bold text-sm text-foreground">{activeGroup.name}</h4>
-                  <p className="text-[11px] text-muted-foreground max-w-xs mx-auto line-clamp-2 leading-tight">{activeGroup.description}</p>
+                  <h4 className="font-bold text-base text-white">{activeGroup.name}</h4>
+                  <p className="text-[10px] text-white/45">{activeGroup.member_ids.length} participants</p>
+                  <p className="text-[10px] text-white/65 max-w-xs mx-auto line-clamp-3 leading-relaxed">{activeGroup.description || 'Gateway fellowship group'}</p>
                 </div>
               )}
 
               {/* Group Meta Info */}
-              <div className="p-2.5 rounded-xl bg-secondary/40 border border-border grid grid-cols-2 gap-2 text-[11px]">
+              <div className="p-2.5 rounded-xl bg-secondary/40 border border-border grid grid-cols-2 gap-2 text-[10px]">
                 <div>
                   <span className="block text-[10px] uppercase text-muted-foreground">Leader</span>
                   <span className="font-semibold text-foreground truncate block">{activeGroup.creator_name}</span>
@@ -3558,7 +3550,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     <span>Admin Controls</span>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px]">
+                  <div className="flex items-center justify-between text-[10px]">
                     <span className="text-foreground font-medium">Only Admins Post Messages</span>
                     <button
                       onClick={() => {
@@ -3577,7 +3569,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border">
+                  <div className="flex items-center justify-between text-[10px] pt-1 border-t border-border">
                     <span className="text-foreground font-medium">Only Admins Add Members</span>
                     <button
                       onClick={() => {
@@ -3596,7 +3588,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border">
+                  <div className="flex items-center justify-between text-[10px] pt-1 border-t border-border">
                     <div className="truncate pr-2">
                       <span className="text-foreground font-medium block">Reset Invite Link</span>
                       <span className="text-[9px] text-muted-foreground">Previous links will immediately be revoked</span>
@@ -3771,7 +3763,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                       StorageService.togglePinChatGroup(activeGroup.id, currentUser.id);
                       refreshGroupsData();
                     }}
-                    className={`py-1.5 px-2 rounded-lg border text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm transition-colors cursor-pointer ${
+                    className={`py-1.5 px-2 rounded-lg border text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm transition-colors cursor-pointer ${
                       isGroupPinned
                         ? 'bg-primary/15 border-primary text-primary'
                         : 'bg-secondary border-border text-foreground hover:bg-secondary/80'
@@ -3784,7 +3776,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleCopyLink(activeGroup.invite_code)}
-                    className="py-1.5 px-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[11px] flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                    className="py-1.5 px-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] flex items-center justify-center gap-1 shadow-sm cursor-pointer"
                   >
                     <Copy className="w-3 h-3" />
                     <span>Invite</span>
@@ -3801,7 +3793,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                         title: activeGroup.name
                       });
                     }}
-                    className="py-1.5 px-2 rounded-lg bg-secondary hover:bg-secondary/80 border border-border text-foreground text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm transition-colors cursor-pointer"
+                    className="py-1.5 px-2 rounded-lg bg-secondary hover:bg-secondary/80 border border-border text-foreground text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm transition-colors cursor-pointer"
                     title="Clear chat history from your device"
                   >
                     <Trash2 className="w-3 h-3 text-destructive" />
@@ -3814,7 +3806,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowExitGroupConfirm(true)}
-                    className="w-full py-1.5 rounded-lg bg-destructive/10 hover:bg-destructive/20 border border-destructive/25 text-destructive text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                    className="w-full py-1.5 rounded-lg bg-destructive/10 hover:bg-destructive/20 border border-destructive/25 text-destructive text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Exit Group</span>
@@ -3822,6 +3814,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                 )}
               </div>
             </div>
+          </div>
           </div>
         );
       })()}
@@ -3951,6 +3944,41 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
               >
                 Clear Chat
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GROUP ATTACHMENT PREVIEW / CONFIRMATION */}
+      {showShareMediaPrompt && stagedLocalMedia && (
+        <div
+          className="fixed inset-0 z-[75] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
+          onClick={() => {
+            setShowShareMediaPrompt(false);
+            setStagedLocalMedia(null);
+            setShareMediaCaption('');
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-foreground">Send attachment</h3>
+                <p className="text-[10px] text-muted-foreground truncate">{stagedLocalMedia.name} • {stagedLocalMedia.size}</p>
+              </div>
+              <button type="button" onClick={() => { setShowShareMediaPrompt(false); setStagedLocalMedia(null); setShareMediaCaption(''); }} className="p-1.5 rounded-full hover:bg-secondary text-muted-foreground"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="rounded-xl overflow-hidden border border-border bg-secondary/30 min-h-28 flex items-center justify-center">
+                {stagedLocalMedia.type === 'image' && <img src={stagedLocalMedia.url} alt={stagedLocalMedia.name} className="max-h-64 w-full object-contain" />}
+                {stagedLocalMedia.type === 'video' && <video src={stagedLocalMedia.url} controls className="max-h-64 w-full object-contain" />}
+                {stagedLocalMedia.type === 'audio' && <div className="w-full p-5 flex flex-col items-center gap-3"><Music className="w-9 h-9 text-primary" /><audio src={stagedLocalMedia.url} controls className="w-full" /></div>}
+                {stagedLocalMedia.type === 'document' && <div className="p-6 text-center"><FileText className="w-10 h-10 text-primary mx-auto mb-2" /><p className="text-xs font-semibold text-foreground break-all">{stagedLocalMedia.name}</p><p className="text-[10px] text-muted-foreground mt-1">Document ready to send</p></div>}
+              </div>
+              <input type="text" value={shareMediaCaption} onChange={(e) => setShareMediaCaption(e.target.value)} placeholder="Add a caption (optional)" className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary" />
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { setShowShareMediaPrompt(false); setStagedLocalMedia(null); setShareMediaCaption(''); }} className="flex-1 py-2.5 rounded-xl bg-secondary border border-border text-xs font-bold text-foreground">Cancel</button>
+                <button type="button" onClick={handleConfirmSendMedia} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"><Send className="w-3.5 h-3.5" />Send</button>
+              </div>
             </div>
           </div>
         </div>

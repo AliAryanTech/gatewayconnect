@@ -69,9 +69,6 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-<<<<<<< HEAD
-  // ... your Paynow routes unchanged ...
-=======
   // Paynow server-side proxy routes. Keeping the Integration Key on the server
   // avoids exposing merchant credentials in the browser and fixes the 404 that
   // occurred when this Node server handled /api/paynow/* requests.
@@ -208,7 +205,6 @@ const server = createServer(async (request, response) => {
     return;
   }
 
->>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
 
   if (requestUrl.pathname === '/' || requestUrl.pathname === '/health') {
     sendJson(response, 200, { service: 'gateway-connect-live', connected: clients.size });
