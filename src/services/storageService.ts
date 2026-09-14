@@ -2508,47 +2508,6 @@ export class StorageService {
     return newMsg;
   }
 
-  static sendDirectMessageWithMedia(
-    senderId: string,
-    receiverId: string,
-    text: string,
-    media?: { url: string; type: 'image' | 'video' | 'audio' | 'document'; name?: string },
-    replyTo?: { id: string; sender_name: string; text: string }
-  ): DirectMessage {
-    const all = getLocal<DirectMessage[]>(KEYS.DIRECT_MESSAGES, []);
-    const newMsg: DirectMessage = {
-      id: `dm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      sender_id: senderId,
-      receiver_id: receiverId,
-      text: text.trim(),
-      created_at: new Date().toISOString(),
-      is_read: false,
-      reply_to: replyTo,
-      media_url: media?.url,
-      media_type: media?.type
-    };
-    all.push(newMsg);
-    setLocal(KEYS.DIRECT_MESSAGES, all);
-    SupabaseSyncService.syncDirectMessage(newMsg).catch(() => {});
-    try {
-      const sender = this.getAllUsers().find(u => u.id === senderId || arePhoneNumbersEqual(u.phone, senderId));
-      this.addAppNotification({
-        title: `Message from ${sender?.full_name || 'A believer'}`,
-        message: text.trim().slice(0, 100),
-        type: 'chat',
-        recipient_id: receiverId,
-        actor_id: senderId,
-        actor_name: sender?.full_name || 'A believer',
-        actor_avatar: sender?.avatar_url
-      });
-    } catch {}
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated', { detail: newMsg }));
-      window.dispatchEvent(new CustomEvent('gcz_dms_updated'));
-    }
-    return newMsg;
-  }
-
   static receiveIncomingDirectMessage(message: DirectMessage): void {
     if (!message) return;
     const all = getLocal<DirectMessage[]>(KEYS.DIRECT_MESSAGES, []);
