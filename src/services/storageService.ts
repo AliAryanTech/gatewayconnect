@@ -208,10 +208,14 @@ export class StorageService {
   static getCurrentUser(): User | null {
     const saved = getLocal<User | null>(KEYS.CURRENT_USER, null);
     if (saved) {
-      if (saved.id === 'usr_developer' || saved.role === 'developer' || saved.phone === '0780699988') {
-        if (saved.full_name !== 'mr_juice7' || saved.handle !== '@mr_juice7') {
+      if (saved.id === 'usr_developer' || saved.role === 'developer' || arePhoneNumbersEqual(saved.phone, '0780699988')) {
+        if (saved.full_name !== 'mr_juice7' || saved.handle !== '@mr_juice7' || saved.role !== 'developer' || !saved.is_verified) {
           saved.full_name = 'mr_juice7';
           saved.handle = '@mr_juice7';
+          saved.role = 'developer';
+          saved.is_verified = true;
+          saved.badge_type = 'gold';
+          saved.is_premium = true;
           setLocal(KEYS.CURRENT_USER, saved);
         }
       }
@@ -246,7 +250,7 @@ export class StorageService {
       }
     }
     // Strictly enforce single developer account: phone 0780699988, password juice2026, handle @mr_juice7, username mr_juice7
-    const devUsers = saved.filter(u => u.role === 'developer' || u.phone === '0780699988' || u.handle === '@mr_juice7');
+    const devUsers = saved.filter(u => u.role === 'developer' || arePhoneNumbersEqual(u.phone, '0780699988') || u.handle === '@mr_juice7' || u.handle === '@mrjuice017');
     if (devUsers.length > 1) {
       const primary = devUsers.find(u => u.id === 'usr_developer') || devUsers[0];
       const dupes = new Set(devUsers.filter(u => u !== primary).map(u => u.id));
@@ -255,14 +259,25 @@ export class StorageService {
       saved.push(...remaining);
       changed = true;
     }
-    const devUser = saved.find(u => u.id === 'usr_developer' || u.role === 'developer' || u.phone === '0780699988');
+    let devUser = saved.find(u => u.id === 'usr_developer' || u.role === 'developer' || arePhoneNumbersEqual(u.phone, '0780699988'));
+    if (!devUser) {
+      const initDev = INITIAL_USERS.find(u => u.id === 'usr_developer');
+      if (initDev) {
+        saved.push(initDev);
+        devUser = initDev;
+        changed = true;
+      }
+    }
     if (devUser) {
-      if (devUser.phone !== '0780699988' || devUser.password !== 'juice2026' || devUser.handle !== '@mr_juice7' || devUser.full_name !== 'mr_juice7') {
+      if (devUser.phone !== '0780699988' || devUser.password !== 'juice2026' || devUser.handle !== '@mr_juice7' || devUser.full_name !== 'mr_juice7' || devUser.role !== 'developer' || !devUser.is_verified) {
         devUser.phone = '0780699988';
         devUser.password = 'juice2026';
         devUser.handle = '@mr_juice7';
         devUser.full_name = 'mr_juice7';
         devUser.role = 'developer';
+        devUser.is_verified = true;
+        devUser.badge_type = 'gold';
+        devUser.is_premium = true;
         changed = true;
       }
     }
@@ -2077,6 +2092,15 @@ export class StorageService {
   }
 
   static isUserBanned(userIdOrPhone: string): { isBanned: boolean; reason?: string; banned_at?: string } {
+    if (!userIdOrPhone) return { isBanned: false };
+    if (
+      userIdOrPhone === 'usr_developer' ||
+      userIdOrPhone === 'usr_apostle_joe' ||
+      userIdOrPhone === 'usr_prophetess_melinda' ||
+      arePhoneNumbersEqual(userIdOrPhone, '0780699988')
+    ) {
+      return { isBanned: false };
+    }
     const bannedMap = this.getBannedUsers();
     // Check by user ID or clean phone
     const clean = userIdOrPhone.replace(/[^0-9]/g, '');
@@ -2092,6 +2116,16 @@ export class StorageService {
   }
 
   static banUser(userIdOrPhone: string, reason: string = 'Violation of Community Fellowship Guidelines or Administrative Restraint'): void {
+    if (!userIdOrPhone) return;
+    if (
+      userIdOrPhone === 'usr_developer' ||
+      userIdOrPhone === 'usr_apostle_joe' ||
+      userIdOrPhone === 'usr_prophetess_melinda' ||
+      arePhoneNumbersEqual(userIdOrPhone, '0780699988')
+    ) {
+      console.warn('Administrative accounts are protected and immune to bans');
+      return;
+    }
     const map = this.getBannedUsers();
     map[userIdOrPhone] = {
       banned_at: new Date().toISOString(),
@@ -2455,9 +2489,29 @@ export class StorageService {
         is_read: true
       }
     ]);
+    const allUsers = this.getAllUsers();
+    const userA = allUsers.find(u => u.id === userAId || arePhoneNumbersEqual(u.phone, userAId));
+    const userB = allUsers.find(u => u.id === userBId || arePhoneNumbersEqual(u.phone, userBId));
+
+    const matchesUserA = (id: string) => {
+      if (id === userAId) return true;
+      if (userA && (id === userA.id || arePhoneNumbersEqual(id, userA.phone))) return true;
+      if ((userAId === 'usr_developer' || userA?.role === 'developer' || arePhoneNumbersEqual(userA?.phone, '0780699988')) && (id === 'usr_developer' || arePhoneNumbersEqual(id, '0780699988'))) return true;
+      if ((userAId === 'usr_apostle_joe' || userA?.id === 'usr_apostle_joe') && id === 'usr_apostle_joe') return true;
+      return false;
+    };
+
+    const matchesUserB = (id: string) => {
+      if (id === userBId) return true;
+      if (userB && (id === userB.id || arePhoneNumbersEqual(id, userB.phone))) return true;
+      if ((userBId === 'usr_developer' || userB?.role === 'developer' || arePhoneNumbersEqual(userB?.phone, '0780699988')) && (id === 'usr_developer' || arePhoneNumbersEqual(id, '0780699988'))) return true;
+      if ((userBId === 'usr_apostle_joe' || userB?.id === 'usr_apostle_joe') && id === 'usr_apostle_joe') return true;
+      return false;
+    };
+
     return all.filter(m => {
-      const matchThread = (m.sender_id === userAId && m.receiver_id === userBId) ||
-                          (m.sender_id === userBId && m.receiver_id === userAId);
+      const matchThread = (matchesUserA(m.sender_id) && matchesUserB(m.receiver_id)) ||
+                          (matchesUserB(m.sender_id) && matchesUserA(m.receiver_id));
       if (!matchThread) return false;
       if (currentUserId && m.deleted_for_users && m.deleted_for_users.includes(currentUserId)) {
         return false;
@@ -2560,23 +2614,41 @@ export class StorageService {
   static getAllDirectMessageThreads(currentUserId: string): DmThread[] {
     const allMsgs = getLocal<DirectMessage[]>(KEYS.DIRECT_MESSAGES, []);
     const allUsers = this.getAllUsers();
-    const threadMap = new Map<string, { lastMsg: DirectMessage; unread: number }>();
+    const threadMap = new Map<string, { lastMsg: DirectMessage; unread: number; targetUserId: string }>();
+
+    const currentUserObj = allUsers.find(u => u.id === currentUserId || arePhoneNumbersEqual(u.phone, currentUserId));
+    const isDev = currentUserId === 'usr_developer' || (currentUserObj && (currentUserObj.role === 'developer' || arePhoneNumbersEqual(currentUserObj.phone, '0780699988')));
+    const isApostle = currentUserId === 'usr_apostle_joe' || (currentUserObj && currentUserObj.id === 'usr_apostle_joe');
+
+    const matchesCurrentUser = (id: string) => {
+      if (id === currentUserId) return true;
+      if (currentUserObj && (id === currentUserObj.id || arePhoneNumbersEqual(id, currentUserObj.phone))) return true;
+      if (isDev && (id === 'usr_developer' || arePhoneNumbersEqual(id, '0780699988'))) return true;
+      if (isApostle && id === 'usr_apostle_joe') return true;
+      return false;
+    };
 
     allMsgs.forEach(msg => {
-      let otherId: string | null = null;
-      if (msg.sender_id === currentUserId) {
-        otherId = msg.receiver_id;
-      } else if (msg.receiver_id === currentUserId) {
-        otherId = msg.sender_id;
+      let otherRawId: string | null = null;
+      let isIncoming = false;
+      if (matchesCurrentUser(msg.sender_id)) {
+        otherRawId = msg.receiver_id;
+      } else if (matchesCurrentUser(msg.receiver_id)) {
+        otherRawId = msg.sender_id;
+        isIncoming = true;
       }
-      if (otherId) {
-        const existing = threadMap.get(otherId);
+      if (otherRawId) {
+        // Resolve canonical user ID for other party
+        const otherUser = allUsers.find(u => u.id === otherRawId || arePhoneNumbersEqual(u.phone, otherRawId));
+        const canonicalId = otherUser ? otherUser.id : otherRawId;
+        const existing = threadMap.get(canonicalId);
         const isNewer = !existing || new Date(msg.created_at) > new Date(existing.lastMsg.created_at);
-        const isUnread = !msg.is_read && msg.receiver_id === currentUserId;
+        const isUnread = !msg.is_read && isIncoming;
         if (isNewer) {
-          threadMap.set(otherId, {
+          threadMap.set(canonicalId, {
             lastMsg: msg,
-            unread: (existing?.unread || 0) + (isUnread ? 1 : 0)
+            unread: (existing?.unread || 0) + (isUnread ? 1 : 0),
+            targetUserId: canonicalId
           });
         } else if (isUnread && existing) {
           existing.unread += 1;
@@ -2586,7 +2658,7 @@ export class StorageService {
 
     // Seed default conversations with Apostle Joe Daniels and Lead Developer if empty
     ['usr_apostle_joe', 'usr_developer'].forEach(id => {
-      if (id !== currentUserId && !threadMap.has(id)) {
+      if (!matchesCurrentUser(id) && !threadMap.has(id)) {
         threadMap.set(id, {
           lastMsg: {
             id: `dm_welcome_${id}`,
@@ -2598,14 +2670,15 @@ export class StorageService {
             created_at: new Date(Date.now() - 7200000).toISOString(),
             is_read: true
           },
-          unread: 0
+          unread: 0,
+          targetUserId: id
         });
       }
     });
 
     const threads: DmThread[] = [];
-    threadMap.forEach((val, otherId) => {
-      const user = allUsers.find(u => u.id === otherId);
+    threadMap.forEach((val, canonicalId) => {
+      const user = allUsers.find(u => u.id === canonicalId || arePhoneNumbersEqual(u.phone, canonicalId));
       if (user) {
         threads.push({
           other_user: user,
@@ -2930,8 +3003,8 @@ export class StorageService {
     if (!target) {
       return { success: false, error: 'Target account not found.' };
     }
-    if (target.role === 'super_admin') {
-      return { success: false, error: 'Super Admin account is system protected and cannot be deleted.' };
+    if (target.role === 'super_admin' || target.role === 'developer' || target.id === 'usr_developer' || target.id === 'usr_apostle_joe') {
+      return { success: false, error: 'Administrative and Developer accounts are system protected and cannot be deleted.' };
     }
     allUsers = allUsers.filter(u => u.id !== target.id);
     setLocal(KEYS.ALL_USERS, allUsers);
@@ -3303,6 +3376,60 @@ export class StorageService {
         changed = true;
       }
     }
+
+    // Migrate & synchronize creators, administrative privileges, and members
+    list.forEach(g => {
+      if (g.id === 'group_passion_ladies') {
+        if (g.created_by !== 'usr_prophetess_melinda') {
+          g.created_by = 'usr_prophetess_melinda';
+          g.creator_name = 'Prophetess Melinda Daniels';
+          changed = true;
+        }
+        if (!g.admin_ids) g.admin_ids = [];
+        ['usr_prophetess_melinda', 'usr_apostle_joe', 'usr_developer'].forEach(id => {
+          if (!g.admin_ids.includes(id)) {
+            g.admin_ids.push(id);
+            changed = true;
+          }
+        });
+        if (!g.member_ids) g.member_ids = [];
+        ['usr_prophetess_melinda', 'usr_apostle_joe', 'usr_developer'].forEach(id => {
+          if (!g.member_ids.includes(id)) {
+            g.member_ids.push(id);
+            changed = true;
+          }
+        });
+      } else if (['group_ignite_worship', 'group_pride_of_lions', 'group_foundation_school', 'group_gymstars_foundation', 'group_isn_mentorship'].includes(g.id)) {
+        if (g.created_by !== 'usr_apostle_joe') {
+          g.created_by = 'usr_apostle_joe';
+          g.creator_name = 'Apostle Joe Daniels';
+          changed = true;
+        }
+        if (!g.admin_ids) g.admin_ids = [];
+        ['usr_apostle_joe', 'usr_developer'].forEach(id => {
+          if (!g.admin_ids.includes(id)) {
+            g.admin_ids.push(id);
+            changed = true;
+          }
+        });
+        if (g.id === 'group_isn_mentorship' && !g.admin_ids.includes('usr_prophetess_melinda')) {
+          g.admin_ids.push('usr_prophetess_melinda');
+          changed = true;
+        }
+        if (!g.member_ids) g.member_ids = [];
+        ['usr_apostle_joe', 'usr_developer'].forEach(id => {
+          if (!g.member_ids.includes(id)) {
+            g.member_ids.push(id);
+            changed = true;
+          }
+        });
+        if (g.id === 'group_isn_mentorship' && !g.member_ids.includes('usr_prophetess_melinda')) {
+          g.member_ids.push('usr_prophetess_melinda');
+          changed = true;
+        }
+      }
+    });
+
     if (changed) {
       setLocal(KEYS.CHAT_GROUPS, list);
     }
