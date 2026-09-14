@@ -49,7 +49,8 @@ import {
   Play,
   Film,
   Mic,
-  Upload
+  Upload,
+  XCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { User, DirectMessage, DmThread, ChatGroup, ChatGroupMessage, GroupMembership, GroupInvite } from '../../types';
@@ -331,7 +332,8 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   const isAdminOrDev = ['super_admin', 'developer', 'pastor', 'moderator'].includes(currentUser.role) || isPrivilegedAdminOrDev;
   const isSuperAdminOrDev = ['super_admin', 'developer'].includes(currentUser.role) || isPrivilegedAdminOrDev;
 
-  const handleBackOrClose = () => {
+  // Closes whatever active chat or sub-view is on top, remaining inside the chat box/inbox list
+  const handleCloseActiveChat = () => {
     if (selectedMediaPreview) {
       setSelectedMediaPreview(null);
       return;
@@ -388,9 +390,51 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       setShowNewChatPicker(false);
       return;
     }
-    if (activeUserId || activeGroupId) {
-      setActiveUserId(null);
-      setActiveGroupId('');
+    // Close active chat and remain inside the chat box
+    setActiveUserId(null);
+    setActiveGroupId('');
+  };
+
+  // Closes all open chats and layered views, leaving user on the chat list
+  const handleCloseAllChats = () => {
+    setSelectedMediaPreview(null);
+    setShowMediaBrowserModal(false);
+    setShowShareMediaPrompt(false);
+    setDeleteConfirmModal({ isOpen: false, isMultiple: false, canDeleteForEveryone: false, isGroup: false });
+    setClearChatConfirmModal({ isOpen: false, isGroup: false, title: '' });
+    setShowExitGroupConfirm(false);
+    setShowPaymentModal(false);
+    setShowJoinByCodeModal(false);
+    setShowAddMemberModal(false);
+    setShowCreateGroupModal(false);
+    setShowGroupInfoModal(false);
+    setViewUserProfile(null);
+    if (isSelectMode) handleCancelSelectMode();
+    setShowNewChatPicker(false);
+    setActiveUserId(null);
+    setActiveGroupId('');
+  };
+
+  const handleBackOrClose = () => {
+    if (
+      selectedMediaPreview ||
+      showMediaBrowserModal ||
+      showShareMediaPrompt ||
+      deleteConfirmModal.isOpen ||
+      clearChatConfirmModal.isOpen ||
+      showExitGroupConfirm ||
+      showPaymentModal ||
+      showJoinByCodeModal ||
+      showAddMemberModal ||
+      showCreateGroupModal ||
+      showGroupInfoModal ||
+      viewUserProfile ||
+      isSelectMode ||
+      showNewChatPicker ||
+      activeUserId ||
+      activeGroupId
+    ) {
+      handleCloseActiveChat();
       return;
     }
     onClose();
@@ -1458,18 +1502,22 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4"
-      onClick={handleBackOrClose}
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
       <div 
-        className="bg-card border-0 sm:border sm:border-border rounded-none sm:rounded-xl w-full max-w-4xl h-full sm:h-[92vh] sm:max-h-[780px] flex flex-col shadow-2xl overflow-hidden text-card-foreground animate-in zoom-in-95 duration-150"
+        className="bg-card border-t sm:border border-border rounded-t-3xl sm:rounded-2xl w-full max-w-4xl h-[94vh] sm:h-[90vh] sm:max-h-[780px] flex flex-col shadow-2xl overflow-hidden text-card-foreground animate-in slide-in-from-bottom-5 sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        
+        {/* Mobile Pull/Drag handle indicator */}
+        <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto my-1.5 sm:hidden shrink-0" />
+
         {/* Top Header Bar & Mode Selector */}
-        <div className={`h-14 bg-card border-b border-border px-3 sm:px-4 flex items-center justify-between shrink-0 ${
-          (activeTab === 'direct' ? activeUserId : activeGroupId) ? 'hidden sm:flex' : 'flex'
-        }`}>
+        <div className="h-13 bg-card border-b border-border px-3 sm:px-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <button
@@ -1531,16 +1579,31 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {copyFeedback && (
-              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/30 animate-fade-in font-medium">
+              <span className="hidden sm:inline text-[11px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/30 animate-fade-in font-medium">
                 {copyFeedback}
               </span>
             )}
+
+            {/* Quick close active chat button if a conversation is open */}
+            {(activeUserId || activeGroupId) && (
+              <button
+                onClick={handleCloseActiveChat}
+                className="text-xs px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground border border-border flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                title="Close active chat (stay in chat box)"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Close Chat</span>
+              </button>
+            )}
+
+            {/* Top Outer X Button: ALWAYS closes the chatting app back to home or previous page */}
             <button
-              onClick={handleBackOrClose}
-              className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              title="Close"
+              onClick={onClose}
+              className="p-1.5 sm:p-2 rounded-xl hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+              title="Close chatting app (back to previous page)"
+              aria-label="Close chatting app"
             >
               <X className="w-5 h-5" />
             </button>

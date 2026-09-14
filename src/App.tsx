@@ -547,7 +547,11 @@ export default function App() {
             setShowDevConsole(false);
             setShowFlutterExport(true);
           }}
-          onSwitchUser={(user) => setCurrentUser(user)}
+          onSwitchUser={(user) => {
+            StorageService.setCurrentUser(user);
+            setCurrentUser(user);
+            refreshAppData();
+          }}
         />
       )}
 

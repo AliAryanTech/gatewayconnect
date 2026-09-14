@@ -255,7 +255,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
   };
 
   // Godmode state
-  const [usersList, setUsersList] = useState<User[]>(StorageService.getAllUsers());
+  const [usersList, setUsersList] = useState<User[]>(() => StorageService.getAllUsers());
   const [godmodeSearch, setGodmodeSearch] = useState('');
   const [penetrateStatus, setPenetrateStatus] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -269,6 +269,22 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
   const [manualPasswordInput, setManualPasswordInput] = useState('');
   const [logsFilter, setLogsFilter] = useState('');
   const logsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Realtime Telemetry & Stream Log states
+  const [isPausedLogs, setIsPausedLogs] = useState<boolean>(false);
+  const [autoScrollLogs, setAutoScrollLogs] = useState<boolean>(true);
+
+  // Bans & Suspension state (Migrated from Admin Panel to Dev Console)
+  const [bannedUsersMap, setBannedUsersMap] = useState<Record<string, { reason: string; banned_at: string; banned_by?: string }>>(() => StorageService.getBannedUsers());
+  const [unbanAppeals, setUnbanAppeals] = useState<UnbanAppeal[]>(() => StorageService.getUnbanAppeals());
+  const [passwordRequests, setPasswordRequests] = useState<PasswordResetRequest[]>(() => StorageService.getPasswordResetRequests());
+  const [banSearch, setBanSearch] = useState('');
+  const [userToBan, setUserToBan] = useState<User | null>(null);
+  const [banReasonInput, setBanReasonInput] = useState('Violation of platform security guidelines');
+  const [selectedPasswordRequest, setSelectedPasswordRequest] = useState<PasswordResetRequest | null>(null);
+  const [tempPasswordToIssue, setTempPasswordToIssue] = useState('');
+  const [copiedTempPass, setCopiedTempPass] = useState(false);
+  const [measuredLatency, setMeasuredLatency] = useState<number | null>(null);
 
   // Ecosystem Sync state
   const [isSyncingEcosystem, setIsSyncingEcosystem] = useState(false);
@@ -529,18 +545,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
     setLogs(prev => [`[${new Date().toLocaleTimeString()}] [DEV_EXPORT] Exported live system telemetry logs to text file`, ...prev]);
   };
 
-  // Bans & Suspension state (Migrated from Admin Panel to Dev Console)
-  const [bannedUsersMap, setBannedUsersMap] = useState<Record<string, { reason: string; banned_at: string; banned_by?: string }>>(StorageService.getBannedUsers());
-  const [unbanAppeals, setUnbanAppeals] = useState<UnbanAppeal[]>(StorageService.getUnbanAppeals());
-  const [passwordRequests, setPasswordRequests] = useState<PasswordResetRequest[]>(StorageService.getPasswordResetRequests());
-  const [banSearch, setBanSearch] = useState('');
-  const [userToBan, setUserToBan] = useState<User | null>(null);
-  const [banReasonInput, setBanReasonInput] = useState('Violation of platform security guidelines');
-  const [selectedPasswordRequest, setSelectedPasswordRequest] = useState<PasswordResetRequest | null>(null);
-  const [tempPasswordToIssue, setTempPasswordToIssue] = useState('');
-  const [copiedTempPass, setCopiedTempPass] = useState(false);
 
-  const [measuredLatency, setMeasuredLatency] = useState<number | null>(null);
 
   const handleTestSupabaseLive = async () => {
     setIsPingingSupabase(true);
@@ -672,9 +677,16 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
           member_id: 'GCZ-DEV-007',
           created_at: new Date().toISOString(),
         };
+        StorageService.saveUser(devUser);
+      } else {
+        StorageService.saveUser(devUser);
       }
       const ok = await SupabaseSyncService.syncUser(devUser);
       setUsersList(StorageService.getAllUsers());
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('gcz_users_synced', { detail: StorageService.getAllUsers() }));
+        window.dispatchEvent(new CustomEvent('gcz_user_profile_updated', { detail: devUser }));
+      }
       if (ok) {
         setLogs(prev => [`[${new Date().toLocaleTimeString()}] [DEV_SYNC] Developer account 0780699988 successfully synced to Supabase ecosystem!`, ...prev]);
       } else {
@@ -1769,8 +1781,10 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                           member_id: 'GCZ-DEV-007',
                           created_at: new Date().toISOString(),
                         };
+                        StorageService.saveUser(devU);
+                        StorageService.setCurrentUser(devU);
                         onSwitchUser(devU);
-                        setLogs(prev => [`[${new Date().toLocaleTimeString()}] [SESSION] Switched active session to Developer mr_juice7`, ...prev]);
+                        setLogs(prev => [`[${new Date().toLocaleTimeString()}] [SESSION] Switched active session to Developer mr_juice7 (Real-time Synced)`, ...prev]);
                       }}
                       className="px-3 py-2 rounded-xl text-xs font-bold bg-purple-600/30 hover:bg-purple-600/40 text-purple-200 border border-purple-500/50 flex items-center gap-2 transition-all cursor-pointer shadow-sm"
                       title="Quickly switch current logged-in session to mr_juice7"

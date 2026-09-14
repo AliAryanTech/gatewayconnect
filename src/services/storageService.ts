@@ -2579,9 +2579,9 @@ export class StorageService {
   // USER LAST SEEN HELPER (WhatsApp Style, except Developer)
   static getUserLastSeen(user: User): string {
     if (!user) return 'offline';
-    // Developer is strictly exempt from last seen
-    if (user.role === 'developer' || user.phone === '0780699988') {
-      return '';
+    // Developer is strictly active & online in the ecosystem
+    if (user.role === 'developer' || user.phone === '0780699988' || user.id === 'usr_developer') {
+      return 'online';
     }
 
     // Check if user is actively watching live stream or in viewers
