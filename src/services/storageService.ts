@@ -4077,6 +4077,9 @@ export class StorageService {
     if (forEveryone) {
       msg.deleted_for_everyone = true;
       msg.text = 'This message was deleted';
+      msg.media_url = undefined;
+      msg.media_type = undefined;
+      msg.reply_to = undefined;
     } else {
       if (!msg.deleted_for_users) msg.deleted_for_users = [];
       if (!msg.deleted_for_users.includes(userId)) {
@@ -4085,7 +4088,11 @@ export class StorageService {
     }
 
     setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
+    SupabaseSyncService.syncDeleteGroupMessage(groupId, messageId, forEveryone).catch(() => {});
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', {
+        detail: { groupId, messageId, message: msg, deletedForEveryone: forEveryone }
+      }));
       window.dispatchEvent(new CustomEvent('gcz_groups_updated'));
     }
     return true;
@@ -4102,20 +4109,43 @@ export class StorageService {
         if (forEveryone) {
           msg.deleted_for_everyone = true;
           msg.text = 'This message was deleted';
+          msg.media_url = undefined;
+          msg.media_type = undefined;
+          msg.reply_to = undefined;
         } else {
           if (!msg.deleted_for_users) msg.deleted_for_users = [];
           if (!msg.deleted_for_users.includes(userId)) {
             msg.deleted_for_users.push(userId);
           }
         }
+        SupabaseSyncService.syncDeleteGroupMessage(groupId, id, forEveryone).catch(() => {});
       }
     });
 
     setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', {
+        detail: { groupId, messageIds, deletedForEveryone: forEveryone }
+      }));
       window.dispatchEvent(new CustomEvent('gcz_groups_updated'));
     }
     return true;
+  }
+
+  static applyRemoteGroupMessageDelete(groupId: string, messageId: string, forEveryone: boolean): void {
+    if (!forEveryone || !groupId || !messageId) return;
+    const allMsgs = getLocal<Record<string, ChatGroupMessage[]>>(KEYS.CHAT_GROUP_MESSAGES, INITIAL_CHAT_GROUP_MESSAGES);
+    const groupMsgs = allMsgs[groupId];
+    if (!groupMsgs) return;
+    const msg = groupMsgs.find(m => m.id === messageId);
+    if (msg) {
+      msg.deleted_for_everyone = true;
+      msg.text = 'This message was deleted';
+      msg.media_url = undefined;
+      msg.media_type = undefined;
+      msg.reply_to = undefined;
+      setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
+    }
   }
 
   static clearChatGroupMessagesForUser(groupId: string, userId: string): boolean {
@@ -4145,6 +4175,8 @@ export class StorageService {
     if (forEveryone) {
       msg.deleted_for_everyone = true;
       msg.text = 'This message was deleted';
+      msg.media_url = undefined;
+      msg.reply_to = undefined;
     } else {
       if (!msg.deleted_for_users) msg.deleted_for_users = [];
       if (!msg.deleted_for_users.includes(userId)) {
@@ -4153,7 +4185,11 @@ export class StorageService {
     }
 
     setLocal(KEYS.DIRECT_MESSAGES, all);
+    SupabaseSyncService.syncDeleteDirectMessage(messageId, forEveryone).catch(() => {});
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated', {
+        detail: { id: messageId, message: msg, deletedForEveryone: forEveryone }
+      }));
       window.dispatchEvent(new CustomEvent('gcz_dms_updated'));
     }
     return true;
@@ -4167,20 +4203,39 @@ export class StorageService {
         if (forEveryone) {
           msg.deleted_for_everyone = true;
           msg.text = 'This message was deleted';
+          msg.media_url = undefined;
+          msg.reply_to = undefined;
         } else {
           if (!msg.deleted_for_users) msg.deleted_for_users = [];
           if (!msg.deleted_for_users.includes(userId)) {
             msg.deleted_for_users.push(userId);
           }
         }
+        SupabaseSyncService.syncDeleteDirectMessage(id, forEveryone).catch(() => {});
       }
     });
 
     setLocal(KEYS.DIRECT_MESSAGES, all);
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated', {
+        detail: { messageIds, deletedForEveryone: forEveryone }
+      }));
       window.dispatchEvent(new CustomEvent('gcz_dms_updated'));
     }
     return true;
+  }
+
+  static applyRemoteDirectMessageDelete(messageId: string, forEveryone: boolean): void {
+    if (!forEveryone || !messageId) return;
+    const all = getLocal<DirectMessage[]>(KEYS.DIRECT_MESSAGES, []);
+    const msg = all.find(m => m.id === messageId);
+    if (msg) {
+      msg.deleted_for_everyone = true;
+      msg.text = 'This message was deleted';
+      msg.media_url = undefined;
+      msg.reply_to = undefined;
+      setLocal(KEYS.DIRECT_MESSAGES, all);
+    }
   }
 
   static clearDirectMessagesForUser(userAId: string, userBId: string, currentUserId: string): boolean {

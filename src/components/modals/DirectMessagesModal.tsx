@@ -141,6 +141,11 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   const [joiningGroup, setJoiningGroup] = useState<ChatGroup | null>(null);
   const [inviteLinkError, setInviteLinkError] = useState<string | null>(null);
 
+  // Pending Group Invites state
+  const [pendingInvites, setPendingInvites] = useState<GroupInvite[]>(() => 
+    currentUser ? StorageService.getGroupInvites(currentUser.id) : []
+  );
+
   // Payment form state
   const [paymentMethod, setPaymentMethod] = useState<'ecocash' | 'innbucks' | 'card'>('ecocash');
   const [paymentPhone, setPaymentPhone] = useState(currentUser.phone || '');
@@ -316,8 +321,107 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
     setTimeout(() => setCopyFeedback(null), 3000);
   };
 
-  const isAdminOrDev = ['super_admin', 'developer', 'pastor', 'moderator'].includes(currentUser.role);
-  const isSuperAdminOrDev = ['super_admin', 'developer'].includes(currentUser.role);
+  const isPrivilegedAdminOrDev = 
+    currentUser.role === 'developer' ||
+    currentUser.role === 'super_admin' ||
+    currentUser.role === 'admin' ||
+    (Boolean(currentUser.phone) && arePhoneNumbersEqual(currentUser.phone, '0780699988')) ||
+    currentUser.id === 'usr_developer' ||
+    currentUser.id === 'usr_apostle_joe';
+  const isAdminOrDev = ['super_admin', 'developer', 'pastor', 'moderator'].includes(currentUser.role) || isPrivilegedAdminOrDev;
+  const isSuperAdminOrDev = ['super_admin', 'developer'].includes(currentUser.role) || isPrivilegedAdminOrDev;
+
+  const handleBackOrClose = () => {
+    if (selectedMediaPreview) {
+      setSelectedMediaPreview(null);
+      return;
+    }
+    if (showMediaBrowserModal) {
+      setShowMediaBrowserModal(false);
+      return;
+    }
+    if (showShareMediaPrompt) {
+      setShowShareMediaPrompt(false);
+      return;
+    }
+    if (deleteConfirmModal.isOpen) {
+      setDeleteConfirmModal({ isOpen: false, isMultiple: false, canDeleteForEveryone: false, isGroup: false });
+      return;
+    }
+    if (clearChatConfirmModal.isOpen) {
+      setClearChatConfirmModal({ isOpen: false, isGroup: false, title: '' });
+      return;
+    }
+    if (showExitGroupConfirm) {
+      setShowExitGroupConfirm(false);
+      return;
+    }
+    if (showPaymentModal) {
+      setShowPaymentModal(false);
+      return;
+    }
+    if (showJoinByCodeModal) {
+      setShowJoinByCodeModal(false);
+      return;
+    }
+    if (showAddMemberModal) {
+      setShowAddMemberModal(false);
+      return;
+    }
+    if (showCreateGroupModal) {
+      setShowCreateGroupModal(false);
+      return;
+    }
+    if (showGroupInfoModal) {
+      setShowGroupInfoModal(false);
+      return;
+    }
+    if (viewUserProfile) {
+      setViewUserProfile(null);
+      return;
+    }
+    if (isSelectMode) {
+      handleCancelSelectMode();
+      return;
+    }
+    if (showNewChatPicker) {
+      setShowNewChatPicker(false);
+      return;
+    }
+    if (activeUserId || activeGroupId) {
+      setActiveUserId(null);
+      setActiveGroupId('');
+      return;
+    }
+    onClose();
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleBackOrClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    isSelectMode,
+    viewUserProfile,
+    showGroupInfoModal,
+    showAddMemberModal,
+    showCreateGroupModal,
+    showNewChatPicker,
+    selectedMediaPreview,
+    showMediaBrowserModal,
+    showShareMediaPrompt,
+    showJoinByCodeModal,
+    showPaymentModal,
+    showExitGroupConfirm,
+    deleteConfirmModal.isOpen,
+    clearChatConfirmModal.isOpen,
+    activeUserId,
+    activeGroupId
+  ]);
 
   // Refresh direct messages threads
   const refreshThreads = () => {
@@ -367,29 +471,29 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
     // Event listeners for local and window-level custom events
     const handleGroupMsgUpdated = (e: any) => {
       const detail = e.detail;
-      if (detail && detail.groupId === activeGroupId) {
-        const msgs = StorageService.getChatGroupMessagesForUser(activeGroupId, currentUser.id);
-        setGroupMessages(msgs);
+      if (detail?.deletedForEveryone && detail?.groupId && detail?.messageId) {
+        StorageService.applyRemoteGroupMessageDelete(detail.groupId, detail.messageId, true);
+      }
+      if (!detail || !detail.groupId || detail.groupId === activeGroupId) {
+        if (activeGroupId) {
+          const msgs = StorageService.getChatGroupMessagesForUser(activeGroupId, currentUser.id);
+          setGroupMessages(msgs);
+        }
       }
       refreshGroupsData();
     };
 
     const handleDirectMsgUpdated = (e: any) => {
-      const msg = e.detail as DirectMessage;
-      if (!msg || !msg.id) return;
-      if (
-        activeUserId &&
-        ((msg.sender_id === activeUserId && msg.receiver_id === currentUser.id) ||
-         (msg.sender_id === currentUser.id && msg.receiver_id === activeUserId))
-      ) {
-        setMessages(prev => {
-          if (prev.some(m => m.id === msg.id)) return prev;
-          return [...prev, msg];
-        });
+      const detail = e.detail;
+      if (detail?.deletedForEveryone && (detail?.id || detail?.messageId)) {
+        StorageService.applyRemoteDirectMessageDelete(detail.id || detail.messageId, true);
+      }
+      if (activeUserId) {
+        const msgs = StorageService.getDirectMessages(currentUser.id, activeUserId, currentUser.id);
+        setMessages(msgs);
       }
       refreshThreads();
     };
-
 
     const handleProfileUpdated = () => {
       refreshThreads();
@@ -423,6 +527,22 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
             if (prev.some(m => m.id === incomingDm.id)) return prev;
             return [...prev, incomingDm];
           });
+        }
+        refreshThreads();
+      },
+      onDeleteGroupMessage: (payload) => {
+        StorageService.applyRemoteGroupMessageDelete(payload.groupId, payload.messageId, payload.forEveryone);
+        if (payload.groupId === activeGroupId) {
+          const msgs = StorageService.getChatGroupMessagesForUser(activeGroupId, currentUser.id);
+          setGroupMessages(msgs);
+        }
+        refreshGroupsData();
+      },
+      onDeleteDirectMessage: (payload) => {
+        StorageService.applyRemoteDirectMessageDelete(payload.messageId, payload.forEveryone);
+        if (activeUserId) {
+          const msgs = StorageService.getDirectMessages(currentUser.id, activeUserId, currentUser.id);
+          setMessages(msgs);
         }
         refreshThreads();
       },
@@ -862,8 +982,8 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   const renderFormattedMessageText = (text: string) => {
     if (text === 'This message was deleted') {
       return (
-        <span className="italic text-white/50 flex items-center gap-1.5 py-0.5">
-          <span className="w-2 h-2 rounded-full bg-white/30 inline-block" />
+        <span className="italic opacity-60 flex items-center gap-1.5 py-0.5">
+          <span className="w-2 h-2 rounded-full bg-current opacity-40 inline-block" />
           <span>This message was deleted</span>
         </span>
       );
@@ -893,10 +1013,10 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   };
 
   // Helper to render message content and interactive official invite cards with 1st "Join" and 2nd "Decline" buttons
-  const renderMessageContent = (msg: { id: string; text: string; sender_id: string }) => {
-    const isDeleted = msg.text === 'This message was deleted';
+  const renderMessageContent = (msg: { id: string; text: string; sender_id: string; deleted_for_everyone?: boolean }) => {
+    const isDeleted = Boolean((msg as any).deleted_for_everyone || msg.text === 'This message was deleted');
     if (isDeleted) {
-      return renderFormattedMessageText(msg.text);
+      return renderFormattedMessageText('This message was deleted');
     }
 
     const hasInviteLink = msg.text.includes('gatewayconnect.church/join/group?code=') || msg.text.includes('Official Group Invitation:');
@@ -1048,7 +1168,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
     if (selectedMessageIds.length === 0) return;
 
     if (isGroup) {
-      const isGroupAdmin = (activeGroup?.admin_ids || [activeGroup?.created_by]).includes(currentUser.id) || isSuperAdminOrDev;
+      const isGroupAdmin = (activeGroup?.admin_ids || [activeGroup?.created_by]).includes(currentUser.id) || isPrivilegedAdminOrDev;
       const allMine = selectedMessageIds.every(id => {
         const m = groupMessages.find(msg => msg.id === id);
         return m?.sender_id === currentUser.id;
@@ -1057,7 +1177,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       setDeleteConfirmModal({
         isOpen: true,
         isMultiple: true,
-        canDeleteForEveryone: allMine || isGroupAdmin,
+        canDeleteForEveryone: allMine || isGroupAdmin || isPrivilegedAdminOrDev,
         isGroup: true
       });
     } else {
@@ -1069,7 +1189,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       setDeleteConfirmModal({
         isOpen: true,
         isMultiple: true,
-        canDeleteForEveryone: allMine || isSuperAdminOrDev,
+        canDeleteForEveryone: allMine || isPrivilegedAdminOrDev,
         isGroup: false
       });
     }
@@ -1080,13 +1200,13 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       const msg = groupMessages.find(m => m.id === msgId);
       if (!msg) return;
       const isMine = msg.sender_id === currentUser.id;
-      const isGroupAdmin = (activeGroup?.admin_ids || [activeGroup?.created_by]).includes(currentUser.id) || isSuperAdminOrDev;
+      const isGroupAdmin = (activeGroup?.admin_ids || [activeGroup?.created_by]).includes(currentUser.id) || isPrivilegedAdminOrDev;
 
       setDeleteConfirmModal({
         isOpen: true,
         isMultiple: false,
         targetMessageId: msgId,
-        canDeleteForEveryone: isMine || isGroupAdmin,
+        canDeleteForEveryone: isMine || isGroupAdmin || isPrivilegedAdminOrDev,
         isGroup: true
       });
     } else {
@@ -1098,7 +1218,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
         isOpen: true,
         isMultiple: false,
         targetMessageId: msgId,
-        canDeleteForEveryone: isMine || isSuperAdminOrDev,
+        canDeleteForEveryone: isMine || isPrivilegedAdminOrDev,
         isGroup: false
       });
     }
@@ -1111,12 +1231,20 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       } else if (deleteConfirmModal.targetMessageId) {
         StorageService.deleteChatGroupMessage(activeGroupId, deleteConfirmModal.targetMessageId, currentUser.id, forEveryone);
       }
+      if (activeGroupId) {
+        const msgs = StorageService.getChatGroupMessagesForUser(activeGroupId, currentUser.id);
+        setGroupMessages(msgs);
+      }
       refreshGroupsData();
     } else {
       if (deleteConfirmModal.isMultiple) {
         StorageService.deleteMultipleDirectMessages(selectedMessageIds, currentUser.id, forEveryone);
       } else if (deleteConfirmModal.targetMessageId) {
         StorageService.deleteDirectMessage(deleteConfirmModal.targetMessageId, currentUser.id, forEveryone);
+      }
+      if (activeUserId) {
+        const msgs = StorageService.getDirectMessages(currentUser.id, activeUserId, currentUser.id);
+        setMessages(msgs);
       }
       refreshMessages();
       refreshThreads();
@@ -1331,7 +1459,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   return (
     <div 
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4"
-      onClick={onClose}
+      onClick={handleBackOrClose}
     >
       <div 
         className="bg-card border-0 sm:border sm:border-border rounded-none sm:rounded-xl w-full max-w-4xl h-full sm:h-[92vh] sm:max-h-[780px] flex flex-col shadow-2xl overflow-hidden text-card-foreground animate-in zoom-in-95 duration-150"
@@ -1410,7 +1538,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
               </span>
             )}
             <button
-              onClick={onClose}
+              onClick={handleBackOrClose}
               className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
               title="Close"
             >
@@ -1842,7 +1970,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     <div className="h-14 bg-card border-b border-border px-4 flex items-center justify-between shrink-0">
                       <div className="flex items-center gap-3 min-w-0">
                         <button
-                          onClick={() => setActiveUserId('')}
+                          onClick={handleBackOrClose}
                           className="sm:hidden p-1 rounded-lg hover:bg-secondary text-muted-foreground"
                         >
                           <ArrowLeft className="w-5 h-5" />
@@ -2041,7 +2169,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     {messages.map((msg) => {
                       const isMine = msg.sender_id === currentUser.id;
                       const isSelected = selectedMessageIds.includes(msg.id);
-                      const isDeleted = msg.text === 'This message was deleted';
+                      const isDeleted = Boolean(msg.deleted_for_everyone || msg.text === 'This message was deleted');
 
                       return (
                         <div
@@ -2087,7 +2215,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                               )}
 
                               {!isSelectMode && !isDeleted && (
-                                <div className="opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1.5 ml-1">
+                                <div className="opacity-80 sm:opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1.5 ml-1">
                                   <button
                                     type="button"
                                     onClick={(e) => {
@@ -2221,7 +2349,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     <div className="h-16 bg-card border-b border-border px-3 sm:px-4 flex items-center justify-between shrink-0 gap-2 shadow-sm">
                       <div className="flex items-center gap-2 min-w-0">
                         <button
-                          onClick={() => setActiveGroupId('')}
+                          onClick={handleBackOrClose}
                           className="sm:hidden p-1 rounded-lg hover:bg-secondary text-muted-foreground"
                         >
                           <ArrowLeft className="w-5 h-5" />
@@ -2412,7 +2540,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                         </div>
 
                         <button
-                          onClick={() => setActiveGroupId(null)}
+                          onClick={() => setActiveGroupId('')}
                           className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                           title="Close Group"
                         >
@@ -2541,7 +2669,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                         {groupMessages.map((msg) => {
                           const isMine = msg.sender_id === currentUser.id;
                           const isSelected = selectedMessageIds.includes(msg.id);
-                          const isDeleted = msg.text === 'This message was deleted';
+                          const isDeleted = Boolean(msg.deleted_for_everyone || msg.text === 'This message was deleted');
 
                           if (msg.is_system) {
                             return (
@@ -4006,6 +4134,11 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
           userId={viewUserProfile.id}
           isOpen={Boolean(viewUserProfile)}
           onClose={() => setViewUserProfile(null)}
+          onOpenDirectChat={(targetId) => {
+            setViewUserProfile(null);
+            setActiveTab('direct');
+            setActiveUserId(targetId);
+          }}
         />
       )}
 

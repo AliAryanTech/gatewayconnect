@@ -54,12 +54,79 @@ export const InstagramProfileModal: React.FC<InstagramProfileModalProps> = ({
   // Accurate Followers / Following List Viewer
   const [showFollowsListModal, setShowFollowsListModal] = useState<'followers' | 'following' | null>(null);
   const [followsUsersList, setFollowsUsersList] = useState<User[]>([]);
+  const [profileHistory, setProfileHistory] = useState<string[]>([]);
 
   const currentUser = StorageService.getCurrentUser() || StorageService.getAllUsers()[0];
   const isMe = currentUser && profileUser && currentUser.id === profileUser.id;
 
+  const navigateToProfile = (targetUser: User) => {
+    if (profileUser && profileUser.id !== targetUser.id) {
+      setProfileHistory(prev => [...prev, profileUser.id]);
+    }
+    setProfileUser(targetUser);
+    setShowFollowsListModal(null);
+    setShowDmDrawer(false);
+  };
+
+  const handleBack = () => {
+    if (showFollowsListModal) {
+      setShowFollowsListModal(null);
+      return;
+    }
+    if (showDmDrawer) {
+      setShowDmDrawer(false);
+      return;
+    }
+    if (profileHistory.length > 0) {
+      const prevId = profileHistory[profileHistory.length - 1];
+      setProfileHistory(prev => prev.slice(0, prev.length - 1));
+      const allUsers = StorageService.getAllUsers();
+      const prevUser = allUsers.find(u => u.id === prevId || u.phone === prevId);
+      if (prevUser) {
+        setProfileUser(prevUser);
+        return;
+      }
+    }
+    onClose();
+  };
+
+  const handleClose = () => {
+    if (showFollowsListModal) {
+      setShowFollowsListModal(null);
+      return;
+    }
+    if (showDmDrawer) {
+      setShowDmDrawer(false);
+      return;
+    }
+    if (profileHistory.length > 0) {
+      const prevId = profileHistory[profileHistory.length - 1];
+      setProfileHistory(prev => prev.slice(0, prev.length - 1));
+      const allUsers = StorageService.getAllUsers();
+      const prevUser = allUsers.find(u => u.id === prevId || u.phone === prevId);
+      if (prevUser) {
+        setProfileUser(prevUser);
+        return;
+      }
+    }
+    onClose();
+  };
+
   useEffect(() => {
-    if (!isOpen || !userId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showFollowsListModal, showDmDrawer, profileHistory]);
+
+  useEffect(() => {
+    if (!isOpen || !userId) {
+      setProfileHistory([]);
+      return;
+    }
 
     // Resolve user details from live database
     const allUsers = StorageService.getAllUsers();
@@ -190,13 +257,19 @@ export const InstagramProfileModal: React.FC<InstagramProfileModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 overflow-hidden">
-      <div className="w-full sm:max-w-lg bg-[#001122] border border-white/10 sm:rounded-3xl h-[95vh] sm:h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-200">
+    <div 
+      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 overflow-hidden"
+      onClick={handleClose}
+    >
+      <div 
+        className="w-full sm:max-w-lg bg-[#001122] border border-white/10 sm:rounded-3xl h-[95vh] sm:h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* 1. INSTAGRAM TOP NAVIGATION BAR */}
         <header className="px-4 py-3 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#00172e]">
           <button
-            onClick={onClose}
+            onClick={handleBack}
             className="p-1.5 -ml-1.5 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors"
             title="Back"
           >
@@ -219,7 +292,7 @@ export const InstagramProfileModal: React.FC<InstagramProfileModalProps> = ({
               <Share2 className="w-4 h-4" />
             </button>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 text-white/50 hover:text-white rounded-full hover:bg-white/10 transition-colors"
               title="Close"
             >
@@ -362,7 +435,6 @@ export const InstagramProfileModal: React.FC<InstagramProfileModalProps> = ({
                     id="btn-instagram-message"
                     onClick={() => {
                       if (onOpenDirectChat) {
-                        onClose();
                         onOpenDirectChat(profileUser.id);
                       } else {
                         setShowDmDrawer(true);
@@ -614,8 +686,7 @@ export const InstagramProfileModal: React.FC<InstagramProfileModalProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          setProfileUser(u);
-                          setShowFollowsListModal(null);
+                          navigateToProfile(u);
                         }}
                         className="flex items-center gap-3 min-w-0 text-left cursor-pointer flex-1"
                       >
@@ -663,7 +734,6 @@ export const InstagramProfileModal: React.FC<InstagramProfileModalProps> = ({
                               type="button"
                               onClick={() => {
                                 setShowFollowsListModal(null);
-                                onClose();
                                 onOpenDirectChat(u.id);
                               }}
                               className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs transition-colors"

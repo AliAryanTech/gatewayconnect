@@ -79,6 +79,7 @@ export default function App() {
   const [directMessageGroupId, setDirectMessageGroupId] = useState<string | undefined>(undefined);
   const [bibleReference, setBibleReference] = useState<string | undefined>(undefined);
   const [globalProfileUserId, setGlobalProfileUserId] = useState<string | null>(null);
+  const [returnToProfileUserId, setReturnToProfileUserId] = useState<string | null>(null);
   const [unreadDmsCount, setUnreadDmsCount] = useState<number>(() => {
     const user = StorageService.getCurrentUser();
     if (!user) return 0;
@@ -455,7 +456,10 @@ export default function App() {
               setDirectMessageRecipientId(undefined);
               setShowDirectMessagesModal(true);
             }}
-            onOpenDirectChat={(recipientId) => {
+            onOpenDirectChat={(recipientId, returnProfileId) => {
+              if (returnProfileId) {
+                setReturnToProfileUserId(returnProfileId);
+              }
               if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
                 setAuthMode('login');
                 setShowAuthModal(true);
@@ -574,6 +578,10 @@ export default function App() {
             setDirectMessageRecipientId(undefined);
             setDirectMessageGroupId(undefined);
             refreshAppData();
+            if (returnToProfileUserId) {
+              setGlobalProfileUserId(returnToProfileUserId);
+              setReturnToProfileUserId(null);
+            }
           }}
         />
       )}
@@ -615,8 +623,12 @@ export default function App() {
         <InstagramProfileModal
           userId={globalProfileUserId}
           isOpen={Boolean(globalProfileUserId)}
-          onClose={() => setGlobalProfileUserId(null)}
+          onClose={() => {
+            setGlobalProfileUserId(null);
+            setReturnToProfileUserId(null);
+          }}
           onOpenDirectChat={(recipientId) => {
+            setReturnToProfileUserId(globalProfileUserId);
             setGlobalProfileUserId(null);
             if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
               setAuthMode('login');

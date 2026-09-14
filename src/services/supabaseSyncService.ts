@@ -747,8 +747,49 @@ export class SupabaseSyncService {
             if (!payload) return;
             this.socialSubscribers.forEach(cb => cb.onBanStatusUpdated?.(payload));
           })
+          .on('broadcast', { event: 'delete_group_message' }, ({ payload }: any) => {
+            if (!payload) return;
+            this.socialSubscribers.forEach(cb => (cb as any).onDeleteGroupMessage?.(payload));
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', {
+                detail: payload
+              }));
+              window.dispatchEvent(new CustomEvent('gcz_groups_updated'));
+            }
+          })
+          .on('broadcast', { event: 'delete_direct_message' }, ({ payload }: any) => {
+            if (!payload) return;
+            this.socialSubscribers.forEach(cb => (cb as any).onDeleteDirectMessage?.(payload));
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated', {
+                detail: payload
+              }));
+              window.dispatchEvent(new CustomEvent('gcz_dms_updated'));
+            }
+          })
 
           // 2. Database triggers (PostgreSQL Realtime replication)
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload: any) => {
+            const row = payload.new;
+            if (!row) return;
+            if (row.text === 'This message was deleted') {
+              if (row.group_id) {
+                this.socialSubscribers.forEach(cb => (cb as any).onDeleteGroupMessage?.({ groupId: row.group_id, messageId: row.id, forEveryone: true }));
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', {
+                    detail: { groupId: row.group_id, messageId: row.id, deletedForEveryone: true }
+                  }));
+                }
+              } else {
+                this.socialSubscribers.forEach(cb => (cb as any).onDeleteDirectMessage?.({ messageId: row.id, forEveryone: true }));
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated', {
+                    detail: { id: row.id, deletedForEveryone: true }
+                  }));
+                }
+              }
+            }
+          })
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
             const row = payload.new;
             if (!row) return;
@@ -1056,12 +1097,71 @@ export class SupabaseSyncService {
   }
 
   /**
+   * Syncs group message deletion across all devices via Realtime and persists deletion to database
+   */
+  static async syncDeleteGroupMessage(groupId: string, messageId: string, forEveryone: boolean): Promise<boolean> {
+    if (!messageId) return false;
+    const channel = this.getSocialChannel();
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'delete_group_message',
+        payload: { groupId, messageId, forEveryone }
+      });
+    }
+
+    const supabase = getSupabase();
+    if (supabase && forEveryone) {
+      Promise.resolve(supabase.from('messages').update({
+        text: 'This message was deleted',
+        media_url: null,
+        media_type: null
+      }).eq('id', messageId)).catch(() => {});
+    }
+
+    return true;
+  }
+
+  /**
+   * Syncs direct message deletion across all devices via Realtime and persists deletion to database
+   */
+  static async syncDeleteDirectMessage(messageId: string, forEveryone: boolean): Promise<boolean> {
+    if (!messageId) return false;
+    const channel = this.getSocialChannel();
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'delete_direct_message',
+        payload: { messageId, forEveryone }
+      });
+    }
+
+    const supabase = getSupabase();
+    if (supabase && forEveryone) {
+      Promise.resolve(supabase.from('messages').update({
+        text: 'This message was deleted',
+        media_url: null,
+        media_type: null
+      }).eq('id', messageId)).catch(() => {});
+
+      Promise.resolve(supabase.from('direct_messages').update({
+        message: 'This message was deleted',
+        media_url: null
+      }).eq('id', messageId)).catch(() => {});
+    }
+
+    return true;
+  }
+
+  /**
    * Subscribes to the single persistent Realtime channel 'gcz_social_realtime'
    * Instant broadcast delivery across all devices with zero REST latency
    */
   static subscribeToSocialMessaging(callbacks: {
     onNewGroupMessage?: (msg: ChatGroupMessage) => void;
     onNewDirectMessage?: (msg: DirectMessage) => void;
+    onDeleteGroupMessage?: (payload: { groupId: string; messageId: string; forEveryone: boolean }) => void;
+    onDeleteDirectMessage?: (payload: { messageId: string; forEveryone: boolean }) => void;
     onUserProfileUpdated?: (user: Partial<User>) => void;
     onGroupMemberChanged?: (detail: { groupId: string; userId: string; isJoining: boolean }) => void;
     onFollowUpdated?: (detail: { followerId: string; followingId: string; isFollowing: boolean }) => void;

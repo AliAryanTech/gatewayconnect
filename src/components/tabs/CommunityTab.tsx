@@ -58,7 +58,7 @@ interface CommunityTabProps {
   onRequireAuth?: () => void;
   onRefreshData?: () => void;
   onOpenGroupChat?: (groupId: string) => void;
-  onOpenDirectChat?: (recipientId: string) => void;
+  onOpenDirectChat?: (recipientId: string, returnProfileId?: string) => void;
   onOpenLiveSermon?: () => void;
 }
 
@@ -2602,6 +2602,13 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
         userId={profileModalUserId}
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+        onOpenDirectChat={(targetId) => {
+          const profileId = profileModalUserId;
+          setShowProfileModal(false);
+          if (onOpenDirectChat) {
+            onOpenDirectChat(targetId, profileId || undefined);
+          }
+        }}
       />
 
       {/* WhatsApp Visual Share Modal (Mobile Responsive - Zero Screen Overlap) */}
