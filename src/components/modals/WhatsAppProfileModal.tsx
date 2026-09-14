@@ -1,25 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Camera, 
-  User as UserIcon, 
-  Phone, 
-  Info, 
-  Edit3, 
-  Check, 
-  Copy, 
-  LogOut, 
-  ShieldCheck, 
-  CheckCircle2, 
-  Sparkles,
+import {
+  X,
+  Camera,
+  Edit3,
+  Check,
+  Copy,
+  LogOut,
+  ShieldCheck,
   ArrowLeft,
-  KeyRound,
-  Trash2,
-  ExternalLink
+  Quote
 } from 'lucide-react';
 import { User } from '../../types';
 import { StorageService } from '../../services/storageService';
 import { ImagePickerModal } from './ImagePickerModal';
+import { VerifiedBadge } from '../common/VerifiedBadge';
 import confetti from 'canvas-confetti';
 
 interface WhatsAppProfileModalProps {
@@ -43,8 +37,8 @@ export const WhatsAppProfileModal: React.FC<WhatsAppProfileModalProps> = ({
   const [nameInput, setNameInput] = useState<string>(currentUser.full_name);
   const [isEditingAbout, setIsEditingAbout] = useState<boolean>(false);
   const [aboutInput, setAboutInput] = useState<string>(
-    currentUser.role === 'super_admin' 
-      ? 'Apostle of Jesus Christ • Preaching the Kingdom with power & speed' 
+    currentUser.role === 'super_admin'
+      ? 'Apostle of Jesus Christ • Preaching the Kingdom with power & speed'
       : 'Available in Christ • Praying without ceasing 🙏'
   );
   const [copiedId, setCopiedId] = useState<boolean>(false);
@@ -76,237 +70,187 @@ export const WhatsAppProfileModal: React.FC<WhatsAppProfileModalProps> = ({
     setTimeout(() => setCopiedId(false), 2000);
   };
 
+  const badgeType = currentUser.verified_badge || currentUser.badge_type || (currentUser.is_verified ? 'gold' : 'none');
+  const displayRole = currentUser.role === 'super_admin' ? 'Apostle / Super Admin' : currentUser.role.replace(/_/g, ' ');
+
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-fade-in"
       onClick={onClose}
     >
-      <div 
-        className="bg-gradient-to-b from-[#121826] to-[#080b12] text-white border border-white/10 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl flex flex-col max-h-[88vh] my-auto"
+      <div
+        className="bg-card text-foreground border border-border rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl flex flex-col max-h-[88vh] my-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        
-        {/* Gateway Account Studio */}
-        <div className="bg-white/[0.04] px-4 py-4 flex items-center justify-between border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="p-1 rounded-full hover:bg-white/10 text-[#aebac1] hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h2 className="font-bold text-base text-white tracking-wide">
-              Account
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowLogoutConfirm(true)}
-              className="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold flex items-center gap-1 transition-all border border-red-500/30"
-              title="Log out of account"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Log out</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-full hover:bg-white/10 text-[#aebac1] hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+        {/* Top Bar */}
+        <div className="px-4 pt-4 pb-1 flex items-center justify-between shrink-0">
+          <button
+            onClick={onClose}
+            className="p-1.5 -ml-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <span className="text-xs font-semibold text-muted-foreground">Your profile</span>
+          <button
+            onClick={onClose}
+            className="p-1.5 -mr-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Gateway Profile Content */}
-        <div className="p-4 sm:p-6 space-y-6 overflow-y-auto flex-1 bg-transparent">
-          
-          {/* 1. Large WhatsApp Profile Avatar */}
-          <div className="flex flex-col items-center justify-center pt-2">
-            <div className="relative group cursor-pointer" onClick={() => setShowPhotoPicker(true)}>
-              <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-[#202c33] group-hover:border-[#00a884] shadow-xl transition-all bg-[#2a3942] flex items-center justify-center">
-                {currentUser.avatar_url ? (
-                  <img
-                    src={currentUser.avatar_url}
-                    alt={currentUser.full_name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-[#aebac1] bg-[#2a3942]">
-                    {currentUser.full_name.slice(0, 2).toUpperCase()}
-                  </div>
-                )}
+        <div className="px-4 sm:px-6 pb-5 pt-3 space-y-5 overflow-y-auto flex-1">
+
+          {/* Covenant Membership Card */}
+          <div
+            className="relative rounded-3xl border border-primary/30 overflow-hidden"
+            style={{
+              background:
+                'linear-gradient(155deg, color-mix(in srgb, var(--primary) 14%, var(--card)) 0%, var(--card) 55%)'
+            }}
+          >
+            <div className="absolute top-3.5 right-3.5 text-primary/60">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+
+            <div className="p-4 sm:p-5 flex items-center gap-4">
+              <div
+                className="relative shrink-0 group cursor-pointer"
+                onClick={() => setShowPhotoPicker(true)}
+              >
+                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-primary/50 bg-secondary flex items-center justify-center shadow-md group-hover:border-primary transition-colors">
+                  {currentUser.avatar_url ? (
+                    <img
+                      src={currentUser.avatar_url}
+                      alt={currentUser.full_name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-lg font-bold text-muted-foreground">
+                      {currentUser.full_name.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center border-2 border-card shadow">
+                  <Camera className="w-3 h-3" />
+                </div>
               </div>
 
-              {/* Camera Action Badge */}
+              <div className="min-w-0 flex-1">
+                {isEditingName ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      className="flex-1 bg-background border border-primary rounded-lg px-2 py-1 text-sm text-foreground focus:outline-none min-w-0"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleSaveName}
+                      className="p-1.5 rounded-lg bg-primary text-primary-foreground shrink-0"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNameInput(currentUser.full_name);
+                        setIsEditingName(false);
+                      }}
+                      className="p-1.5 rounded-lg bg-background text-muted-foreground hover:text-foreground shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <h2 className="font-bold text-base text-foreground truncate">{currentUser.full_name}</h2>
+                    {badgeType !== 'none' && <VerifiedBadge type={badgeType} size="sm" />}
+                    <button
+                      onClick={() => setIsEditingName(true)}
+                      className="p-0.5 text-muted-foreground hover:text-primary transition-colors shrink-0"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                <span className="inline-block mt-1.5 text-[10px] font-semibold text-primary/90 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                  {displayRole}
+                </span>
+              </div>
+            </div>
+
+            <div className="border-t border-primary/15 grid grid-cols-2 divide-x divide-primary/15">
+              <div className="px-4 py-3 min-w-0">
+                <span className="text-[10px] text-muted-foreground">Member ID</span>
+                <button
+                  onClick={handleCopyMemberId}
+                  className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-foreground hover:text-primary transition-colors w-full"
+                >
+                  <span className="truncate">{copiedId ? 'Copied!' : currentUser.member_id}</span>
+                  {copiedId ? (
+                    <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+                  ) : (
+                    <Copy className="w-3 h-3 shrink-0 opacity-60" />
+                  )}
+                </button>
+              </div>
+              <div className="px-4 py-3 min-w-0">
+                <span className="text-[10px] text-muted-foreground">Phone</span>
+                <p className="mt-0.5 text-xs font-semibold text-foreground font-mono truncate">
+                  {currentUser.phone}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* About & Status */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] text-muted-foreground font-medium">About &amp; status</span>
+            {isEditingAbout ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={aboutInput}
+                  onChange={(e) => setAboutInput(e.target.value)}
+                  className="flex-1 bg-secondary/60 border border-primary rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none min-w-0"
+                  autoFocus
+                />
+                <button
+                  onClick={() => setIsEditingAbout(false)}
+                  className="p-2 rounded-xl bg-primary text-primary-foreground shrink-0"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
               <button
-                type="button"
-                className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#02906f] text-white flex items-center justify-center shadow-lg transition-transform group-hover:scale-110"
-                title="Change Profile Photo"
+                onClick={() => setIsEditingAbout(true)}
+                className="w-full text-left flex items-start gap-2.5 rounded-xl bg-secondary/40 hover:bg-secondary/60 border border-border px-3.5 py-3 transition-colors group"
               >
-                <Camera className="w-5 h-5" />
+                <Quote className="w-3.5 h-3.5 text-primary/60 mt-0.5 shrink-0" />
+                <span className="flex-1 text-sm text-foreground/85 italic leading-snug">{aboutInput}</span>
+                <Edit3 className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors mt-0.5 shrink-0" />
               </button>
-            </div>
-            
-            <p className="text-[11px] text-[#00a884] font-medium mt-3 flex items-center gap-1">
-              <Camera className="w-3 h-3" />
-              <span>Tap photo to change or pick from local storage</span>
-            </p>
+            )}
           </div>
 
-          {/* 2. WhatsApp Name Field */}
-          <div className="flex items-start gap-4 p-3.5 rounded-2xl bg-[#202c33]/50 border border-[#2a3942]">
-            <div className="mt-1 text-[#00a884]">
-              <UserIcon className="w-5 h-5" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <span className="text-xs text-[#8696a0] font-medium block">
-                Name
-              </span>
-              
-              {isEditingName ? (
-                <div className="flex items-center gap-2 mt-1">
-                  <input
-                    type="text"
-                    value={nameInput}
-                    onChange={(e) => setNameInput(e.target.value)}
-                    className="flex-1 bg-transparent border border-[#00a884] rounded-lg px-2.5 py-1 text-sm text-white focus:outline-none"
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleSaveName}
-                    className="p-1.5 rounded-lg bg-[#00a884] text-white hover:bg-[#02906f]"
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setNameInput(currentUser.full_name);
-                      setIsEditingName(false);
-                    }}
-                    className="p-1.5 rounded-lg bg-white/10 text-[#8696a0] hover:text-white"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-[#e9edef]">
-                    {currentUser.full_name}
-                  </span>
-                  <button
-                    onClick={() => setIsEditingName(true)}
-                    className="p-1 text-[#8696a0] hover:text-[#00a884] transition-colors"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              <p className="text-[11px] text-[#8696a0] leading-normal pt-1">
-                This is not your username or pin. This name will be visible to your Gateway Church contacts.
-              </p>
-            </div>
-          </div>
-
-          {/* 3. WhatsApp About / Ministry Bio */}
-          <div className="flex items-start gap-4 p-3.5 rounded-2xl bg-[#202c33]/50 border border-[#2a3942]">
-            <div className="mt-1 text-[#00a884]">
-              <Info className="w-5 h-5" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <span className="text-xs text-[#8696a0] font-medium block">
-                About & Status
-              </span>
-
-              {isEditingAbout ? (
-                <div className="flex items-center gap-2 mt-1">
-                  <input
-                    type="text"
-                    value={aboutInput}
-                    onChange={(e) => setAboutInput(e.target.value)}
-                    className="flex-1 bg-transparent border border-[#00a884] rounded-lg px-2.5 py-1 text-sm text-white focus:outline-none"
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => setIsEditingAbout(false)}
-                    className="p-1.5 rounded-lg bg-[#00a884] text-white hover:bg-[#02906f]"
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#d1d7db] italic">
-                    "{aboutInput}"
-                  </span>
-                  <button
-                    onClick={() => setIsEditingAbout(true)}
-                    className="p-1 text-[#8696a0] hover:text-[#00a884] transition-colors"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 4. WhatsApp Phone */}
-          <div className="flex items-start gap-4 p-3.5 rounded-2xl bg-[#202c33]/50 border border-[#2a3942]">
-            <div className="mt-1 text-[#00a884]">
-              <Phone className="w-5 h-5" />
-            </div>
-            <div className="flex-1 space-y-0.5">
-              <span className="text-xs text-[#8696a0] font-medium block">
-                Phone
-              </span>
-              <span className="text-sm font-semibold text-[#e9edef] font-mono">
-                {currentUser.phone}
-              </span>
-            </div>
-          </div>
-
-          {/* 5. Covenant Partner Credentials */}
-          <div className="p-3.5 rounded-2xl bg-[#202c33] border border-[#2a3942] space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#00a884] uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4" />
-                <span>Covenant Member ID</span>
-              </span>
-              <button
-                onClick={handleCopyMemberId}
-                className="flex items-center gap-1 text-[11px] font-semibold text-[#8696a0] hover:text-white px-2 py-0.5 rounded bg-transparent border border-white/5"
-              >
-                {copiedId ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedId ? 'Copied' : currentUser.member_id}</span>
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between text-xs pt-1 border-t border-[#2a3942]">
-              <span className="text-[#8696a0]">Assigned Role:</span>
-              <span className="font-bold text-[#D4AF37] uppercase">
-                {currentUser.role === 'super_admin' ? 'Apostle / Super Admin' : currentUser.role}
-              </span>
-            </div>
-          </div>
-
-          {/* 6. Quick Photo Update & Log Out Action Buttons */}
-          <div className="space-y-2 pt-2">
+          {/* Actions */}
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
             <button
               onClick={() => setShowPhotoPicker(true)}
-              className="w-full py-3 rounded-2xl bg-[#202c33] hover:bg-[#2a3942] text-white text-xs font-bold flex items-center justify-center gap-2 border border-[#2a3942] transition-all"
+              className="py-3 rounded-2xl bg-secondary/60 hover:bg-secondary text-foreground text-xs font-bold flex items-center justify-center gap-1.5 border border-border transition-colors"
             >
-              <Camera className="w-4 h-4 text-[#00a884]" />
-              <span>Change Profile Photo (Local Device or Gallery)</span>
+              <Camera className="w-3.5 h-3.5 text-primary" />
+              <span>Change photo</span>
             </button>
-
             <button
               id="btn-whatsapp-logout"
               onClick={() => setShowLogoutConfirm(true)}
-              className="w-full py-3.5 rounded-2xl bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 text-xs font-bold flex items-center justify-center gap-2 border border-red-500/40 transition-all shadow-md"
+              className="py-3 rounded-2xl bg-transparent hover:bg-destructive/10 text-destructive text-xs font-bold flex items-center justify-center gap-1.5 border border-destructive/40 transition-colors"
             >
-              <LogOut className="w-4 h-4" />
-              <span>Log Out of Account</span>
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Log out</span>
             </button>
           </div>
 
@@ -315,20 +259,20 @@ export const WhatsAppProfileModal: React.FC<WhatsAppProfileModalProps> = ({
         {/* Log Out Confirmation Dialog */}
         {showLogoutConfirm && (
           <div className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-[#202c33] border border-[#2a3942] rounded-2xl max-w-xs w-full p-5 space-y-4 text-center">
-              <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto">
+            <div className="bg-card border border-border rounded-2xl max-w-xs w-full p-5 space-y-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-destructive/15 text-destructive flex items-center justify-center mx-auto">
                 <LogOut className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="font-bold text-white text-base">Log Out?</h4>
-                <p className="text-xs text-[#8696a0] mt-1">
-                  Are you sure you want to log out of {currentUser.full_name}? You can log back in anytime with your phone number.
+                <h4 className="font-bold text-foreground text-base">Log out?</h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  You can log back in anytime with your phone number.
                 </p>
               </div>
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-transparent text-[#8696a0] hover:text-white text-xs font-bold"
+                  className="flex-1 py-2.5 rounded-xl bg-transparent text-muted-foreground hover:text-foreground text-xs font-bold"
                 >
                   Cancel
                 </button>
@@ -338,22 +282,22 @@ export const WhatsAppProfileModal: React.FC<WhatsAppProfileModalProps> = ({
                     onLogout();
                     onClose();
                   }}
-                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow"
+                  className="flex-1 py-2.5 rounded-xl bg-destructive hover:brightness-110 text-destructive-foreground text-xs font-bold shadow"
                 >
-                  Log Out
+                  Log out
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Image Picker Modal for Profile Picture */}
+        {/* Image Picker Modal for Profile Photo */}
         <ImagePickerModal
           isOpen={showPhotoPicker}
           onClose={() => setShowPhotoPicker(false)}
           onSelectImage={handleSavePhoto}
           currentImage={currentUser.avatar_url}
-          title="Update Profile Photo"
+          title="Update profile photo"
           subtitle="Select a photo from your local device storage or pick an authentic photo from Apostle Joe Daniels gallery."
         />
 
