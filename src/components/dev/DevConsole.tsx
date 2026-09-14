@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { StorageService } from '../../services/storageService';
+import { SupabaseSyncService } from '../../services/supabaseSyncService';
 import { PaynowService } from '../../services/paynowService';
 import { testSupabaseConnection } from '../../services/supabaseClient';
 import { downloadCsvForExcel } from '../../utils/exportUtils';
@@ -267,9 +268,12 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
   const [passwordModalUser, setPasswordModalUser] = useState<User | null>(null);
   const [manualPasswordInput, setManualPasswordInput] = useState('');
   const [logsFilter, setLogsFilter] = useState('');
-  const [autoScrollLogs, setAutoScrollLogs] = useState(true);
-  const [isPausedLogs, setIsPausedLogs] = useState(false);
   const logsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Ecosystem Sync state
+  const [isSyncingEcosystem, setIsSyncingEcosystem] = useState(false);
+  const [accountsSearch, setAccountsSearch] = useState('');
+  const [accountsRoleFilter, setAccountsRoleFilter] = useState('all');
 
   const [logs, setLogs] = useState<string[]>([
     `[SYSTEM] Console opened ${new Date().toISOString()}`,
@@ -381,6 +385,30 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
       refreshAll();
     };
 
+    const handleGroupMsg = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      const detail = customEvt.detail;
+      const stamp = new Date().toLocaleTimeString();
+      const sender = detail?.message?.sender_name || 'Member';
+      const text = (detail?.message?.text || 'Media').slice(0, 50);
+      setLogs(prev => [
+        `[${stamp}] [GROUP_MESSAGE] ${detail?.groupId || 'Group'} | ${sender}: "${text}"`,
+        ...prev.slice(0, 150)
+      ]);
+      refreshAll();
+    };
+
+    const handleDirectMsg = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      const msg = customEvt.detail;
+      const stamp = new Date().toLocaleTimeString();
+      setLogs(prev => [
+        `[${stamp}] [DIRECT_CHAT] Direct message event: "${(msg?.text || 'Sent media').slice(0, 40)}"`,
+        ...prev.slice(0, 150)
+      ]);
+      refreshAll();
+    };
+
     window.addEventListener('gcz_user_profile_updated', refreshAll);
     window.addEventListener('gcz_user_registered', refreshAll);
     window.addEventListener('gcz_users_synced', refreshAll);
@@ -396,6 +424,10 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
     window.addEventListener('gcz_stream_chat_sent', handleStreamChat);
     window.addEventListener('gcz_stream_reaction_sent', handleStreamReaction);
     window.addEventListener('gcz_live_presence_updated', handlePresence);
+    window.addEventListener('gcz_group_messages_updated', handleGroupMsg);
+    window.addEventListener('gcz_direct_messages_updated', handleDirectMsg);
+    window.addEventListener('gcz_dms_updated', refreshAll);
+    window.addEventListener('gcz_groups_updated', refreshAll);
 
     // Heartbeat live telemetry logs
     const heartbeat = setInterval(() => {
@@ -427,6 +459,10 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
       window.removeEventListener('gcz_stream_chat_sent', handleStreamChat);
       window.removeEventListener('gcz_stream_reaction_sent', handleStreamReaction);
       window.removeEventListener('gcz_live_presence_updated', handlePresence);
+      window.removeEventListener('gcz_group_messages_updated', handleGroupMsg);
+      window.removeEventListener('gcz_direct_messages_updated', handleDirectMsg);
+      window.removeEventListener('gcz_dms_updated', refreshAll);
+      window.removeEventListener('gcz_groups_updated', refreshAll);
       clearInterval(heartbeat);
     };
   }, [isPausedLogs, supabaseConfig.isLiveConnected]);
@@ -613,6 +649,61 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
     setSelectedPasswordRequest(null);
   };
 
+  const handleSyncDeveloperAccount = async () => {
+    setIsSyncingEcosystem(true);
+    setLogs(prev => [`[${new Date().toLocaleTimeString()}] [DEV_SYNC] Syncing developer account mr_juice7 (0780699988) with Supabase...`, ...prev]);
+    try {
+      const allUsers = StorageService.getAllUsers();
+      let devUser = allUsers.find(u => u.role === 'developer' || u.phone === '0780699988');
+      if (!devUser) {
+        devUser = {
+          id: 'usr_developer',
+          phone: '0780699988',
+          password: 'juice2026',
+          full_name: 'mr_juice7',
+          handle: '@mr_juice7',
+          role: 'developer' as UserRole,
+          badge_type: 'gold' as const,
+          is_verified: true,
+          is_premium: true,
+          cell_group: 'Gateway Tech Ministry',
+          location: 'Harare, Zimbabwe',
+          city_location: 'Harare',
+          member_id: 'GCZ-DEV-007',
+          created_at: new Date().toISOString(),
+        };
+      }
+      const ok = await SupabaseSyncService.syncUser(devUser);
+      setUsersList(StorageService.getAllUsers());
+      if (ok) {
+        setLogs(prev => [`[${new Date().toLocaleTimeString()}] [DEV_SYNC] Developer account 0780699988 successfully synced to Supabase ecosystem!`, ...prev]);
+      } else {
+        setLogs(prev => [`[${new Date().toLocaleTimeString()}] [DEV_SYNC] Developer account synced locally (Supabase remote offline/unreachable).`, ...prev]);
+      }
+    } catch (err: any) {
+      setLogs(prev => [`[${new Date().toLocaleTimeString()}] [DEV_SYNC] Sync notice: ${err?.message || err}`, ...prev]);
+    } finally {
+      setIsSyncingEcosystem(false);
+    }
+  };
+
+  const handleSyncAllEcosystem = async () => {
+    setIsSyncingEcosystem(true);
+    setLogs(prev => [`[${new Date().toLocaleTimeString()}] [ECOSYSTEM_SYNC] Starting full bidirectional ecosystem sync...`, ...prev]);
+    try {
+      const result = await StorageService.syncAllEcosystemAccountsWithRemote();
+      setUsersList(StorageService.getAllUsers());
+      setLogs(prev => [
+        `[${new Date().toLocaleTimeString()}] [ECOSYSTEM_SYNC] Complete! Synced ${result.syncedCount} accounts (Local: ${result.localCount}, Remote: ${result.remoteCount}). Developer account active: ${result.devAccountSynced ? 'YES' : 'NO'}.`,
+        ...prev
+      ]);
+    } catch (err: any) {
+      setLogs(prev => [`[${new Date().toLocaleTimeString()}] [ECOSYSTEM_SYNC] Sync notice: ${err?.message || err}`, ...prev]);
+    } finally {
+      setIsSyncingEcosystem(false);
+    }
+  };
+
   return (
     <div className={cn(
       "fixed inset-0 z-50 flex flex-col overflow-hidden font-sans isolate",
@@ -730,6 +821,20 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
             <CreditCard className="w-4 h-4" />
           </button>
           <button
+            onClick={handleSyncAllEcosystem}
+            disabled={isSyncingEcosystem}
+            title="Sync all ecosystem accounts & developer with Supabase"
+            className={cn(
+              "px-2.5 py-1.5 rounded-xl border text-[11px] font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm",
+              isSyncingEcosystem
+                ? "bg-amber-500/20 border-amber-500/40 text-amber-300 animate-pulse"
+                : "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40"
+            )}
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5", isSyncingEcosystem && "animate-spin")} />
+            <span className="hidden lg:inline">{isSyncingEcosystem ? 'Syncing...' : 'Sync Ecosystem'}</span>
+          </button>
+          <button
             onClick={onOpenFlutterExport}
             title="Database & SQL Specs"
             className="p-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 transition-colors flex items-center justify-center cursor-pointer shadow-sm"
@@ -830,6 +935,17 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
               <button
                 onClick={() => {
                   setShowMobileMenu(false);
+                  handleSyncAllEcosystem();
+                }}
+                disabled={isSyncingEcosystem}
+                className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 flex items-center gap-2"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5", isSyncingEcosystem && "animate-spin")} />
+                <span>{isSyncingEcosystem ? 'Syncing...' : 'Sync Ecosystem Accounts'}</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowMobileMenu(false);
                   handleTestSupabaseLive();
                 }}
                 className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 flex items-center gap-2"
@@ -891,6 +1007,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
       )}>
         {[
           { id: 'telemetry', label: 'Telemetry & Health', icon: Activity },
+          { id: 'accounts', label: 'Ecosystem Accounts & Sync', icon: Users },
           { id: 'streamers', label: `Stream Attendees (${activeStreamers.length} Live)`, icon: Radio },
           { id: 'bans', label: 'Account Bans & Suspension', icon: ShieldOff },
           { id: 'appeals', label: `Unban Appeals (${unbanAppeals.filter(a => a.status === 'pending').length})`, icon: Eye },
@@ -946,6 +1063,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
           >
             {[
               { id: 'telemetry', label: 'Telemetry & Health' },
+              { id: 'accounts', label: 'Ecosystem Accounts & Sync' },
               { id: 'streamers', label: `Stream Attendees (${activeStreamers.length} Live / ${streamAttendees.length} Total)` },
               { id: 'bans', label: 'Account Bans & Suspension' },
               { id: 'appeals', label: `Unban Appeals (${unbanAppeals.filter(a => a.status === 'pending').length})` },
@@ -1555,6 +1673,300 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
         )}
 
         {/* ACCOUNTS & PROFILES TAB (DEVELOPER PORTAL ONLY) */}
+        {activeTab === 'accounts' && (
+          <div className="space-y-4 font-mono">
+            {/* 1. Developer Account Master Status Banner */}
+            <div className={cn(
+              "rounded-2xl p-5 border shadow-xl relative overflow-hidden",
+              consoleTheme === 'jarvis'
+                ? "bg-[#021827]/90 border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.15)]"
+                : "bg-slate-900 border-purple-500/40"
+            )}>
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-3.5">
+                  <div className={cn(
+                    "w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shrink-0 shadow-lg",
+                    consoleTheme === 'jarvis'
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+                      : "bg-[#D4AF37] text-[#001F3F]"
+                  )}>
+                    MJ
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base sm:text-lg font-black text-white">
+                        mr_juice7
+                      </h3>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 font-bold">
+                        SYSTEM ARCHITECT
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 font-bold">
+                        DEV GODMODE 0
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="text-emerald-400 font-bold">Phone: 0780699988</span>
+                      <span>•</span>
+                      <span className="text-purple-300">Handle: @mr_juice7</span>
+                      <span>•</span>
+                      <span className="text-slate-400">ID: GCZ-DEV-007</span>
+                      <span>•</span>
+                      <span className="text-slate-400">Harare, Zimbabwe</span>
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Full-stack ecosystem controller with Supabase PostgreSQL bidirectional synchronization & live telemetry.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    onClick={handleSyncDeveloperAccount}
+                    disabled={isSyncingEcosystem}
+                    className={cn(
+                      "px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm border",
+                      isSyncingEcosystem
+                        ? "bg-amber-500/20 border-amber-500/40 text-amber-300 animate-pulse"
+                        : "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/50"
+                    )}
+                    title="Sync developer account (0780699988) directly to Supabase"
+                  >
+                    <RefreshCw className={cn("w-3.5 h-3.5", isSyncingEcosystem && "animate-spin")} />
+                    <span>Sync Developer (0780699988)</span>
+                  </button>
+
+                  <button
+                    onClick={handleSyncAllEcosystem}
+                    disabled={isSyncingEcosystem}
+                    className={cn(
+                      "px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-sm border",
+                      isSyncingEcosystem
+                        ? "bg-amber-500/20 border-amber-500/40 text-amber-300 animate-pulse"
+                        : "bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/50"
+                    )}
+                    title="Sync all ecosystem user profiles and accounts"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Sync Entire Ecosystem</span>
+                  </button>
+
+                  {onSwitchUser && (
+                    <button
+                      onClick={() => {
+                        const devU = usersList.find(u => u.role === 'developer' || u.phone === '0780699988') || {
+                          id: 'usr_developer',
+                          phone: '0780699988',
+                          password: 'juice2026',
+                          full_name: 'mr_juice7',
+                          handle: '@mr_juice7',
+                          role: 'developer' as UserRole,
+                          badge_type: 'gold' as const,
+                          is_verified: true,
+                          is_premium: true,
+                          cell_group: 'Gateway Tech Ministry',
+                          location: 'Harare, Zimbabwe',
+                          city_location: 'Harare',
+                          member_id: 'GCZ-DEV-007',
+                          created_at: new Date().toISOString(),
+                        };
+                        onSwitchUser(devU);
+                        setLogs(prev => [`[${new Date().toLocaleTimeString()}] [SESSION] Switched active session to Developer mr_juice7`, ...prev]);
+                      }}
+                      className="px-3 py-2 rounded-xl text-xs font-bold bg-purple-600/30 hover:bg-purple-600/40 text-purple-200 border border-purple-500/50 flex items-center gap-2 transition-all cursor-pointer shadow-sm"
+                      title="Quickly switch current logged-in session to mr_juice7"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Switch Session to Dev</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Metrics Overview Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-1">
+                <span className="text-[11px] text-slate-400">Total Ecosystem Accounts</span>
+                <div className="text-xl font-bold text-white">{usersList.length}</div>
+                <span className="text-[10px] text-emerald-400">Local Cache + Supabase</span>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-1">
+                <span className="text-[11px] text-slate-400">Developers & Super Admins</span>
+                <div className="text-xl font-bold text-purple-400">
+                  {usersList.filter(u => u.role === 'super_admin' || u.role === 'developer').length}
+                </div>
+                <span className="text-[10px] text-purple-300">Privileged Tier</span>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-1">
+                <span className="text-[11px] text-slate-400">Suspended / Banned</span>
+                <div className="text-xl font-bold text-rose-400">
+                  {Object.keys(bannedUsersMap).length}
+                </div>
+                <span className="text-[10px] text-rose-300">Security Quarantine</span>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-1">
+                <span className="text-[11px] text-slate-400">Supabase RLS Status</span>
+                <div className="text-xl font-bold text-emerald-400">
+                  {supabaseConfig.isLiveConnected ? 'Connected' : 'Local Fallback'}
+                </div>
+                <span className="text-[10px] text-slate-500">public.users table</span>
+              </div>
+            </div>
+
+            {/* 3. Search & Filter Bar */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, phone, handle, or city..."
+                    value={accountsSearch}
+                    onChange={(e) => setAccountsSearch(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <span className="text-xs text-slate-400 shrink-0">Role:</span>
+                  <select
+                    value={accountsRoleFilter}
+                    onChange={(e) => setAccountsRoleFilter(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400 cursor-pointer"
+                  >
+                    <option value="all">All Roles ({usersList.length})</option>
+                    <option value="developer">Developer</option>
+                    <option value="super_admin">Super Admin</option>
+                    <option value="member">Member</option>
+                    <option value="pastor">Pastor</option>
+                    <option value="usher">Usher</option>
+                    <option value="finance">Finance</option>
+                    <option value="worship_leader">Worship Leader</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 4. Accounts Table */}
+              <div className="overflow-x-auto border border-slate-800 rounded-xl">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className="bg-slate-950 text-slate-400 border-b border-slate-800">
+                      <th className="p-3">User & Handle</th>
+                      <th className="p-3">Phone & Location</th>
+                      <th className="p-3">Role & Badges</th>
+                      <th className="p-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {usersList
+                      .filter(user => {
+                        const matchesSearch = !accountsSearch || 
+                          user.full_name?.toLowerCase().includes(accountsSearch.toLowerCase()) ||
+                          user.phone?.includes(accountsSearch) ||
+                          user.handle?.toLowerCase().includes(accountsSearch.toLowerCase()) ||
+                          user.city_location?.toLowerCase().includes(accountsSearch.toLowerCase());
+                        const matchesRole = accountsRoleFilter === 'all' || user.role === accountsRoleFilter;
+                        return matchesSearch && matchesRole;
+                      })
+                      .map(user => {
+                        const isBanned = Boolean(bannedUsersMap[user.id] || (user.phone && bannedUsersMap[user.phone]) || user.is_banned);
+                        const isDev = user.role === 'developer' || user.phone === '0780699988';
+                        return (
+                          <tr key={user.id} className="hover:bg-slate-800/40 transition-colors">
+                            <td className="p-3">
+                              <div className="flex items-center gap-2.5">
+                                <div className={cn(
+                                  "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0",
+                                  isDev ? "bg-[#D4AF37] text-[#001F3F]" : "bg-slate-800 text-slate-300 border border-slate-700"
+                                )}>
+                                  {user.avatar_url ? (
+                                    <img src={user.avatar_url} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                                  ) : (
+                                    (user.full_name || 'U').charAt(0).toUpperCase()
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <span className="font-bold text-white truncate">{user.full_name}</span>
+                                    {user.is_verified && <BadgeCheck className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
+                                    {isBanned && (
+                                      <span className="text-[9px] px-1 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                                        BANNED
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-slate-400 text-[11px] truncate block">{user.handle || `@${user.phone}`}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 text-slate-300">
+                              <div className="font-mono text-emerald-400 font-bold">{user.phone}</div>
+                              <span className="text-slate-400 text-[11px]">{user.city_location || user.location || 'Harare'}</span>
+                            </td>
+                            <td className="p-3">
+                              <span className={cn(
+                                "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
+                                isDev 
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                                  : user.role === 'super_admin'
+                                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
+                                  : "bg-slate-800 text-slate-300 border border-slate-700"
+                              )}>
+                                {user.role}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={async () => {
+                                    setIsSyncingEcosystem(true);
+                                    try {
+                                      const ok = await SupabaseSyncService.syncUser(user);
+                                      setLogs(prev => [`[${new Date().toLocaleTimeString()}] [SYNC_USER] ${user.full_name} (${user.phone}) synced: ${ok ? 'SUCCESS' : 'LOCAL CACHED'}`, ...prev]);
+                                    } finally {
+                                      setIsSyncingEcosystem(false);
+                                    }
+                                  }}
+                                  className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                  title="Sync this user record with Supabase"
+                                >
+                                  <RefreshCw className="w-2.5 h-2.5" />
+                                  <span>Sync DB</span>
+                                </button>
+                                {onSwitchUser && (
+                                  <button
+                                    onClick={() => {
+                                      onSwitchUser(user);
+                                      setLogs(prev => [`[${new Date().toLocaleTimeString()}] [SESSION] Switched active session to ${user.full_name} (${user.phone})`, ...prev]);
+                                    }}
+                                    className="px-2 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-[10px] font-bold transition-all cursor-pointer"
+                                    title="Switch app active session to this user"
+                                  >
+                                    Switch
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setGodmodeSearch(user.phone || user.full_name);
+                                    setActiveTab('godmode');
+                                  }}
+                                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-bold transition-all cursor-pointer"
+                                  title="Inspect and edit in Godmode console"
+                                >
+                                  Godmode
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* GODMODE ACCOUNT CONTROL TAB */}
         {activeTab === 'godmode' && (
           <div className="bg-slate-900 border border-purple-500/40 rounded-2xl p-5 space-y-4">

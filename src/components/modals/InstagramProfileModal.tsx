@@ -360,7 +360,14 @@ export const InstagramProfileModal: React.FC<InstagramProfileModalProps> = ({
                   {/* Direct Message (DM) Button */}
                   <button
                     id="btn-instagram-message"
-                    onClick={() => setShowDmDrawer(true)}
+                    onClick={() => {
+                      if (onOpenDirectChat) {
+                        onClose();
+                        onOpenDirectChat(profileUser.id);
+                      } else {
+                        setShowDmDrawer(true);
+                      }
+                    }}
                     className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors active:scale-95 border border-white/10"
                   >
                     <Send className="w-3.5 h-3.5 -rotate-12" />
@@ -482,7 +489,7 @@ export const InstagramProfileModal: React.FC<InstagramProfileModalProps> = ({
                     <span>{profileUser.full_name}</span>
                     {profileUser.is_verified && <VerifiedBadge type="gold" size="xs" />}
                   </h3>
-                  <p className="text-[10px] text-emerald-400">Direct Message Altar</p>
+                  <p className="text-[10px] text-emerald-400">Direct Chat</p>
                 </div>
               </div>
 

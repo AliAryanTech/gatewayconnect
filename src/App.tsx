@@ -83,7 +83,9 @@ export default function App() {
     const user = StorageService.getCurrentUser();
     if (!user) return 0;
     const threads = StorageService.getAllDirectMessageThreads(user.id);
-    return threads.reduce((acc, t) => acc + (t.unread_count || 0), 0);
+    const dmCount = threads.reduce((acc, t) => acc + (t.unread_count || 0), 0);
+    const grpCount = StorageService.getTotalUnreadGroupMessagesCount(user.id);
+    return dmCount + grpCount;
   });
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
@@ -112,7 +114,9 @@ export default function App() {
     setCurrentUser(user);
     if (user) {
       const threads = StorageService.getAllDirectMessageThreads(user.id);
-      setUnreadDmsCount(threads.reduce((acc, t) => acc + (t.unread_count || 0), 0));
+      const dmCount = threads.reduce((acc, t) => acc + (t.unread_count || 0), 0);
+      const grpCount = StorageService.getTotalUnreadGroupMessagesCount(user.id);
+      setUnreadDmsCount(dmCount + grpCount);
     }
   };
 
@@ -193,6 +197,7 @@ export default function App() {
     window.addEventListener('gcz_users_synced', refreshAppData);
     window.addEventListener('gcz_user_profile_updated', refreshAppData);
     window.addEventListener('gcz_groups_updated', refreshAppData);
+    window.addEventListener('gcz_group_messages_updated', refreshAppData);
     return () => {
       unbind();
       liveSyncService.disconnect();
@@ -208,6 +213,7 @@ export default function App() {
       window.removeEventListener('gcz_users_synced', refreshAppData);
       window.removeEventListener('gcz_user_profile_updated', refreshAppData);
       window.removeEventListener('gcz_groups_updated', refreshAppData);
+      window.removeEventListener('gcz_group_messages_updated', refreshAppData);
     };
   }, [currentUser?.id]);
   useEffect(() => {

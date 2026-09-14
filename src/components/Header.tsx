@@ -96,11 +96,13 @@ export const Header: React.FC<HeaderProps> = ({
     window.addEventListener('gcz_notifications_updated', updateSettingsAndCount);
     window.addEventListener('gcz_new_notification', updateSettingsAndCount as any);
     window.addEventListener('gcz_notification_settings_updated', updateSettingsAndCount as any);
+    window.addEventListener('gcz_group_messages_updated', updateSettingsAndCount as any);
     window.addEventListener('storage', updateSettingsAndCount);
     return () => {
       window.removeEventListener('gcz_notifications_updated', updateSettingsAndCount);
       window.removeEventListener('gcz_new_notification', updateSettingsAndCount as any);
       window.removeEventListener('gcz_notification_settings_updated', updateSettingsAndCount as any);
+      window.removeEventListener('gcz_group_messages_updated', updateSettingsAndCount as any);
       window.removeEventListener('storage', updateSettingsAndCount);
     };
   }, [currentUser?.id]);
@@ -142,17 +144,17 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Action Controls & User Identity */}
       <div className="flex items-center gap-1.5 sm:gap-2">
         
-        {/* Direct Messages Button */}
+        {/* Direct Messages & Groups Button */}
         {!isGuest && onOpenDirectMessages && (
           <button
             id="btn-direct-messages-header"
             onClick={onOpenDirectMessages}
-            title="Direct Messages"
+            title="Chats & Groups"
             className="relative p-2 rounded-lg bg-secondary/50 border border-border hover:bg-secondary text-foreground/80 hover:text-foreground transition-all shadow-sm cursor-pointer"
           >
             <Send className="w-4 h-4 text-primary" />
             {unreadDmsCount > 0 && notifSettings.directMessages && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center shadow">
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center shadow">
                 {unreadDmsCount}
               </span>
             )}

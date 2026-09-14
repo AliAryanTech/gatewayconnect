@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { User, AppNotification } from '../../types';
 import { StorageService } from '../../services/storageService';
+import { cn } from '../../lib/utils';
 
 interface FloatingNotificationToastProps {
   currentUser?: User | null;
@@ -61,6 +62,7 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
     if (timerRef.current) clearTimeout(timerRef.current);
     setCurrentNotif(notif);
     setIsVisible(true);
+    StorageService.playNotificationChime();
 
     // Auto-dismiss after 8 seconds
     timerRef.current = setTimeout(() => {
@@ -194,7 +196,7 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
       return 'Join Live Stream';
     }
     if (currentNotif.target_type === 'group' || (currentNotif.target_id && (currentNotif.target_id.startsWith('grp_') || currentNotif.target_id.startsWith('group_')))) {
-      return 'Open Group';
+      return 'Open Group Chat';
     }
     if (currentNotif.type === 'chat' || currentNotif.target_type === 'dm') {
       return 'Reply in Chat';
@@ -261,8 +263,13 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
         {/* Content */}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center justify-between gap-1">
-            <span className="text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-[#D4AF37]/20 text-[#D4AF37]">
-              New Notification
+            <span className={cn(
+              "text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded",
+              currentNotif.target_type === 'group'
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                : "bg-[#D4AF37]/20 text-[#D4AF37]"
+            )}>
+              {currentNotif.target_type === 'group' ? 'Group Message' : 'New Notification'}
             </span>
             <button
               id="btn-dismiss-floating-toast"

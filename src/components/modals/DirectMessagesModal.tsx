@@ -111,8 +111,20 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   });
   const [groupMessages, setGroupMessages] = useState<ChatGroupMessage[]>([]);
   const [groupInputText, setGroupInputText] = useState('');
-  const [pendingInvites, setPendingInvites] = useState<GroupInvite[]>([]);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
+  // Reactively respond to initialRecipientId and initialGroupId props
+  useEffect(() => {
+    if (initialRecipientId) {
+      setActiveTab('direct');
+      setActiveUserId(initialRecipientId);
+    } else if (initialGroupId) {
+      setActiveTab('groups');
+      setActiveGroupId(initialGroupId);
+      StorageService.markGroupMessagesAsRead(initialGroupId, currentUser.id);
+      setGroupMessages(StorageService.getChatGroupMessagesForUser(initialGroupId, currentUser.id));
+    }
+  }, [initialRecipientId, initialGroupId, currentUser.id]);
 
   // Modals for groups
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
@@ -343,6 +355,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
     setActiveGroupId(groupId);
     setIsSelectMode(false);
     setSelectedMessageIds([]);
+    StorageService.markGroupMessagesAsRead(groupId, currentUser.id);
     const msgs = StorageService.getChatGroupMessagesForUser(groupId, currentUser.id);
     setGroupMessages(msgs);
   };
@@ -438,6 +451,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       refreshMessages();
       refreshThreads();
     } else if (activeTab === 'groups' && activeGroupId) {
+      StorageService.markGroupMessagesAsRead(activeGroupId, currentUser.id);
       const msgs = StorageService.getChatGroupMessagesForUser(activeGroupId, currentUser.id);
       setGroupMessages(msgs);
     }
@@ -460,6 +474,9 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   const visibleGroups = isDeveloper
     ? groups
     : groups.filter(g => g.member_ids && g.member_ids.includes(currentUser.id));
+
+  const totalUnreadDms = threads.reduce((acc, t) => acc + (t.unread_count || 0), 0);
+  const totalUnreadGroups = StorageService.getTotalUnreadGroupMessagesCount(currentUser.id);
 
   const activeGroup = groups.find(g => g.id === activeGroupId) || (typeof window !== 'undefined' && !isMobile ? (visibleGroups[0] || null) : null);
 
@@ -1341,6 +1358,13 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
               >
                 <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span>Direct Chats</span>
+                {totalUnreadDms > 0 && (
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    activeTab === 'direct' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-emerald-500 text-white'
+                  }`}>
+                    {totalUnreadDms}
+                  </span>
+                )}
               </button>
 
               <button
@@ -1356,13 +1380,21 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                 }`}
               >
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>Church Groups</span>
-                {visibleGroups.length > 0 && (
+                <span>Groups</span>
+                {totalUnreadGroups > 0 ? (
                   <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                    activeTab === 'groups' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-secondary text-foreground'
+                    activeTab === 'groups' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-emerald-500 text-white'
                   }`}>
-                    {visibleGroups.length}
+                    {totalUnreadGroups}
                   </span>
+                ) : (
+                  visibleGroups.length > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      activeTab === 'groups' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-secondary text-foreground'
+                    }`}>
+                      {visibleGroups.length}
+                    </span>
+                  )
                 )}
                 {pendingInvites.length > 0 && (
                   <span className="w-2 h-2 rounded-full bg-destructive animate-ping" />
@@ -1620,6 +1652,10 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                   const isSelected = grp.id === activeGroupId;
                   const isMember = grp.member_ids.includes(currentUser.id);
                   const isFs = grp.id === 'group_foundation_school';
+                  const grpUnread = StorageService.getUnreadGroupMessagesCount(grp.id, currentUser.id);
+                  const grpMsgs = StorageService.getChatGroupMessagesForUser(grp.id, currentUser.id);
+                  const lastMsg = grpMsgs[grpMsgs.length - 1];
+                  const lastMsgTime = lastMsg?.created_at ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
                   return (
                     <button
@@ -1644,42 +1680,67 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                             <Crown className="w-3 h-3 fill-current" />
                           </span>
                         )}
+                        {grpUnread > 0 && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-card" />
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1 mb-0.5">
-                          <h4 className="font-semibold text-xs sm:text-sm text-foreground truncate flex items-center gap-1">
+                          <h4 className={`text-xs sm:text-sm truncate flex items-center gap-1 ${
+                            grpUnread > 0 ? 'font-bold text-foreground' : 'font-semibold text-foreground/90'
+                          }`}>
                             {grp.pinned_by_users?.includes(currentUser.id) && (
                               <Pin className="w-3 h-3 text-primary fill-primary shrink-0" />
                             )}
                             <span>{grp.name}</span>
                           </h4>
-                          {grp.is_paid ? (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20 shrink-0">
-                              ${grp.price_usd}/3m
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground shrink-0">
-                              {grp.member_ids.length} members
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {lastMsgTime && (
+                              <span className={`text-[10px] ${grpUnread > 0 ? 'text-emerald-500 font-bold' : 'text-muted-foreground'}`}>
+                                {lastMsgTime}
+                              </span>
+                            )}
+                            {grp.is_paid ? (
+                              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20">
+                                ${grp.price_usd}/3m
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`text-[11px] truncate flex-1 ${
+                            grpUnread > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'
+                          }`}>
+                            {lastMsg 
+                              ? `${lastMsg.sender_name ? `${lastMsg.sender_name.split(' ')[0]}: ` : ''}${lastMsg.text || (lastMsg.media_type ? `📷 ${lastMsg.media_type}` : 'New message')}`
+                              : grp.description
+                            }
+                          </p>
+
+                          {grpUnread > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full bg-emerald-500 text-white text-[10px] font-black shrink-0 min-w-4 text-center shadow-sm">
+                              {grpUnread}
                             </span>
                           )}
                         </div>
-
-                        <p className="text-[11px] text-muted-foreground truncate">
-                          {grp.description}
-                        </p>
 
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-secondary text-muted-foreground font-semibold uppercase tracking-wider border border-border">
                             {grp.category || 'Group'}
                           </span>
 
+                          <span className="text-[10px] text-muted-foreground">
+                            {grp.member_ids.length} members
+                          </span>
+
                           {isMember ? (
-                            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
+                            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5 ml-auto">
                               <Check className="w-2.5 h-2.5" /> Enrolled
                             </span>
                           ) : (
-                            <span className="text-[9px] text-primary font-semibold">
+                            <span className="text-[9px] text-primary font-semibold ml-auto">
                               {grp.is_paid ? 'Tap to Enroll' : 'Tap to Join'}
                             </span>
                           )}
