@@ -10,6 +10,7 @@ export type RealtimeHandlers = {
   reactions?: (payload: unknown) => void;
   users?: (payload: unknown) => void;
   profilePictures?: (payload: unknown) => void;
+  communityStories?: (payload: unknown) => void;
   onPresenceSync?: (activeMembers: Array<{ id: string; full_name: string; handle?: string }>) => void;
   onBroadcastEvent?: (event: { type: string; payload: unknown }) => void;
 };
@@ -104,6 +105,16 @@ export function subscribeToRealtime(
     { event: '*', schema: 'public', table: 'profile_pictures' },
     (payload) => {
       handlers.profilePictures?.(payload);
+    }
+  );
+
+  // 8c. Community Stories (24h status posts) — previously never subscribed to,
+  // so a story only ever appeared on the poster's own device.
+  channel.on(
+    'postgres_changes',
+    { event: 'INSERT', schema: 'public', table: 'community_stories' },
+    (payload) => {
+      handlers.communityStories?.(payload);
     }
   );
 
