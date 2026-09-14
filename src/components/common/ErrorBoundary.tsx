@@ -41,19 +41,32 @@ export class ErrorBoundary extends React.Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
-  // Fresh Start: Cleans logs, streaming states, resets cache while preserving all registered users & profiles
+  // Fresh Start: Cleans logs, streaming states, resets cache while preserving all registered users, groups & profiles
   handleFreshStart = () => {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const allUsers = window.localStorage.getItem('gcz_all_users_v1');
-        const currUser = window.localStorage.getItem('gcz_current_user_v1');
-        const avatars = window.localStorage.getItem('gcz_permanent_custom_avatars_v1');
+        const allUsers = window.localStorage.getItem('gcz_all_users') || window.localStorage.getItem('gcz_all_users_v1');
+        const currUser = window.localStorage.getItem('gcz_current_user') || window.localStorage.getItem('gcz_current_user_v1');
+        const avatars = window.localStorage.getItem('gcz_permanent_custom_avatars') || window.localStorage.getItem('gcz_permanent_custom_avatars_v1');
+        const chatGroups = window.localStorage.getItem('gcz_chat_groups_v1');
+        const directMsgs = window.localStorage.getItem('gcz_direct_messages');
         
         window.localStorage.clear();
         
-        if (allUsers) window.localStorage.setItem('gcz_all_users_v1', allUsers);
-        if (currUser) window.localStorage.setItem('gcz_current_user_v1', currUser);
-        if (avatars) window.localStorage.setItem('gcz_permanent_custom_avatars_v1', avatars);
+        if (allUsers) {
+          window.localStorage.setItem('gcz_all_users', allUsers);
+          window.localStorage.setItem('gcz_all_users_v1', allUsers);
+        }
+        if (currUser) {
+          window.localStorage.setItem('gcz_current_user', currUser);
+          window.localStorage.setItem('gcz_current_user_v1', currUser);
+        }
+        if (avatars) {
+          window.localStorage.setItem('gcz_permanent_custom_avatars', avatars);
+          window.localStorage.setItem('gcz_permanent_custom_avatars_v1', avatars);
+        }
+        if (chatGroups) window.localStorage.setItem('gcz_chat_groups_v1', chatGroups);
+        if (directMsgs) window.localStorage.setItem('gcz_direct_messages', directMsgs);
       }
     } catch {}
     this.setState({ hasError: false, error: null });
