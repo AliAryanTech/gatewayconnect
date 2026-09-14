@@ -4649,20 +4649,6 @@ export class StorageService {
     return true;
   }
 
-  static updateGroupSettings(groupId: string, settings: { only_admins_can_send_messages?: boolean; only_admins_can_add_members?: boolean }): boolean {
-    const groups = this.getChatGroups();
-    const grp = groups.find(g => g.id === groupId);
-    if (!grp) return false;
-    if (settings.only_admins_can_send_messages !== undefined) {
-      grp.only_admins_can_send_messages = settings.only_admins_can_send_messages;
-    }
-    if (settings.only_admins_can_add_members !== undefined) {
-      grp.only_admins_can_add_members = settings.only_admins_can_add_members;
-    }
-    setLocal(KEYS.CHAT_GROUPS, groups);
-    return true;
-  }
-
   static togglePromoteGroupAdmin(groupId: string, targetUserId: string): boolean {
     const groups = this.getChatGroups();
     const grp = groups.find(g => g.id === groupId);
