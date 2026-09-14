@@ -128,8 +128,13 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
     // Cross-device social sync
     const unsubscribe = SupabaseSyncService.subscribeToSocialMessaging({
       onUserProfileUpdated: () => {
-        setGroupList(StorageService.getGroups(currentUser?.id));
-        setAllRegisteredUsers(StorageService.getAllUsers());
+        // Pull the new/updated account from Supabase and merge it into local
+        // storage first — re-reading local storage alone won't show accounts
+        // that registered on another device, or photo changes made elsewhere.
+        StorageService.syncUsersWithRemote().finally(() => {
+          setGroupList(StorageService.getGroups(currentUser?.id));
+          setAllRegisteredUsers(StorageService.getAllUsers());
+        });
       },
       onGroupMemberChanged: () => {
         setGroupList(StorageService.getGroups(currentUser?.id));
