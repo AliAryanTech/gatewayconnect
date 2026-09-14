@@ -591,8 +591,14 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
         refreshThreads();
       },
       onUserProfileUpdated: () => {
-        refreshThreads();
-        refreshGroupsData();
+        // Pull the new/updated account from Supabase and merge it into local
+        // storage first — otherwise a sender who just registered (or just
+        // changed their photo) on another device won't resolve to a real
+        // user here, and their messages/threads won't render.
+        StorageService.syncUsersWithRemote().finally(() => {
+          refreshThreads();
+          refreshGroupsData();
+        });
       },
       onGroupMemberChanged: () => {
         refreshGroupsData();
