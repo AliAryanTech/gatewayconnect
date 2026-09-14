@@ -172,6 +172,7 @@ export default function App() {
 
   useEffect(() => {
     StorageService.syncUsersWithRemote().catch(() => {});
+    StorageService.syncStoriesWithRemote().catch(() => {});
     if (!currentUser) {
       liveSyncService.disconnect();
       return;
@@ -274,6 +275,27 @@ export default function App() {
         profilePictures: (payload) => {
           console.log('Realtime profile picture change:', payload);
           StorageService.syncUsersWithRemote().catch(() => {});
+        },
+        communityStories: (payload) => {
+          // A story was posted from another device — merge it in directly so
+          // it shows up immediately without needing a manual page refresh.
+          console.log('Realtime story posted:', payload);
+          const row = (payload as any)?.new;
+          if (row) {
+            StorageService.receiveRemoteStory({
+              id: row.id,
+              user_id: row.user_id,
+              user_name: row.user_name || 'Church Member',
+              user_handle: row.user_handle || '',
+              user_avatar: row.avatar_url || '',
+              avatar_url: row.avatar_url || null,
+              badge_type: row.badge_type || 'none',
+              image_url: row.image_url || '',
+              caption: row.caption || '',
+              scripture: row.scripture || null,
+              created_at: row.created_at
+            });
+          }
         },
         onBroadcastEvent: (event) => {
           console.log('Realtime live broadcast event:', event);
