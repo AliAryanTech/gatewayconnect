@@ -88,52 +88,25 @@ export class PaynowService {
       const additionalinfo = params.additionalInfo.trim() || 'Gateway Church Ministry Partner';
       const status = 'Message';
 
-      // Step 2: Calculate SHA-512 hash in exact field order
-      // Paynow requires: id, reference, amount, additionalinfo, returnurl, resulturl, authemail, status
-      const hashValues = [id, reference, amount, additionalinfo, returnUrl, resultUrl, authEmail, status];
-      const hash = await generatePaynowHash(hashValues, config.integrationKey.trim());
-
-      const payload = new URLSearchParams({
-        id,
-        reference,
-        amount,
-        additionalinfo,
-        returnurl: returnUrl,
-        resulturl: resultUrl,
-        authemail: authEmail,
-        status,
-        hash
-      });
-
-      // Try server-side proxy route first if available, otherwise direct call
+      // Always use the server-side proxy. The Integration Key must never be
+      // sent directly from the browser to Paynow.
       const endpoint = '/api/paynow/initiate';
-      let response: Response;
-
-      try {
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            integrationId: id,
-            integrationKey: config.integrationKey.trim(),
-            reference,
-            amount: params.amount,
-            additionalInfo: additionalinfo,
-            returnUrl,
-            resultUrl,
-            authEmail,
-            phone: params.phone,
-            method: params.paymentMethod
-          })
-        });
-      } catch (networkError) {
-        // Direct browser fallback call
-        response = await fetch('https://www.paynow.co.zw/interface/initiatetransaction', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: payload.toString()
-        });
-      }
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          integrationId: id,
+          integrationKey: config.integrationKey.trim(),
+          reference,
+          amount: params.amount,
+          additionalInfo: additionalinfo,
+          returnUrl,
+          resultUrl,
+          authEmail,
+          phone: params.phone,
+          method: params.paymentMethod
+        })
+      });
 
       if (!response.ok) {
         const errText = await response.text();
