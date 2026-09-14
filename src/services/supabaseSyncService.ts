@@ -972,7 +972,9 @@ export class SupabaseSyncService {
       }
 
       if (upsertRes.error) {
-        console.warn('Supabase syncUser upsert notice:', upsertRes.error.message);
+        console.error('[GatewayConnect] syncUser: Supabase upsert FAILED for', user.phone, '-', upsertRes.error.message, upsertRes.error);
+      } else {
+        console.log('[GatewayConnect] syncUser: successfully pushed', user.full_name, '(', user.phone, ') to Supabase.');
       }
 
       if (user.avatar_url && userPayload.id) {
@@ -994,7 +996,7 @@ export class SupabaseSyncService {
 
       return !upsertRes.error;
     } catch (err: any) {
-      console.warn('Supabase syncUser notice:', err?.message || err);
+      console.error('[GatewayConnect] syncUser threw an exception for', user?.phone, ':', err?.message || err, err);
       return false;
     }
   }
@@ -1018,13 +1020,21 @@ export class SupabaseSyncService {
    */
   static async pullUsersFromSupabase(): Promise<User[]> {
     const supabase = getSupabase();
-    if (!supabase) return [];
+    if (!supabase) {
+      console.warn('[GatewayConnect] pullUsersFromSupabase: Supabase client not configured (getSupabase() returned null). Check VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.');
+      return [];
+    }
     try {
       const { data, error } = await supabase
         .from('users')
         .select('*');
 
-      if (error || !data) return [];
+      if (error) {
+        console.error('[GatewayConnect] pullUsersFromSupabase Supabase error:', error.message, error);
+        return [];
+      }
+      if (!data) return [];
+      console.log(`[GatewayConnect] pullUsersFromSupabase: fetched ${data.length} user rows from Supabase.`);
 
       return data.map((row: any) => ({
         id: row.id,
@@ -1045,7 +1055,8 @@ export class SupabaseSyncService {
         following_count: row.following_count || 0,
         saved_verses: row.saved_verses || ['John 1:1', 'Isaiah 40:31']
       }));
-    } catch {
+    } catch (err) {
+      console.error('[GatewayConnect] pullUsersFromSupabase threw an exception:', err);
       return [];
     }
   }
