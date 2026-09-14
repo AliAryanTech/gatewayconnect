@@ -50,12 +50,10 @@ export const CONFIG = {
   // ---------------------------------------------------------------------------
   // Paynow Zimbabwe Gateway Configuration (Serverless / Backend)
   // ---------------------------------------------------------------------------
-  // IMPORTANT: Paynow credentials are server-only. Do not provide fallback/demo values here.
-  // The client never receives these unless they are explicitly exposed by the build environment.
-  PAYNOW_INTEGRATION_ID: getEnv('PAYNOW_INTEGRATION_ID'),
-  PAYNOW_INTEGRATION_KEY: getEnv('PAYNOW_INTEGRATION_KEY'),
+  PAYNOW_INTEGRATION_ID: getEnv('PAYNOW_INTEGRATION_ID', ''),
+  PAYNOW_INTEGRATION_KEY: getEnv('PAYNOW_INTEGRATION_KEY', ''),
   PAYNOW_MERCHANT_EMAIL: getEnv('PAYNOW_MERCHANT_EMAIL', 'gatewaychurchzim@gmail.com'),
-  PAYNOW_RETURN_URL: getEnv('PAYNOW_RETURN_URL', 'https://gatewayconnect.joedaniels.org/?payment=return'),
+  PAYNOW_RETURN_URL: getEnv('PAYNOW_RETURN_URL', 'https://gatewayconnect.joedaniels.org/payment/success'),
   PAYNOW_RESULT_URL: getEnv('PAYNOW_RESULT_URL', 'https://gatewayconnect.joedaniels.org/api/paynow/webhook'),
 
   // ---------------------------------------------------------------------------

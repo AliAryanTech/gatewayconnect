@@ -51,7 +51,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-t border-border py-2 px-3 safe-area-bottom shadow-lg transition-colors">
-      <div className="w-full max-w-md mx-auto grid grid-cols-5 gap-0.5">
+      <div className="max-w-md mx-auto grid grid-cols-5 gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -62,7 +62,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               id={`tab-btn-${tab.id}`}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                'relative min-w-0 flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all duration-200 cursor-pointer select-none',
+                'relative flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all duration-200 cursor-pointer select-none',
                 isActive 
                   ? 'text-primary bg-secondary/80 shadow-xs' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'

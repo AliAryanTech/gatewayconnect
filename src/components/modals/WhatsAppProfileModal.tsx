@@ -82,12 +82,12 @@ export const WhatsAppProfileModal: React.FC<WhatsAppProfileModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="bg-[#0b141a] text-[#e9edef] border border-[#222e35] rounded-3xl max-w-md w-full overflow-hidden shadow-2xl flex flex-col max-h-[85vh] my-auto"
+        className="bg-[#0b0f19] text-white border border-white/10 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl shadow-black/60 flex flex-col max-h-[85vh] my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         
         {/* WhatsApp Top App Bar */}
-        <div className="bg-[#202c33] px-4 py-3.5 flex items-center justify-between border-b border-[#2a3942]">
+        <div className="bg-gradient-to-r from-[#111827] via-[#172033] to-[#0f172a] px-4 py-3.5 flex items-center justify-between border-b border-white/10">
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
@@ -96,7 +96,7 @@ export const WhatsAppProfileModal: React.FC<WhatsAppProfileModalProps> = ({
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h2 className="font-bold text-base text-white tracking-wide">
-              Profile
+              My Profile
             </h2>
           </div>
 
@@ -119,12 +119,12 @@ export const WhatsAppProfileModal: React.FC<WhatsAppProfileModalProps> = ({
         </div>
 
         {/* WhatsApp Profile Content Body */}
-        <div className="p-4 sm:p-6 space-y-6 overflow-y-auto flex-1 bg-[#111b21]">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 bg-gradient-to-b from-[#0b1220] to-[#080c14]">
           
           {/* 1. Large WhatsApp Profile Avatar */}
           <div className="flex flex-col items-center justify-center pt-2">
             <div className="relative group cursor-pointer" onClick={() => setShowPhotoPicker(true)}>
-              <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-[#202c33] group-hover:border-[#00a884] shadow-xl transition-all bg-[#2a3942] flex items-center justify-center">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-primary/60 group-hover:border-[#00a884] shadow-xl transition-all bg-[#2a3942] flex items-center justify-center">
                 {currentUser.avatar_url ? (
                   <img
                     src={currentUser.avatar_url}

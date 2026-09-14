@@ -981,8 +981,8 @@ SUPABASE_ANON_KEY=sb_publishable_TJvwQ_lcZtUL0hHOm1yJmA_rfhpBKEX
 
 # 2. PAYNOW ZIMBABWE (EcoCash, OneMoney, Zimswitch, Visa/Mastercard)
 # Get from: https://www.paynow.co.zw
-PAYNOW_INTEGRATION_ID=
-PAYNOW_INTEGRATION_KEY=
+PAYNOW_INTEGRATION_ID=12345
+PAYNOW_INTEGRATION_KEY=abcdef-1234-5678-90ab-cdef12345678
 PAYNOW_RESULT_URL=https://your-domain.org/api/paynow/webhook
 PAYNOW_RETURN_URL=https://your-domain.org/payment/success
 

@@ -14,14 +14,12 @@ import { FlutterExportModal } from './components/modals/FlutterExportModal';
 import { WhatsAppProfileModal } from './components/modals/WhatsAppProfileModal';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { BannedScreen } from './components/auth/BannedScreen';
-import { LiveSermonModal } from './components/modals/LiveSermonModal';
 import { DirectMessagesModal } from './components/modals/DirectMessagesModal';
 import { NotificationsModal } from './components/modals/NotificationsModal';
 import { FloatingNotificationToast } from './components/common/FloatingNotificationToast';
 import { FloatingCommentReply } from './components/common/FloatingCommentReply';
 import { InstagramProfileModal } from './components/modals/InstagramProfileModal';
 import { StorageService } from './services/storageService';
-import { liveSyncService } from './services/liveSyncService';
 import { 
   TabType, 
   User, 
@@ -74,14 +72,11 @@ export default function App() {
   const [showFlutterExport, setShowFlutterExport] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
-  const [showLiveSermonModal, setShowLiveSermonModal] = useState<boolean>(false);
   const [showDirectMessagesModal, setShowDirectMessagesModal] = useState<boolean>(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
   const [directMessageRecipientId, setDirectMessageRecipientId] = useState<string | undefined>(undefined);
   const [directMessageGroupId, setDirectMessageGroupId] = useState<string | undefined>(undefined);
   const [bibleReference, setBibleReference] = useState<string | undefined>(undefined);
-  const [dismissedLiveNotification, setDismissedLiveNotification] = useState<boolean>(false);
-  const [liveSermonStatus, setLiveSermonStatus] = useState(StorageService.getLiveSermonStatus());
   const [globalProfileUserId, setGlobalProfileUserId] = useState<string | null>(null);
   const [unreadDmsCount, setUnreadDmsCount] = useState<number>(() => {
     const user = StorageService.getCurrentUser();
@@ -101,9 +96,6 @@ export default function App() {
   const [authReferralCode, setAuthReferralCode] = useState<string>('');
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Background Audio Player Bar (when audio-only stream is active)
-  const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
-  const [audioStreamTitle, setAudioStreamTitle] = useState<string>('Live Broadcast Audio (24kbps Low-Data Stream)');
 
   // Refresh all state from StorageService
   const refreshAppData = () => {
@@ -117,7 +109,6 @@ export default function App() {
     setPushNotifications(StorageService.getPushNotifications());
     const user = StorageService.getCurrentUser();
     setCurrentUser(user);
-    setLiveSermonStatus(StorageService.getLiveSermonStatus());
     if (user) {
       const threads = StorageService.getAllDirectMessageThreads(user.id);
       setUnreadDmsCount(threads.reduce((acc, t) => acc + (t.unread_count || 0), 0));
@@ -176,32 +167,20 @@ export default function App() {
   useEffect(() => {
     StorageService.syncUsersWithRemote().catch(() => {});
     if (!currentUser) {
-      liveSyncService.disconnect();
       return;
     }
     if (currentUser?.id && currentUser?.role !== 'guest') {
       StorageService.hydrateFollowsFromSupabase(currentUser.id).catch(() => {});
     }
-    liveSyncService.connect(currentUser);
-    const unbind = liveSyncService.bindLocalEvents();
-    const refreshLiveState = () => refreshAppData();
+    const unbind = () => {};
     const handleOpenProfile = (e: any) => {
       if (e?.detail?.userId) {
         setGlobalProfileUserId(e.detail.userId);
       }
     };
-    window.addEventListener('gcz_live_state_updated', refreshLiveState);
-    window.addEventListener('gcz_live_event_received', refreshLiveState);
-    window.addEventListener('gcz_banned_users_updated', refreshLiveState);
-    window.addEventListener('gcz_current_user_banned', refreshLiveState);
     window.addEventListener('gcz_open_user_profile', handleOpenProfile);
     return () => {
       unbind();
-      liveSyncService.disconnect();
-      window.removeEventListener('gcz_live_state_updated', refreshLiveState);
-      window.removeEventListener('gcz_live_event_received', refreshLiveState);
-      window.removeEventListener('gcz_banned_users_updated', refreshLiveState);
-      window.removeEventListener('gcz_current_user_banned', refreshLiveState);
       window.removeEventListener('gcz_open_user_profile', handleOpenProfile);
     };
   }, [currentUser?.id]);
@@ -387,58 +366,10 @@ export default function App() {
         onOpenFlutterExport={() => setShowFlutterExport(true)}
         onOpenDirectMessages={() => handleOpenDirectChat()}
         onOpenNotifications={() => setShowNotificationsModal(true)}
-        onOpenLiveSermon={() => setShowLiveSermonModal(true)}
-        isLiveSermon={liveSermonStatus.isLive}
         unreadDmsCount={unreadDmsCount}
         pushNotifications={pushNotifications}
       />
 
-      {/* Non-Annoying Live Sermon Notification Bar */}
-      {liveSermonStatus.isLive && !dismissedLiveNotification && (
-        <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 pt-3">
-          <div className="bg-gradient-to-r from-red-950/90 via-[#001F3F] to-red-950/90 border border-red-500/50 rounded-2xl p-3 sm:p-3.5 shadow-2xl flex items-center justify-between gap-3 text-white animate-slide-up">
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-9 h-9 rounded-xl bg-red-600 flex items-center justify-center shrink-0 shadow-md animate-pulse">
-                <Radio className="w-5 h-5 text-white" />
-              </div>
-              <div className="truncate">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded bg-red-500 text-white animate-pulse">
-                    LIVE SERVICE
-                  </span>
-                  <span className="text-xs sm:text-sm font-bold truncate text-white">
-                    {liveSermonStatus.title || 'Supernatural Dominion Service • Apostle Joe Daniels Live'}
-                  </span>
-                </div>
-                <p className="text-[11px] text-white/70 truncate mt-0.5 flex items-center gap-1.5">
-                  <span className="text-emerald-400 font-semibold">{StorageService.getStreamViewers().length + 42} Believers Streaming</span>
-                  <span>•</span>
-                  <span className="text-[#D4AF37]">Streaming with your {currentUser?.location || currentUser?.city_location || 'Harare'} congregation</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setShowLiveSermonModal(true)}
-                className="px-3 sm:px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center gap-1.5 transition-all transform hover:scale-105"
-              >
-                <Tv className="w-3.5 h-3.5" />
-                <span>Join Stream</span>
-              </button>
-              <button
-                onClick={() => setDismissedLiveNotification(true)}
-                title="Dismiss notification"
-                className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Main Content Area */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 py-3">
         {activeTab === 'home' && (
           <HomeTab
@@ -456,7 +387,6 @@ export default function App() {
               setAuthMode('login');
               setShowAuthModal(true);
             }}
-            onOpenLiveModal={() => setShowLiveSermonModal(true)}
             onOpenDevConsole={() => setShowDevConsole(true)}
             onOpenAdminPanel={() => setShowAdminPanel(true)}
           />
@@ -497,8 +427,7 @@ export default function App() {
               setDirectMessageGroupId(undefined);
               setShowDirectMessagesModal(true);
             }}
-            onOpenLiveSermon={() => setShowLiveSermonModal(true)}
-            onRefreshData={refreshAppData}
+               onRefreshData={refreshAppData}
           />
         )}
 
@@ -548,27 +477,6 @@ export default function App() {
         </div>
       </footer>
 
-      {/* 4. Global Audio Floating Mini-Player */}
-      {isAudioPlaying && (
-        <div className="fixed bottom-16 left-3 right-3 sm:left-auto sm:right-6 sm:w-80 z-40 bg-[#001F3F] border border-[#D4AF37]/50 rounded-2xl p-3 shadow-2xl flex items-center justify-between gap-3 animate-slide-up">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-[#D4AF37] text-[#001F3F] flex items-center justify-center shrink-0 animate-pulse">
-              <Volume2 className="w-4 h-4" />
-            </div>
-            <div className="truncate text-xs">
-              <p className="font-bold text-white truncate">{audioStreamTitle}</p>
-              <p className="text-[10px] text-[#D4AF37] font-mono">OPUS • 24kbps Low-Data</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsAudioPlaying(false)}
-            className="p-1 rounded-lg bg-[#001122] text-white/60 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
       {/* 5. Bottom Tab Navigation */}
       <Navigation
         activeTab={activeTab}
@@ -617,21 +525,6 @@ export default function App() {
         onUpdateUser={handleUpdateUser}
       />
 
-      {/* Live Sermon Broadcast Streaming Modal */}
-      {showLiveSermonModal && (
-        <LiveSermonModal
-          currentUser={currentUser}
-          onClose={() => {
-            setShowLiveSermonModal(false);
-            refreshAppData();
-          }}
-          onOpenSeedModal={() => {
-            setShowLiveSermonModal(false);
-            setActiveTab('store');
-          }}
-        />
-      )}
-
       {/* Direct Messages Modal */}
       {showDirectMessagesModal && (
         <DirectMessagesModal
@@ -650,7 +543,6 @@ export default function App() {
       {/* Floating Notification Toast (Redirects to exact place message comes from) */}
       <FloatingNotificationToast
         currentUser={currentUser}
-        onOpenLiveSermon={() => setShowLiveSermonModal(true)}
         onOpenDirectChat={(recipientId) => {
           if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
             setAuthMode('login');
@@ -705,8 +597,7 @@ export default function App() {
         <NotificationsModal
           isOpen={showNotificationsModal}
           onClose={() => setShowNotificationsModal(false)}
-          onOpenLiveSermon={() => setShowLiveSermonModal(true)}
-          onOpenDirectChat={(recipientId) => {
+           onOpenDirectChat={(recipientId) => {
             if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
               setAuthMode('login');
               setShowAuthModal(true);

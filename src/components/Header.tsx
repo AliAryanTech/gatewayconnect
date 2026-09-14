@@ -118,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 h-14 sm:h-20 bg-background/85 backdrop-blur-xl border-b border-border flex items-center justify-between px-3 sm:px-6 shrink-0 transition-all shadow-sm">
+    <header className="sticky top-0 z-40 h-16 sm:h-20 bg-background/85 backdrop-blur-xl border-b border-border flex items-center justify-between px-3 sm:px-6 shrink-0 transition-all shadow-sm">
       
       {/* Brand & Ministry Logo */}
       <div className="flex items-center gap-2.5 sm:gap-3">
@@ -142,20 +142,6 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Action Controls & User Identity */}
       <div className="flex items-center gap-1.5 sm:gap-2">
         
-        {/* Live Sermon Broadcast Button */}
-        {isLiveSermon && notifSettings.liveStreams && onOpenLiveSermon && (
-          <button
-            id="btn-live-sermon-header"
-            onClick={onOpenLiveSermon}
-            title="Apostle Joe Daniels Live Service • Tap to Stream"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500/15 text-rose-500 border border-rose-500/30 hover:bg-rose-500/25 transition-all text-xs font-semibold shadow-sm cursor-pointer"
-          >
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-            <Radio className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-bold uppercase tracking-wider hidden sm:inline">LIVE SERVICE</span>
-          </button>
-        )}
-
         {/* Direct Messages Button */}
         {!isGuest && onOpenDirectMessages && (
           <button

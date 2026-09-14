@@ -243,17 +243,54 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   const [groupMediaFilter, setGroupMediaFilter] = useState<'all' | 'image' | 'video' | 'audio'>('all');
   const [stagedLocalMedia, setStagedLocalMedia] = useState<{
     url: string;
-    type: 'image' | 'video' | 'audio';
+    type: 'image' | 'video' | 'audio' | 'document';
     name: string;
     size: string;
   } | null>(null);
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
+  const directAttachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const [stagedDirectAttachment, setStagedDirectAttachment] = useState<{
+    url: string;
+    type: 'image' | 'video' | 'audio' | 'document';
+    name: string;
+  } | null>(null);
+
+  const handleDirectAttachmentSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const type: 'image' | 'video' | 'audio' | 'document' =
+      file.type.startsWith('image/') ? 'image' :
+      file.type.startsWith('video/') ? 'video' :
+      file.type.startsWith('audio/') ? 'audio' : 'document';
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = reader.result as string;
+      if (url) setStagedDirectAttachment({ url, type, name: file.name });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const sendDirectAttachment = () => {
+    if (!activeUserId || !activeUser || !stagedDirectAttachment) return;
+    StorageService.sendDirectMessageWithMedia(
+      currentUser.id,
+      activeUserId,
+      inputText.trim() || (stagedDirectAttachment.type === 'document' ? stagedDirectAttachment.name : `Shared ${stagedDirectAttachment.type}`),
+      stagedDirectAttachment
+    );
+    setStagedDirectAttachment(null);
+    setInputText('');
+    refreshMessages();
+    refreshThreads();
+  };
+
 
   const handleLocalMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    let mType: 'image' | 'video' | 'audio' = 'image';
+    let mType: 'image' | 'video' | 'audio' | 'document' = 'document';
     if (file.type.startsWith('video/')) mType = 'video';
     else if (file.type.startsWith('audio/')) mType = 'audio';
 
@@ -290,7 +327,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       sender_name: currentUser.full_name,
       sender_avatar: currentUser.avatar_url,
       sender_role: currentUser.role,
-      text: shareMediaCaption.trim() || (stagedLocalMedia.type === 'video' ? 'Shared a video' : stagedLocalMedia.type === 'audio' ? 'Shared an audio note' : 'Shared a photo'),
+      text: shareMediaCaption.trim() || (stagedLocalMedia.type === 'video' ? 'Shared a video' : stagedLocalMedia.type === 'audio' ? 'Shared an audio note' : stagedLocalMedia.type === 'document' ? stagedLocalMedia.name : 'Shared a photo'),
       media_url: stagedLocalMedia.url,
       media_type: stagedLocalMedia.type
     });
@@ -1312,11 +1349,11 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4 overscroll-none"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <div 
-        className="gcz-modal-shell gcz-mobile-dvh bg-card border-0 sm:border sm:border-border rounded-none sm:rounded-xl w-full max-w-4xl h-full sm:h-[92vh] sm:max-h-[780px] flex flex-col shadow-2xl overflow-hidden text-card-foreground animate-in zoom-in-95 duration-150"
+        className="bg-card border-0 sm:border sm:border-border rounded-none sm:rounded-xl w-full max-w-4xl h-full sm:h-[92vh] sm:max-h-[780px] flex flex-col shadow-2xl overflow-hidden text-card-foreground animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         
@@ -2011,6 +2048,22 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                     : 'bg-card border border-border text-card-foreground rounded-bl-none'
                               }`}
                             >
+                              {msg.media_url && !isDeleted && (
+                                <div className="mb-2 rounded-lg overflow-hidden border border-white/10">
+                                  {msg.media_type === 'image' ? (
+                                    <img src={msg.media_url} alt="Shared media" className="max-w-full max-h-64 object-cover cursor-pointer" onClick={() => setSelectedMediaPreview({ url: msg.media_url!, type: 'image', sender_name: activeUser?.full_name, created_at: msg.created_at })} />
+                                  ) : msg.media_type === 'video' ? (
+                                    <video src={msg.media_url} controls className="max-w-full max-h-64" />
+                                  ) : msg.media_type === 'audio' ? (
+                                    <audio src={msg.media_url} controls className="max-w-full" />
+                                  ) : (
+                                    <a href={msg.media_url} download={msg.text || 'document'} className="flex items-center gap-2 px-3 py-2 bg-secondary text-primary font-semibold hover:underline">
+                                      <FileText className="w-4 h-4" />
+                                      <span className="truncate">{msg.text || 'Download document'}</span>
+                                    </a>
+                                  )}
+                                </div>
+                              )}
                               {renderMessageContent(msg)}
                             </div>
 
@@ -2072,6 +2125,18 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                   </div>
 
                   {/* Message Input Box */}
+                  {stagedDirectAttachment && (
+                    <div className="px-3 py-2 bg-card border-t border-border flex items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {stagedDirectAttachment.type === 'document' ? <FileText className="w-4 h-4 text-primary shrink-0" /> : <ImageIcon className="w-4 h-4 text-primary shrink-0" />}
+                        <span className="truncate text-foreground">{stagedDirectAttachment.name}</span>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button type="button" onClick={sendDirectAttachment} className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-semibold">Send</button>
+                        <button type="button" onClick={() => setStagedDirectAttachment(null)} className="px-2.5 py-1 rounded-lg bg-secondary text-muted-foreground">Cancel</button>
+                      </div>
+                    </div>
+                  )}
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -2079,6 +2144,10 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     }}
                     className="p-3 bg-card border-t border-border flex items-center gap-2"
                   >
+                    <input ref={directAttachmentInputRef} type="file" className="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onChange={handleDirectAttachmentSelect} />
+                    <button type="button" onClick={() => directAttachmentInputRef.current?.click()} title="Attach media or document" className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary border border-border shrink-0">
+                      <Paperclip className="w-4 h-4" />
+                    </button>
                     <input
                       type="text"
                       value={inputText}
@@ -2588,16 +2657,17 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                       }}
                                       className="mb-2 rounded-lg overflow-hidden max-w-xs cursor-pointer group/media relative border border-border shadow-sm"
                                     >
-                                      <img
-                                        src={msg.media_url}
-                                        alt="Group Media"
-                                        className="w-full max-h-60 object-cover group-hover/media:scale-105 transition-transform duration-200"
-                                      />
-                                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
-                                        <span className="p-1 px-2.5 rounded-full bg-black/75 text-white text-[10px] flex items-center gap-1 font-semibold">
-                                          <ImageIcon className="w-3 h-3" /> View Photo
-                                        </span>
-                                      </div>
+                                      {msg.media_type === 'image' ? (
+                                        <img src={msg.media_url} alt="Group Media" className="w-full max-h-60 object-cover group-hover/media:scale-105 transition-transform duration-200" />
+                                      ) : msg.media_type === 'video' ? (
+                                        <video src={msg.media_url} controls className="w-full max-h-60" />
+                                      ) : msg.media_type === 'audio' ? (
+                                        <audio src={msg.media_url} controls className="w-full" />
+                                      ) : (
+                                        <a href={msg.media_url} download={msg.text || 'document'} className="flex items-center gap-2 p-3 bg-secondary text-primary font-semibold text-xs">
+                                          <FileText className="w-4 h-4" /> <span className="truncate">{msg.text || 'Download document'}</span>
+                                        </a>
+                                      )}
                                     </div>
                                   )}
 
@@ -2781,6 +2851,17 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                             }}
                             className="p-3 bg-card border-t border-border flex items-center gap-2"
                           >
+                            {/* Media / document attachment */}
+                            <input ref={mediaFileInputRef} type="file" className="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onChange={handleLocalMediaSelect} />
+                            <button
+                              type="button"
+                              onClick={() => mediaFileInputRef.current?.click()}
+                              title="Upload media or document"
+                              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary border border-border shrink-0"
+                            >
+                              <Paperclip className="w-4 h-4" />
+                            </button>
+
                             {/* Quick @ Tag button */}
                             <button
                               type="button"

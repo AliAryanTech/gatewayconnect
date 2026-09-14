@@ -1603,8 +1603,8 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                     </span>
                     <span className="text-[11px] text-muted-foreground">{group.member_count} Members</span>
                   </div>
-                  <h4 className="font-bold text-sm text-foreground mb-1">{group.name}</h4>
-                  <p className="text-xs text-muted-foreground mb-2">{group.description}</p>
+                  <h4 className="font-bold text-xs text-foreground mb-1">{group.name}</h4>
+                  <p className="text-[11px] text-muted-foreground mb-2">{group.description}</p>
                   
                   <div className="space-y-1 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5">
@@ -1856,18 +1856,6 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                     </span>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      {/* If in session, show Join Stream button */}
-                      {countdown.isInSession && (
-                        <button
-                          id={`btn-join-stream-${event.id}`}
-                          onClick={() => handleJoinStream(event)}
-                          className="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-                        >
-                          <Radio className="w-4 h-4" />
-                          <span>Join Stream</span>
-                        </button>
-                      )}
-
                       {/* For the 2 permanent events (Sunday & Wednesday): Request Location and Go Virtual */}
                       {isPermanent && (
                         <>

@@ -260,7 +260,7 @@ export interface CartItem {
 }
 
 export type DonationFund = 'Tithe' | 'Firstfruits' | 'Seed Faith' | 'Building Foundation' | 'Missions & Evangelism' | 'Apostolic Honorarium' | 'Altar Seed';
-export type PaymentGateway = 'EcoCash' | 'EcoCash Push' | 'Credit Card' | 'PayPal' | 'OneMoney' | 'InnBucks' | 'ZimSwitch' | 'Paynow' | 'Stripe' | 'Bank Transfer';
+export type PaymentGateway = 'EcoCash' | 'EcoCash Push' | 'Credit Card' | 'PayPal' | 'OneMoney' | 'Paynow' | 'Stripe' | 'Bank Transfer';
 
 export interface UnbanAppeal {
   id: string;
@@ -395,7 +395,7 @@ export interface DirectMessage {
   deleted_for_users?: string[];
   reactions?: MessageReaction[];
   media_url?: string;
-  media_type?: 'image' | 'video' | 'audio';
+  media_type?: 'image' | 'video' | 'audio' | 'document';
 }
 
 export const SUPPORTED_CITIES = [

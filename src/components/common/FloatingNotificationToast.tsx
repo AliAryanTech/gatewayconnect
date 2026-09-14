@@ -217,7 +217,7 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
   return (
     <aside 
       aria-label="New Alert"
-      className="gcz-floating-surface fixed top-[62px] sm:top-18 right-2.5 sm:right-6 z-50 animate-in slide-in-from-top-4 fade-in duration-300"
+      className="fixed top-18 right-3 sm:right-6 z-50 max-w-sm w-[calc(100vw-24px)] animate-in slide-in-from-top-4 fade-in duration-300"
       onMouseEnter={() => {
         if (timerRef.current) clearTimeout(timerRef.current);
       }}
@@ -236,7 +236,7 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
             handleRedirect();
           }
         }}
-        className="group relative bg-[#00172e] border-2 border-[#D4AF37] hover:border-[#F4C430] text-white rounded-2xl p-3 shadow-2xl backdrop-blur-md cursor-pointer transition-all hover:scale-[1.02] flex items-start gap-3 text-left"
+        className="group relative bg-[#00172e] border-2 border-[#D4AF37] hover:border-[#F4C430] text-white rounded-2xl p-3.5 shadow-2xl backdrop-blur-md cursor-pointer transition-all hover:scale-[1.02] flex items-start gap-3 text-left"
       >
         {/* Glow accent */}
         <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#D4AF37] animate-ping" />
