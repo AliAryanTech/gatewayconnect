@@ -35,7 +35,10 @@ import { MOCK_PARTNER_TICKERS } from '../../data/mockData';
 import { VerifiedBadge } from '../common/VerifiedBadge';
 import { PaidBookingModal } from '../modals/PaidBookingModal';
 import { cn } from '../../lib/utils';
+<<<<<<< HEAD
 import { liveSyncService } from '../../services/liveSyncService';
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
 
 interface HomeTabProps {
   sermons: Sermon[];
@@ -47,7 +50,10 @@ interface HomeTabProps {
   onOpenPremiumModal?: (sermon?: Sermon) => void;
   onNavigateToBible?: (reference?: string) => void;
   onNavigateTab?: (tab: any) => void;
+<<<<<<< HEAD
   onOpenLiveModal?: () => void;
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
   onOpenDevConsole?: () => void;
   onOpenAdminPanel?: () => void;
 }
@@ -64,6 +70,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   onNavigateTab,
 }) => {
   const [activeSermon, setActiveSermon] = useState<Sermon>(sermons[0] || {} as Sermon);
+<<<<<<< HEAD
   const [overridePlayingVideo, setOverridePlayingVideo] = useState<{ id: string; title: string; youtube_id: string } | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [isAudioOnly, setIsAudioOnly] = useState<boolean>(lowDataMode);
@@ -86,6 +93,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({
     '👏': 4
   });
   const [userReacted, setUserReacted] = useState<Record<string, boolean>>({});
+=======
+  const [offlineIds, setOfflineIds] = useState<string[]>(StorageService.getOfflineSermonsList());
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedSeries, setSelectedSeries] = useState<string>('All');
 
@@ -103,6 +113,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
     };
   }, [devotionals]);
 
+<<<<<<< HEAD
   // Dynamic live stream URL from Admin Panel
   const [liveStreamUrl, setLiveStreamUrl] = useState<string>(StorageService.getLiveStreamUrl());
 
@@ -259,6 +270,11 @@ export const HomeTab: React.FC<HomeTabProps> = ({
     });
   };
 
+=======
+  const isGuest = !currentUser || currentUser.role === 'guest';
+  const isSermonUnlocked = !activeSermon?.is_premium || Boolean(currentUser?.is_premium) || Boolean(currentUser?.unlocked_sermon_ids?.includes(activeSermon?.id || ''));
+
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
   const handleToggleDownload = (sermonId: string) => {
     const res = StorageService.toggleOfflineSermon(sermonId);
     if (!res.success) {
@@ -285,6 +301,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   const [showPaidBookingModal, setShowPaidBookingModal] = useState(false);
 
   const uniqueSeries = ['All', ...Array.from(new Set(sermons.map(s => s.series).filter(Boolean)))];
+<<<<<<< HEAD
   const latestApostlePost = (liveTestimonies || []).find(t => (t?.user_name || '').toLowerCase().includes('daniels')) || liveTestimonies?.[0];
 
   const [liveStreamStatus, setLiveStreamStatus] = useState(() => StorageService.getLiveSermonStatus());
@@ -358,6 +375,10 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       }
     };
   }, [currentUser?.id]);
+=======
+
+  const latestApostlePost = (testimonies || []).find(t => (t?.user_name || '').toLowerCase().includes('daniels')) || testimonies?.[0];
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
 
   return (
     <div className="space-y-6 pb-24 max-w-4xl mx-auto px-2 sm:px-4 pt-1">
@@ -388,6 +409,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* 2. Hero Live Stream & Sermon Player Card with Platform Dynamic Theme */}
       <div 
         className={cn(
@@ -1058,6 +1080,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         </div>
       )}
 
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
       {/* 3. Sleek Grid: Daily Devotional & Partner Wall */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         
@@ -1163,7 +1187,11 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                 </div>
               </div>
 
+<<<<<<< HEAD
               {liveTestimonies.filter((t) => t.id !== latestApostlePost?.id).slice(0, 1).map((test) => (
+=======
+              {testimonies.filter((t) => t.id !== latestApostlePost?.id).slice(0, 1).map((test) => (
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
                 <div 
                   key={test.id} 
                   onClick={() => onNavigateTab && onNavigateTab('community')}
@@ -1308,7 +1336,11 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                     className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline cursor-pointer"
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
+<<<<<<< HEAD
                     <span>{overridePlayingVideo?.id === sermon.id ? 'Now Playing' : 'Watch / Listen'}</span>
+=======
+                    <span>Watch / Listen</span>
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
                   </button>
 
                   <button

@@ -14,14 +14,20 @@ import { FlutterExportModal } from './components/modals/FlutterExportModal';
 import { WhatsAppProfileModal } from './components/modals/WhatsAppProfileModal';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { BannedScreen } from './components/auth/BannedScreen';
+<<<<<<< HEAD
 import { LiveSermonModal } from './components/modals/LiveSermonModal';
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
 import { DirectMessagesModal } from './components/modals/DirectMessagesModal';
 import { NotificationsModal } from './components/modals/NotificationsModal';
 import { FloatingNotificationToast } from './components/common/FloatingNotificationToast';
 import { FloatingCommentReply } from './components/common/FloatingCommentReply';
 import { InstagramProfileModal } from './components/modals/InstagramProfileModal';
 import { StorageService } from './services/storageService';
+<<<<<<< HEAD
 import { liveSyncService } from './services/liveSyncService';
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
 import { 
   TabType, 
   User, 
@@ -74,14 +80,20 @@ export default function App() {
   const [showFlutterExport, setShowFlutterExport] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+<<<<<<< HEAD
   const [showLiveSermonModal, setShowLiveSermonModal] = useState<boolean>(false);
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
   const [showDirectMessagesModal, setShowDirectMessagesModal] = useState<boolean>(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
   const [directMessageRecipientId, setDirectMessageRecipientId] = useState<string | undefined>(undefined);
   const [directMessageGroupId, setDirectMessageGroupId] = useState<string | undefined>(undefined);
   const [bibleReference, setBibleReference] = useState<string | undefined>(undefined);
+<<<<<<< HEAD
   const [dismissedLiveNotification, setDismissedLiveNotification] = useState<boolean>(false);
   const [liveSermonStatus, setLiveSermonStatus] = useState(StorageService.getLiveSermonStatus());
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
   const [globalProfileUserId, setGlobalProfileUserId] = useState<string | null>(null);
   const [unreadDmsCount, setUnreadDmsCount] = useState<number>(() => {
     const user = StorageService.getCurrentUser();
@@ -101,9 +113,12 @@ export default function App() {
   const [authReferralCode, setAuthReferralCode] = useState<string>('');
   const [authError, setAuthError] = useState<string | null>(null);
 
+<<<<<<< HEAD
   // Background Audio Player Bar (when audio-only stream is active)
   const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
   const [audioStreamTitle, setAudioStreamTitle] = useState<string>('Live Broadcast Audio (24kbps Low-Data Stream)');
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
 
   // Refresh all state from StorageService
   const refreshAppData = () => {
@@ -117,7 +132,10 @@ export default function App() {
     setPushNotifications(StorageService.getPushNotifications());
     const user = StorageService.getCurrentUser();
     setCurrentUser(user);
+<<<<<<< HEAD
     setLiveSermonStatus(StorageService.getLiveSermonStatus());
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
     if (user) {
       const threads = StorageService.getAllDirectMessageThreads(user.id);
       setUnreadDmsCount(threads.reduce((acc, t) => acc + (t.unread_count || 0), 0));
@@ -176,20 +194,28 @@ export default function App() {
   useEffect(() => {
     StorageService.syncUsersWithRemote().catch(() => {});
     if (!currentUser) {
+<<<<<<< HEAD
       liveSyncService.disconnect();
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
       return;
     }
     if (currentUser?.id && currentUser?.role !== 'guest') {
       StorageService.hydrateFollowsFromSupabase(currentUser.id).catch(() => {});
     }
+<<<<<<< HEAD
     liveSyncService.connect(currentUser);
     const unbind = liveSyncService.bindLocalEvents();
     const refreshLiveState = () => refreshAppData();
+=======
+    const unbind = () => {};
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
     const handleOpenProfile = (e: any) => {
       if (e?.detail?.userId) {
         setGlobalProfileUserId(e.detail.userId);
       }
     };
+<<<<<<< HEAD
     window.addEventListener('gcz_live_state_updated', refreshLiveState);
     window.addEventListener('gcz_live_event_received', refreshLiveState);
     window.addEventListener('gcz_banned_users_updated', refreshLiveState);
@@ -202,6 +228,11 @@ export default function App() {
       window.removeEventListener('gcz_live_event_received', refreshLiveState);
       window.removeEventListener('gcz_banned_users_updated', refreshLiveState);
       window.removeEventListener('gcz_current_user_banned', refreshLiveState);
+=======
+    window.addEventListener('gcz_open_user_profile', handleOpenProfile);
+    return () => {
+      unbind();
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
       window.removeEventListener('gcz_open_user_profile', handleOpenProfile);
     };
   }, [currentUser?.id]);
@@ -387,12 +418,16 @@ export default function App() {
         onOpenFlutterExport={() => setShowFlutterExport(true)}
         onOpenDirectMessages={() => handleOpenDirectChat()}
         onOpenNotifications={() => setShowNotificationsModal(true)}
+<<<<<<< HEAD
         onOpenLiveSermon={() => setShowLiveSermonModal(true)}
         isLiveSermon={liveSermonStatus.isLive}
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
         unreadDmsCount={unreadDmsCount}
         pushNotifications={pushNotifications}
       />
 
+<<<<<<< HEAD
       {/* Non-Annoying Live Sermon Notification Bar */}
       {liveSermonStatus.isLive && !dismissedLiveNotification && (
         <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 pt-3">
@@ -439,6 +474,8 @@ export default function App() {
       )}
 
       {/* 2. Main Content Area */}
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
       <main className="flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 py-3">
         {activeTab === 'home' && (
           <HomeTab
@@ -456,7 +493,10 @@ export default function App() {
               setAuthMode('login');
               setShowAuthModal(true);
             }}
+<<<<<<< HEAD
             onOpenLiveModal={() => setShowLiveSermonModal(true)}
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
             onOpenDevConsole={() => setShowDevConsole(true)}
             onOpenAdminPanel={() => setShowAdminPanel(true)}
           />
@@ -497,8 +537,12 @@ export default function App() {
               setDirectMessageGroupId(undefined);
               setShowDirectMessagesModal(true);
             }}
+<<<<<<< HEAD
             onOpenLiveSermon={() => setShowLiveSermonModal(true)}
             onRefreshData={refreshAppData}
+=======
+               onRefreshData={refreshAppData}
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
           />
         )}
 
@@ -548,6 +592,7 @@ export default function App() {
         </div>
       </footer>
 
+<<<<<<< HEAD
       {/* 4. Global Audio Floating Mini-Player */}
       {isAudioPlaying && (
         <div className="fixed bottom-16 left-3 right-3 sm:left-auto sm:right-6 sm:w-80 z-40 bg-[#001F3F] border border-[#D4AF37]/50 rounded-2xl p-3 shadow-2xl flex items-center justify-between gap-3 animate-slide-up">
@@ -569,6 +614,8 @@ export default function App() {
         </div>
       )}
 
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
       {/* 5. Bottom Tab Navigation */}
       <Navigation
         activeTab={activeTab}
@@ -617,6 +664,7 @@ export default function App() {
         onUpdateUser={handleUpdateUser}
       />
 
+<<<<<<< HEAD
       {/* Live Sermon Broadcast Streaming Modal */}
       {showLiveSermonModal && (
         <LiveSermonModal
@@ -632,6 +680,8 @@ export default function App() {
         />
       )}
 
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
       {/* Direct Messages Modal */}
       {showDirectMessagesModal && (
         <DirectMessagesModal
@@ -650,7 +700,10 @@ export default function App() {
       {/* Floating Notification Toast (Redirects to exact place message comes from) */}
       <FloatingNotificationToast
         currentUser={currentUser}
+<<<<<<< HEAD
         onOpenLiveSermon={() => setShowLiveSermonModal(true)}
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
         onOpenDirectChat={(recipientId) => {
           if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
             setAuthMode('login');
@@ -705,8 +758,12 @@ export default function App() {
         <NotificationsModal
           isOpen={showNotificationsModal}
           onClose={() => setShowNotificationsModal(false)}
+<<<<<<< HEAD
           onOpenLiveSermon={() => setShowLiveSermonModal(true)}
           onOpenDirectChat={(recipientId) => {
+=======
+           onOpenDirectChat={(recipientId) => {
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
             if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
               setAuthMode('login');
               setShowAuthModal(true);

@@ -142,6 +142,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Action Controls & User Identity */}
       <div className="flex items-center gap-1.5 sm:gap-2">
         
+<<<<<<< HEAD
         {/* Live Sermon Broadcast Button */}
         {isLiveSermon && notifSettings.liveStreams && onOpenLiveSermon && (
           <button
@@ -156,6 +157,8 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
+=======
+>>>>>>> 3efe98f03d89b6ecf80400ae8a26eeed80be6c6f
         {/* Direct Messages Button */}
         {!isGuest && onOpenDirectMessages && (
           <button
