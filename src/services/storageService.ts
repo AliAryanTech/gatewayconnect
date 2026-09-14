@@ -2539,6 +2539,50 @@ export class StorageService {
     return newStory;
   }
 
+  /**
+   * Merges a single story received from another device (via Supabase Realtime)
+   * into local storage, so it shows up in the feed without a manual refresh.
+   */
+  static receiveRemoteStory(story: CommunityStory): void {
+    if (!story || !story.id) return;
+    const list = getLocal<CommunityStory[]>(KEYS.COMMUNITY_STORIES, []);
+    if (list.some(s => s.id === story.id)) return; // already have it
+    list.unshift(story);
+    setLocal(KEYS.COMMUNITY_STORIES, list);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_story_updated', { detail: story }));
+    }
+  }
+
+  /**
+   * Pulls all stories from every user (last 24h) from Supabase and merges
+   * them into local storage. Without this, stories posted on other devices
+   * never appear here at all — syncStory() only ever wrote to Supabase and
+   * nothing ever read it back.
+   */
+  static async syncStoriesWithRemote(): Promise<void> {
+    try {
+      const remoteStories = await SupabaseSyncService.pullStoriesFromSupabase();
+      if (!remoteStories || remoteStories.length === 0) return;
+      const list = getLocal<CommunityStory[]>(KEYS.COMMUNITY_STORIES, []);
+      const existingIds = new Set(list.map(s => s.id));
+      let changed = false;
+      for (const rs of remoteStories) {
+        if (!existingIds.has(rs.id)) {
+          list.push(rs);
+          existingIds.add(rs.id);
+          changed = true;
+        }
+      }
+      if (changed) {
+        setLocal(KEYS.COMMUNITY_STORIES, list);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('gcz_story_updated'));
+        }
+      }
+    } catch {}
+  }
+
   // REAL STORY LIKES TRACKING (Recorded just like post likes)
   static getStoryLikes(storyId: string): string[] {
     const map = getLocal<Record<string, string[]>>(KEYS.STORY_LIKES, {});
