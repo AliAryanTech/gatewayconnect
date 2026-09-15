@@ -338,6 +338,33 @@ export class StorageService {
     } catch {}
   }
 
+  /**
+   * Pulls other members' community stories from Supabase into local storage
+   * so a story posted on one device shows up for everyone, not just the
+   * device that created it.
+   */
+  static async syncStoriesWithRemote(): Promise<void> {
+    try {
+      const remoteStories = await SupabaseSyncService.pullStoriesFromSupabase();
+      if (!remoteStories || remoteStories.length === 0) return;
+      const localStories = getLocal<CommunityStory[]>(KEYS.COMMUNITY_STORIES, []);
+      const existingIds = new Set(localStories.map(s => s.id));
+      let changed = false;
+      for (const rs of remoteStories) {
+        if (!existingIds.has(rs.id)) {
+          localStories.push(rs);
+          changed = true;
+        }
+      }
+      if (changed) {
+        setLocal(KEYS.COMMUNITY_STORIES, localStories);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('gcz_story_updated'));
+        }
+      }
+    } catch {}
+  }
+
   static updateUserRole(userId: string, newRole: UserRole): void {
     const users = this.getAllUsers();
     const target = users.find(u => u.id === userId);

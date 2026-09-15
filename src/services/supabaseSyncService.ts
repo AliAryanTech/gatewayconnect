@@ -258,20 +258,18 @@ export class SupabaseSyncService {
   }
 
   /**
-   * Pulls stories posted by ALL users (any device) from Supabase within the
-   * last 24 hours. Previously nothing ever read this table back — syncStory()
-   * was write-only, so a story only ever appeared on the poster's own device.
+   * Pulls other members' community stories from Supabase so they show up on
+   * every device, not just the one that posted them.
    */
   static async pullStoriesFromSupabase(): Promise<CommunityStory[]> {
     const supabase = getSupabase();
     if (!supabase) return [];
     try {
-      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('community_stories')
         .select('*')
-        .gte('created_at', cutoff)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (error || !data) return [];
 
@@ -279,14 +277,15 @@ export class SupabaseSyncService {
         id: row.id,
         user_id: row.user_id,
         user_name: row.user_name || 'Church Member',
-        user_handle: row.user_handle || '',
+        user_handle: row.user_handle || '@member',
         user_avatar: row.avatar_url || '',
-        avatar_url: row.avatar_url || null,
+        avatar_url: row.avatar_url || undefined,
         badge_type: row.badge_type || 'none',
         image_url: row.image_url || '',
-        caption: row.caption || '',
-        scripture: row.scripture || null,
-        created_at: row.created_at
+        text: row.text || row.caption || undefined,
+        caption: row.caption || row.text || undefined,
+        scripture: row.scripture || undefined,
+        created_at: row.created_at || new Date().toISOString()
       }));
     } catch {
       return [];
@@ -715,24 +714,6 @@ export class SupabaseSyncService {
     onBanStatusUpdated?: (detail: { userId: string; isBanned: boolean; reason?: string }) => void;
   }>();
 
-  static subscribeToSocialEvents(subscriber: {
-    onNewGroupMessage?: (msg: ChatGroupMessage) => void;
-    onNewDirectMessage?: (msg: DirectMessage) => void;
-    onUserProfileUpdated?: (user: Partial<User>) => void;
-    onGroupMemberChanged?: (detail: { groupId: string; userId: string; isJoining: boolean }) => void;
-    onFollowUpdated?: (detail: { followerId: string; followingId: string; isFollowing: boolean }) => void;
-    onStreamerJoined?: (viewer: LiveStreamViewer) => void;
-    onStreamerLeft?: (userId: string) => void;
-    onNotificationCreated?: (notification: AppNotification) => void;
-    onBanStatusUpdated?: (detail: { userId: string; isBanned: boolean; reason?: string }) => void;
-  }): () => void {
-    this.socialSubscribers.add(subscriber);
-    this.getSocialChannel();
-    return () => {
-      this.socialSubscribers.delete(subscriber);
-    };
-  }
-
   static getSocialChannel() {
     const supabase = getSupabase();
     if (!supabase) return null;
@@ -783,49 +764,8 @@ export class SupabaseSyncService {
             if (!payload) return;
             this.socialSubscribers.forEach(cb => cb.onBanStatusUpdated?.(payload));
           })
-          .on('broadcast', { event: 'delete_group_message' }, ({ payload }: any) => {
-            if (!payload) return;
-            this.socialSubscribers.forEach(cb => (cb as any).onDeleteGroupMessage?.(payload));
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', {
-                detail: payload
-              }));
-              window.dispatchEvent(new CustomEvent('gcz_groups_updated'));
-            }
-          })
-          .on('broadcast', { event: 'delete_direct_message' }, ({ payload }: any) => {
-            if (!payload) return;
-            this.socialSubscribers.forEach(cb => (cb as any).onDeleteDirectMessage?.(payload));
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated', {
-                detail: payload
-              }));
-              window.dispatchEvent(new CustomEvent('gcz_dms_updated'));
-            }
-          })
 
           // 2. Database triggers (PostgreSQL Realtime replication)
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload: any) => {
-            const row = payload.new;
-            if (!row) return;
-            if (row.text === 'This message was deleted') {
-              if (row.group_id) {
-                this.socialSubscribers.forEach(cb => (cb as any).onDeleteGroupMessage?.({ groupId: row.group_id, messageId: row.id, forEveryone: true }));
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', {
-                    detail: { groupId: row.group_id, messageId: row.id, deletedForEveryone: true }
-                  }));
-                }
-              } else {
-                this.socialSubscribers.forEach(cb => (cb as any).onDeleteDirectMessage?.({ messageId: row.id, forEveryone: true }));
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated', {
-                    detail: { id: row.id, deletedForEveryone: true }
-                  }));
-                }
-              }
-            }
-          })
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
             const row = payload.new;
             if (!row) return;
@@ -925,18 +865,17 @@ export class SupabaseSyncService {
    */
   static async syncUser(user: User): Promise<boolean> {
     const supabase = getSupabase();
-    if (!supabase || !user || !user.phone) return false;
+    if (!supabase || !user) return false;
     try {
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
-      
       const userPayload: any = {
+        id: user.id,
         phone: user.phone,
-        full_name: user.full_name || 'Church Member',
+        full_name: user.full_name,
         role: user.role || 'member',
         referral_code: user.handle || user.referral_code || null,
         avatar_url: user.avatar_url || null,
         cell_group: user.cell_group || null,
-        is_verified: Boolean(user.is_verified),
+        is_verified: user.is_verified || false,
         member_id: user.member_id || null,
         location: user.location || 'Harare, Zimbabwe',
         city_location: user.city_location || 'Harare',
@@ -946,40 +885,15 @@ export class SupabaseSyncService {
         offline_sermon_ids: user.offline_sermon_ids || [],
         updated_at: new Date().toISOString()
       };
-
-      if (isUUID) {
-        userPayload.id = user.id;
-      } else {
-        // Query existing UUID by phone to prevent Postgres invalid UUID syntax error
-        const { data: existing } = await supabase
-          .from('users')
-          .select('id')
-          .eq('phone', user.phone)
-          .maybeSingle();
-        if (existing?.id) {
-          userPayload.id = existing.id;
-        }
-      }
-
       if (user.password) {
         userPayload.password_hash = user.password;
       }
 
-      // Upsert by phone number (guaranteed unique column in schema) or fallback to id
-      let upsertRes = await supabase.from('users').upsert(userPayload, { onConflict: 'phone' });
-      if (upsertRes.error && userPayload.id) {
-        upsertRes = await supabase.from('users').upsert(userPayload, { onConflict: 'id' });
-      }
+      await supabase.from('users').upsert(userPayload, { onConflict: 'id' });
 
-      if (upsertRes.error) {
-        console.error('[GatewayConnect] syncUser: Supabase upsert FAILED for', user.phone, '-', upsertRes.error.message, upsertRes.error);
-      } else {
-        console.log('[GatewayConnect] syncUser: successfully pushed', user.full_name, '(', user.phone, ') to Supabase.');
-      }
-
-      if (user.avatar_url && userPayload.id) {
+      if (user.avatar_url) {
         await supabase.from('profile_pictures').upsert({
-          user_id: userPayload.id,
+          user_id: user.id,
           avatar_url: user.avatar_url,
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
@@ -994,9 +908,9 @@ export class SupabaseSyncService {
         });
       }
 
-      return !upsertRes.error;
-    } catch (err: any) {
-      console.error('[GatewayConnect] syncUser threw an exception for', user?.phone, ':', err?.message || err, err);
+      return true;
+    } catch (err) {
+      console.warn('Supabase syncUser notice:', err);
       return false;
     }
   }
@@ -1020,21 +934,13 @@ export class SupabaseSyncService {
    */
   static async pullUsersFromSupabase(): Promise<User[]> {
     const supabase = getSupabase();
-    if (!supabase) {
-      console.warn('[GatewayConnect] pullUsersFromSupabase: Supabase client not configured (getSupabase() returned null). Check VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.');
-      return [];
-    }
+    if (!supabase) return [];
     try {
       const { data, error } = await supabase
         .from('users')
         .select('*');
 
-      if (error) {
-        console.error('[GatewayConnect] pullUsersFromSupabase Supabase error:', error.message, error);
-        return [];
-      }
-      if (!data) return [];
-      console.log(`[GatewayConnect] pullUsersFromSupabase: fetched ${data.length} user rows from Supabase.`);
+      if (error || !data) return [];
 
       return data.map((row: any) => ({
         id: row.id,
@@ -1055,8 +961,7 @@ export class SupabaseSyncService {
         following_count: row.following_count || 0,
         saved_verses: row.saved_verses || ['John 1:1', 'Isaiah 40:31']
       }));
-    } catch (err) {
-      console.error('[GatewayConnect] pullUsersFromSupabase threw an exception:', err);
+    } catch {
       return [];
     }
   }
@@ -1144,71 +1049,12 @@ export class SupabaseSyncService {
   }
 
   /**
-   * Syncs group message deletion across all devices via Realtime and persists deletion to database
-   */
-  static async syncDeleteGroupMessage(groupId: string, messageId: string, forEveryone: boolean): Promise<boolean> {
-    if (!messageId) return false;
-    const channel = this.getSocialChannel();
-    if (channel) {
-      channel.send({
-        type: 'broadcast',
-        event: 'delete_group_message',
-        payload: { groupId, messageId, forEveryone }
-      });
-    }
-
-    const supabase = getSupabase();
-    if (supabase && forEveryone) {
-      Promise.resolve(supabase.from('messages').update({
-        text: 'This message was deleted',
-        media_url: null,
-        media_type: null
-      }).eq('id', messageId)).catch(() => {});
-    }
-
-    return true;
-  }
-
-  /**
-   * Syncs direct message deletion across all devices via Realtime and persists deletion to database
-   */
-  static async syncDeleteDirectMessage(messageId: string, forEveryone: boolean): Promise<boolean> {
-    if (!messageId) return false;
-    const channel = this.getSocialChannel();
-    if (channel) {
-      channel.send({
-        type: 'broadcast',
-        event: 'delete_direct_message',
-        payload: { messageId, forEveryone }
-      });
-    }
-
-    const supabase = getSupabase();
-    if (supabase && forEveryone) {
-      Promise.resolve(supabase.from('messages').update({
-        text: 'This message was deleted',
-        media_url: null,
-        media_type: null
-      }).eq('id', messageId)).catch(() => {});
-
-      Promise.resolve(supabase.from('direct_messages').update({
-        message: 'This message was deleted',
-        media_url: null
-      }).eq('id', messageId)).catch(() => {});
-    }
-
-    return true;
-  }
-
-  /**
    * Subscribes to the single persistent Realtime channel 'gcz_social_realtime'
    * Instant broadcast delivery across all devices with zero REST latency
    */
   static subscribeToSocialMessaging(callbacks: {
     onNewGroupMessage?: (msg: ChatGroupMessage) => void;
     onNewDirectMessage?: (msg: DirectMessage) => void;
-    onDeleteGroupMessage?: (payload: { groupId: string; messageId: string; forEveryone: boolean }) => void;
-    onDeleteDirectMessage?: (payload: { messageId: string; forEveryone: boolean }) => void;
     onUserProfileUpdated?: (user: Partial<User>) => void;
     onGroupMemberChanged?: (detail: { groupId: string; userId: string; isJoining: boolean }) => void;
     onFollowUpdated?: (detail: { followerId: string; followingId: string; isFollowing: boolean }) => void;
