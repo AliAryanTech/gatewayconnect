@@ -3849,6 +3849,25 @@ export class StorageService {
   }
 
   /**
+   * Unread fellowship-group message count for a single group. A message
+   * counts as unread when it wasn't sent by the user themselves and their
+   * id is missing from read_by_user_ids.
+   */
+  static getUnreadGroupMessagesCount(groupId: string, userId: string): number {
+    if (!groupId || !userId) return 0;
+    const msgs = this.getChatGroupMessagesForUser(groupId, userId);
+    let count = 0;
+    for (const msg of msgs) {
+      if (msg.is_system) continue;
+      if (msg.sender_id === userId) continue;
+      if (!msg.read_by_user_ids || !msg.read_by_user_ids.includes(userId)) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Total number of unread fellowship-group messages across every group the
    * user belongs to. A message counts as unread when it wasn't sent by the
    * user themselves and their id is missing from read_by_user_ids.
@@ -3861,14 +3880,7 @@ export class StorageService {
 
     let total = 0;
     for (const group of groups) {
-      const msgs = this.getChatGroupMessagesForUser(group.id, userId);
-      for (const msg of msgs) {
-        if (msg.is_system) continue;
-        if (msg.sender_id === userId) continue;
-        if (!msg.read_by_user_ids || !msg.read_by_user_ids.includes(userId)) {
-          total += 1;
-        }
-      }
+      total += this.getUnreadGroupMessagesCount(group.id, userId);
     }
     return total;
   }
