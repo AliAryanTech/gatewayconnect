@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import "./SplashScreen.css";
 
 interface SplashScreenProps {
@@ -5,6 +6,27 @@ interface SplashScreenProps {
 }
 
 export default function SplashScreen({ onComplete }: SplashScreenProps) {
+  const [progress, setProgress] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let value = 0;
+
+    const timer = setInterval(() => {
+      value += Math.floor(Math.random() * 4) + 1;
+
+      if (value >= 100) {
+        value = 100;
+        clearInterval(timer);
+        setLoaded(true);
+      }
+
+      setProgress(value);
+    }, 60);
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="gateway-splash">
       <div className="splash-glow splash-glow-one" />
@@ -37,15 +59,33 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           TO A BRIGHTER FUTURE
         </p>
 
-        {/* GET STARTED */}
-        <button
-          type="button"
-          className="gateway-start-button"
-          onClick={onComplete}
-        >
-          <span>GET STARTED</span>
-          <span className="start-arrow">→</span>
-        </button>
+        {!loaded ? (
+          <div className="splash-loading">
+            <div className="loading-text">
+              Connecting...
+            </div>
+
+            <div className="loading-bar">
+              <div
+                className="loading-progress"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            <div className="loading-percent">
+              {progress}%
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="gateway-start-button"
+            onClick={onComplete}
+          >
+            <span>GET STARTED</span>
+            <span className="start-arrow">→</span>
+          </button>
+        )}
 
       </div>
 
