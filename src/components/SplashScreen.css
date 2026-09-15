@@ -1,0 +1,275 @@
+.gateway-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 50% 35%, #092c63 0%, #06152f 35%, #020914 75%, #01040a 100%);
+  color: white;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  animation: splashAppear 0.5s ease-out;
+}
+
+.splash-content {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 430px;
+  padding: 30px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo-wrapper {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.gateway-splash-logo {
+  position: relative;
+  z-index: 3;
+  width: 155px;
+  height: 155px;
+  object-fit: contain;
+  border-radius: 32px;
+  filter:
+    drop-shadow(0 0 15px rgba(0, 180, 255, 0.75))
+    drop-shadow(0 0 40px rgba(0, 120, 255, 0.35));
+  animation: logoFloat 2.2s ease-in-out infinite;
+}
+
+.logo-ring {
+  position: absolute;
+  border: 1px solid rgba(0, 210, 255, 0.35);
+  border-radius: 50%;
+}
+
+.logo-ring-one {
+  width: 180px;
+  height: 180px;
+  animation: ringRotate 5s linear infinite;
+}
+
+.logo-ring-two {
+  width: 210px;
+  height: 210px;
+  border-style: dashed;
+  border-color: rgba(0, 130, 255, 0.2);
+  animation: ringRotateReverse 8s linear infinite;
+}
+
+.gateway-title {
+  margin: 4px 0 0;
+  font-size: clamp(34px, 10vw, 48px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  line-height: 1;
+  background: linear-gradient(180deg, #ffffff 20%, #b9eaff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 25px rgba(0, 180, 255, 0.3);
+}
+
+.gateway-connect {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #00d9ff;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 5px;
+}
+
+.gateway-connect span {
+  width: 25px;
+  height: 2px;
+  display: block;
+  background: linear-gradient(90deg, transparent, #00d9ff);
+  box-shadow: 0 0 8px #00d9ff;
+}
+
+.gateway-connect span:last-child {
+  background: linear-gradient(90deg, #00d9ff, transparent);
+}
+
+.gateway-tagline {
+  margin: 28px 0 0;
+  color: rgba(235, 248, 255, 0.8);
+  font-size: 11px;
+  line-height: 1.8;
+  letter-spacing: 4px;
+  font-weight: 500;
+}
+
+.loading-area {
+  width: min(300px, 80vw);
+  margin-top: 45px;
+}
+
+.loading-text {
+  margin-bottom: 12px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #bcecff;
+}
+
+.loading-track {
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 0 8px rgba(0, 0, 0, 0.5),
+    0 0 10px rgba(0, 180, 255, 0.1);
+}
+
+.loading-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0077ff, #00e5ff);
+  box-shadow:
+    0 0 10px #00cfff,
+    0 0 20px rgba(0, 190, 255, 0.6);
+  transition: width 0.03s linear;
+}
+
+.loading-percent {
+  margin-top: 9px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+.splash-bottom {
+  position: absolute;
+  z-index: 3;
+  bottom: 25px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  color: rgba(150, 220, 255, 0.55);
+  font-size: 8px;
+  letter-spacing: 2px;
+}
+
+.splash-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.splash-glow-one {
+  width: 250px;
+  height: 250px;
+  top: 10%;
+  left: -100px;
+  background: rgba(0, 110, 255, 0.2);
+  animation: glowMove 5s ease-in-out infinite;
+}
+
+.splash-glow-two {
+  width: 300px;
+  height: 300px;
+  right: -150px;
+  bottom: 5%;
+  background: rgba(0, 210, 255, 0.14);
+  animation: glowMove 6s ease-in-out infinite reverse;
+}
+
+@keyframes splashAppear {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes logoFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-7px) scale(1.025);
+  }
+}
+
+@keyframes ringRotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ringRotateReverse {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes glowMove {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  50% {
+    transform: translate(50px, -30px);
+  }
+}
+
+@media (max-height: 650px) {
+  .logo-wrapper {
+    width: 145px;
+    height: 145px;
+  }
+
+  .gateway-splash-logo {
+    width: 120px;
+    height: 120px;
+  }
+
+  .logo-ring-one {
+    width: 140px;
+    height: 140px;
+  }
+
+  .logo-ring-two {
+    width: 165px;
+    height: 165px;
+  }
+
+  .gateway-tagline {
+    margin-top: 15px;
+  }
+
+  .loading-area {
+    margin-top: 25px;
+  }
+}
