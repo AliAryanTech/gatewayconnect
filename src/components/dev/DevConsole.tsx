@@ -718,10 +718,10 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
 
   return (
     <div className={cn(
-      "fixed inset-0 z-50 flex flex-col overflow-hidden font-sans isolate",
+      "gcz-dev-console fixed inset-0 z-50 flex flex-col overflow-hidden font-sans isolate",
       consoleTheme === 'jarvis'
-        ? "bg-[#010a14] text-cyan-100"
-        : "bg-slate-950 text-slate-100"
+        ? "text-cyan-100"
+        : "text-slate-100"
     )}>
       
       {/* 0. Cyber-Futuristic Matrix / Binary / JARVIS Background (Strictly BEHIND all cards, tables and logs) */}
