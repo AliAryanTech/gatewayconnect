@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Camera, Edit3, Check, Copy, LogOut, ShieldCheck, Crown, Hash, Phone, Sparkles } from 'lucide-react';
+import { X, Camera, Edit3, Check, Copy, LogOut, Crown, Sparkles } from 'lucide-react';
 import { User } from '../../types';
 import { StorageService } from '../../services/storageService';
 import { ImagePickerModal } from './ImagePickerModal';
@@ -10,12 +10,11 @@ interface Props {
   currentUser: User;
   onUpdateUser: (u: User) => void;
   onLogout: () => void;
-  onOpenSwitchRole?: () => void;
 }
 
 export const WhatsAppProfileModal: React.FC<Props> = ({ isOpen, onClose, currentUser, onUpdateUser, onLogout }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [nameInput, setNameInput] = useState(currentUser.full_name);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(currentUser.full_name);
   const [showPicker, setShowPicker] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
@@ -23,152 +22,108 @@ export const WhatsAppProfileModal: React.FC<Props> = ({ isOpen, onClose, current
   if (!isOpen) return null;
 
   const saveName = () => {
-    if (!nameInput.trim()) return;
-    const u = StorageService.updateUserProfile({ full_name: nameInput.trim() });
+    if (!name.trim()) return;
+    const u = StorageService.updateUserProfile({ full_name: name.trim() });
     onUpdateUser(u);
     setIsEditing(false);
   };
+  const setIsEditing = (v: boolean) => setEditing(v);
 
   const savePhoto = (url: string) => {
     const u = StorageService.updateUserProfile({ avatar_url: url });
     onUpdateUser(u);
   };
 
-  const copyId = async () => {
-    await navigator.clipboard.writeText(currentUser.member_id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  const isApostle = currentUser.role === 'super_admin';
-
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[420px] h-full bg-[#0E0E10] border-l border-white/10 flex flex-col">
-        <div className="relative h-[38%] min-h-[280px] shrink-0 overflow-hidden bg-zinc-900">
-          {currentUser.avatar_url? (
-            <img src={currentUser.avatar_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-violet-600 to-fuchsia-600" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0E0E10] via-[#0E0E10]/60 to-black/10" />
-          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center">
-            <button onClick={onClose} className="w-9 h-9 rounded-full bg-black/40 border border-white/20 flex items-center justify-center text-white">
-              <X className="w-5 h-5" />
-            </button>
-            <div className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 text-[10px] font-bold text-white flex items-center gap-1">
-              <Crown className="w-3 h-3 text-amber-400" />
-              {isApostle? 'APOSTLE' : 'ELITE'}
-            </div>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} className="relative w-full max-w-[340px] rounded-[28px] bg-[#101014] border border-white/10 shadow-[0_20px_60px_-15px_rgba(124,58,237,0.6)] overflow-hidden animate-[float_6s_ease-in-out_infinite]">
+
+        {/* Glow */}
+        <div className="absolute -top-20 -right-20 w-[180px] h-[180px] bg-violet-600/30 blur-[40px] rounded-full animate-pulse" />
+        <div className="absolute -bottom-20 -left-20 w-[180px] h-[180px] bg-fuchsia-600/20 blur-[40px] rounded-full animate-pulse" />
+
+        {/* Top Bar */}
+        <div className="relative p-4 flex justify-between items-center">
+          <div className="px-2.5 py-1 rounded-full bg-white/10 border border-white/10 text-[9px] font-black tracking-widest text-white/70 flex items-center gap-1">
+            <Sparkles className="w-3 h-3" /> ELITE
           </div>
-          <div className="absolute bottom-0 left-0 right-0 p-5 flex gap-4 items-end">
-            <div className="relative">
-              <div className="w-[84px] h-[84px] rounded-[20px] overflow-hidden border-[3px] border-[#0E0E10] bg-zinc-800">
-                {currentUser.avatar_url? (
-                  <img src={currentUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xl font-black text-white">
-                    {currentUser.full_name.slice(0, 2).toUpperCase()}
-                  </div>
-                )}
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/70 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Floating Avatar */}
+        <div className="relative flex flex-col items-center -mt-2 pb-5">
+          <div className="relative">
+            <div className="absolute -inset-2 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 blur-[12px] opacity-60 animate-pulse" />
+            <div className="relative w-[92px] h-[92px] rounded-full p-[2px] bg-gradient-to-br from-white to-white/20">
+              <div className="w-full h-full rounded-full overflow-hidden bg-zinc-900">
+                {currentUser.avatar_url? <img src={currentUser.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-black text-white">{currentUser.full_name.slice(0,2)}</div>}
               </div>
-              <button onClick={() => setShowPicker(true)} className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-white text-black flex items-center justify-center border-2 border-[#0E0E10]">
-                <Camera className="w-4 h-4" />
-              </button>
             </div>
-            <div className="flex-1 min-w-0">
-              {isEditing? (
-                <div className="flex gap-2">
-                  <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} className="flex-1 bg-black/50 border border-violet-500 rounded-xl px-3 py-2 text-sm text-white outline-none" autoFocus />
-                  <button onClick={saveName} className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center">
-                    <Check className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-[20px] font-bold text-white truncate">{currentUser.full_name}</h2>
-                    <button onClick={() => setIsEditing(true)} className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
-                      <Edit3 className="w-3 h-3 text-white/70" />
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-white/60 mt-1 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    {isApostle? 'Preaching with power' : 'Available in Christ'}
-                  </p>
-                </div>
-              )}
+            <button onClick={()=>setShowPicker(true)} className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white text-black flex items-center justify-center shadow-lg border-2 border-[#101014] hover:rotate-12 transition-transform">
+              <Camera className="w-3.5 h-3.5" />
+            </button>
+            {currentUser.role === 'super_admin' && (
+              <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center shadow">
+                <Crown className="w-3.5 h-3.5 text-black" />
+              </div>
+            )}
+          </div>
+
+          {editing? (
+            <div className="flex gap-2 mt-4 px-6 w-full">
+              <input value={name} onChange={e=>setName(e.target.value)} className="flex-1 bg-white/10 border border-violet-500/50 rounded-full px-4 py-2 text-sm text-white outline-none text-center" autoFocus />
+              <button onClick={saveName} className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center"><Check className="w-4 h-4" /></button>
             </div>
+          ) : (
+            <div className="mt-4 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <h2 className="text-[18px] font-black text-white tracking-tight">{currentUser.full_name}</h2>
+                <button onClick={()=>setEditing(true)} className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center"><Edit3 className="w-3 h-3 text-white/60" /></button>
+              </div>
+              <p className="text-[11px] text-white/50 mt-1 px-6 leading-snug">
+                {currentUser.role === 'super_admin'? 'Apostle • Preaching with power' : 'Available in Christ • Praying 🙏'}
+              </p>
+            </div>
+          )}
+
+          {/* Mini Stats - Floating Pills */}
+          <div className="flex gap-2 mt-4">
+            <div className="px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 text-[11px] font-mono text-white/70 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> {currentUser.phone.slice(-4)}
+            </div>
+            <button onClick={async ()=>{ await navigator.clipboard.writeText(currentUser.member_id); setCopied(true); setTimeout(()=>setCopied(false),1200); }} className="px-3 py-1.5 rounded-full bg-violet-600/20 border border-violet-500/30 text-[11px] font-mono text-violet-200 flex items-center gap-1">
+              {copied? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {copied? 'Copied' : currentUser.member_id.slice(0,6)}
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0E0E10]">
-          <div className="rounded-[18px] bg-white/[0.04] border border-white/[0.06] divide-y divide-white/[0.06] overflow-hidden">
-            <div className="flex items-center gap-3 p-4">
-              <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
-                <Hash className="w-4 h-4 text-white/70" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-white/30">MEMBER ID</p>
-                <p className="text-[13px] font-semibold text-white font-mono truncate">{currentUser.member_id}</p>
-              </div>
-              <button onClick={copyId} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                {copied? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-white/60" />}
-              </button>
-            </div>
-            <div className="flex items-center gap-3 p-4">
-              <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
-                <Phone className="w-4 h-4 text-white/70" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-bold text-white/30">PHONE</p>
-                <p className="text-[13px] font-semibold text-white">{currentUser.phone}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-4">
-              <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-bold text-white/30">STATUS</p>
-                <p className="text-[13px] font-semibold text-white">Gold Verified</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[18px] bg-gradient-to-br from-violet-600/15 to-fuchsia-600/10 border border-violet-500/20 p-4">
-            <p className="text-[10px] font-bold tracking-widest text-violet-300">DECLARATION</p>
-            <p className="text-[13px] text-white/80 mt-2 italic">
-              {isApostle? 'Apostle of Jesus Christ - Preaching Kingdom with power' : 'Available in Christ - Praying without ceasing'}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => setShowPicker(true)} className="h-12 rounded-xl bg-white text-black font-bold text-[13px] flex items-center justify-center gap-2">
-              <Camera className="w-4 h-4" />
-              Change Photo
-            </button>
-            <button onClick={() => setShowLogout(true)} className="h-12 rounded-xl bg-white/5 border border-white/10 text-white/70 font-bold text-[13px] flex items-center justify-center gap-2">
-              <LogOut className="w-4 h-4" />
-              Log out
-            </button>
-          </div>
+        {/* Actions */}
+        <div className="p-3 grid grid-cols-2 gap-2.5 bg-white/[0.02] border-t border-white/5">
+          <button onClick={()=>setShowPicker(true)} className="h-11 rounded-full bg-white text-black font-bold text-[12px] flex items-center justify-center gap-1.5 hover:bg-zinc-100 transition">
+            <Camera className="w-4 h-4" /> Photo
+          </button>
+          <button onClick={()=>setShowLogout(true)} className="h-11 rounded-full bg-white/5 border border-white/10 text-white/60 font-bold text-[12px] flex items-center justify-center gap-1.5 hover:bg-red-500/10 hover:text-red-400">
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
         </div>
 
         {showLogout && (
-          <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
-            <div className="w-full bg-[#1A1A1F] border border-white/10 rounded-[20px] p-5 text-center">
-              <h4 className="font-bold text-white">Log out?</h4>
-              <p className="text-xs text-white/50 mt-1">You can log back anytime</p>
-              <div className="flex gap-2 mt-5">
-                <button onClick={() => setShowLogout(false)} className="flex-1 h-11 rounded-xl bg-white/10 text-white font-bold text-sm">Cancel</button>
-                <button onClick={() => { setShowLogout(false); onLogout(); onClose(); }} className="flex-1 h-11 rounded-xl bg-red-600 text-white font-bold text-sm">Log out</button>
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-5">
+            <div className="bg-[#1A1A1F] border border-white/10 rounded-[18px] p-4 w-full text-center">
+              <p className="font-bold text-white text-sm">Log out?</p>
+              <div className="flex gap-2 mt-4">
+                <button onClick={()=>setShowLogout(false)} className="flex-1 h-10 rounded-full bg-white/10 text-white text-xs font-bold">Cancel</button>
+                <button onClick={()=>{ setShowLogout(false); onLogout(); onClose(); }} className="flex-1 h-10 rounded-full bg-red-600 text-white text-xs font-bold">Logout</button>
               </div>
             </div>
           </div>
         )}
 
-        <ImagePickerModal isOpen={showPicker} onClose={() => setShowPicker(false)} onSelectImage={savePhoto} currentImage={currentUser.avatar_url} title="Update photo" subtitle="Choose from device or gallery" />
+        <ImagePickerModal isOpen={showPicker} onClose={()=>setShowPicker(false)} onSelectImage={savePhoto} currentImage={currentUser.avatar_url} title="Update photo" subtitle="Choose photo" />
+
+        <style>{`@keyframes float { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-6px)} }`}</style>
       </div>
     </div>
   );
