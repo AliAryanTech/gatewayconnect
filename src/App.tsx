@@ -12,14 +12,12 @@ import { getSupabase } from './services/supabaseClient';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { DevConsole } from './components/dev/DevConsole';
 import { FlutterExportModal } from './components/modals/FlutterExportModal';
-import { WhatsAppProfileModal } from './components/modals/WhatsAppProfileModal';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { BannedScreen } from './components/auth/BannedScreen';
 import { DirectMessagesModal } from './components/modals/DirectMessagesModal';
 import { NotificationsModal } from './components/modals/NotificationsModal';
 import { FloatingNotificationToast } from './components/common/FloatingNotificationToast';
 import { FloatingCommentReply } from './components/common/FloatingCommentReply';
-import FloatingLiveBroadcast from './components/FloatingLiveBroadcast';
 import { LiveSermonModal } from './components/modals/LiveSermonModal';
 import { InstagramProfileModal } from './components/modals/InstagramProfileModal';
 import { StorageService } from './services/storageService';
@@ -156,6 +154,7 @@ export default function App() {
 
   const handleUpdateUser = (updated: User) => {
     setCurrentUser(updated);
+    refreshAppData();
   };
 
   const handleInstantJoin = (nameOrHandle: string) => {
@@ -201,15 +200,24 @@ export default function App() {
         setGlobalProfileUserId(e.detail.userId);
       }
     };
+    const handleProfileUpdated = (e: any) => {
+      const updated = e?.detail || StorageService.getCurrentUser();
+      if (updated) {
+        setCurrentUser(updated);
+      }
+      refreshAppData();
+    };
     window.addEventListener('gcz_banned_users_updated', refreshLiveState);
     window.addEventListener('gcz_current_user_banned', refreshLiveState);
     window.addEventListener('gcz_open_user_profile', handleOpenProfile);
+    window.addEventListener('gcz_user_profile_updated', handleProfileUpdated);
     return () => {
       unbind();
       liveSyncService.disconnect();
       window.removeEventListener('gcz_banned_users_updated', refreshLiveState);
       window.removeEventListener('gcz_current_user_banned', refreshLiveState);
       window.removeEventListener('gcz_open_user_profile', handleOpenProfile);
+      window.removeEventListener('gcz_user_profile_updated', handleProfileUpdated);
     };
   }, [currentUser?.id]);
   useEffect(() => {
@@ -503,25 +511,27 @@ export default function App() {
       </main>
 
       {/* 3. Sleek Ministry System Status Bar */}
-      <footer className="gcz-statusbar h-10 bg-[#001F3F] border-t border-white/5 px-4 sm:px-8 flex items-center justify-between text-[10px] font-bold tracking-widest text-white/50 shrink-0 mb-14 sm:mb-16">
+      <footer className="gcz-statusbar h-10 bg-card border-t border-border px-4 sm:px-8 flex items-center justify-between text-[10px] font-bold tracking-widest text-muted-foreground shrink-0 mb-14 sm:mb-16">
         <div className="flex items-center gap-4 sm:gap-8">
-          <span className="text-[#D4AF37] flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
+          <span className="text-primary flex items-center gap-1.5 font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
             SYSTEM: ONLINE
           </span>
-          <span className="hidden sm:inline text-white/40">FCM PUSH: READY</span>
+          <span className="hidden sm:inline text-muted-foreground/70">FCM PUSH: READY</span>
         </div>
-        <div className="flex items-center gap-3 text-white/40">
+        <div className="flex items-center gap-3 text-muted-foreground/70">
           <span>V 1.0.4-PROD</span>
           <span className="hidden md:inline">© GATEWAY CHURCH ZIMBABWE</span>
         </div>
       </footer>
 
-      {/* 5. Bottom Tab Navigation */}
+      {/* 5. Bottom Tab Navigation (Instagram Style) */}
       <Navigation
         activeTab={activeTab}
         onTabChange={setActiveTab}
         cartCount={0}
+        currentUser={currentUser}
+        communityBadge={unreadDmsCount}
       />
 
       {/* 6. Modals & Drawers */}
@@ -556,14 +566,31 @@ export default function App() {
         />
       )}
 
-      {/* WhatsApp-Style User Info & Profile Modal with Image Picker & Logout */}
-      <WhatsAppProfileModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        onUpdateUser={handleUpdateUser}
-      />
+      {/* Instagram-Style User Profile Modal (Self & Global Member Profile) */}
+      {(showProfileModal || globalProfileUserId) && (
+        <InstagramProfileModal
+          userId={globalProfileUserId || currentUser?.id || null}
+          isOpen={Boolean(showProfileModal || globalProfileUserId)}
+          onClose={() => {
+            setShowProfileModal(false);
+            setGlobalProfileUserId(null);
+          }}
+          onUpdateUser={handleUpdateUser}
+          onLogout={handleLogout}
+          onOpenDirectChat={(recipientId) => {
+            setShowProfileModal(false);
+            setGlobalProfileUserId(null);
+            if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
+              setAuthMode('login');
+              setShowAuthModal(true);
+              return;
+            }
+            setDirectMessageRecipientId(recipientId);
+            setDirectMessageGroupId(undefined);
+            setShowDirectMessagesModal(true);
+          }}
+        />
+      )}
 
       {/* Direct Messages Modal */}
       {showDirectMessagesModal && (
@@ -613,43 +640,11 @@ export default function App() {
       {/* Floating Comment Reply Float */}
       {currentUser && <FloatingCommentReply currentUser={currentUser} />}
 
-      {/* Floating Live Broadcast notification when church broadcast is live */}
-      <FloatingLiveBroadcast
-        currentUser={currentUser}
-        onWatchLive={() => {
-          setActiveTab('home');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        onOpenInteractiveModal={() => {
-          setShowLiveSermonModal(true);
-        }}
-      />
-
       {/* Interactive Live Sanctuary Sermon Modal */}
       {showLiveSermonModal && currentUser && (
         <LiveSermonModal
           currentUser={currentUser}
           onClose={() => setShowLiveSermonModal(false)}
-        />
-      )}
-
-      {/* Global Instagram Profile Modal */}
-      {globalProfileUserId && (
-        <InstagramProfileModal
-          userId={globalProfileUserId}
-          isOpen={Boolean(globalProfileUserId)}
-          onClose={() => setGlobalProfileUserId(null)}
-          onOpenDirectChat={(recipientId) => {
-            setGlobalProfileUserId(null);
-            if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
-              setAuthMode('login');
-              setShowAuthModal(true);
-              return;
-            }
-            setDirectMessageRecipientId(recipientId);
-            setDirectMessageGroupId(undefined);
-            setShowDirectMessagesModal(true);
-          }}
         />
       )}
 
@@ -686,30 +681,30 @@ export default function App() {
 
       {/* Auth Modal (Login / Signup) */}
       {showAuthModal && (
-        <div className="fixed inset-0 z-50 bg-[#001122]/80 backdrop-blur-md flex items-center justify-center p-3">
-          <div className="bg-[#001F3F] border border-[#D4AF37]/40 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
-            <div className="flex justify-between items-center border-b border-white/10 pb-2.5">
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-center justify-center p-3">
+          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
+            <div className="flex justify-between items-center border-b border-border pb-2.5">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#D4AF37] text-[#001F3F] flex items-center justify-center font-bold text-lg">
+                <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg shadow-xs">
                   G
                 </div>
                 <div>
-                  <h3 className="font-serif-church font-bold text-[#D4AF37] text-base leading-none">
+                  <h3 className="font-serif-church font-bold text-primary text-base leading-none">
                     {authMode === 'login' ? 'GATEWAY CONNECT' : 'JOIN GATEWAY CHURCH'}
                   </h3>
-                  <p className="text-[10px] text-white/60 tracking-widest mt-0.5">Zimbabwe & Diaspora Ministry</p>
+                  <p className="text-[10px] text-muted-foreground tracking-widest mt-0.5">Zimbabwe & Diaspora Ministry</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowAuthModal(false)}
-                className="text-xs text-white/60 hover:text-white p-1 rounded hover:bg-white/10"
+                className="text-xs text-muted-foreground hover:text-foreground p-1 rounded hover:bg-secondary"
               >
                 ✕
               </button>
             </div>
 
             {authError && (
-              <div className="p-2.5 rounded-xl bg-red-950/50 border border-red-500/40 text-red-300 text-xs">
+              <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs">
                 {authError}
               </div>
             )}
@@ -717,20 +712,20 @@ export default function App() {
             <form onSubmit={handleAuthSubmit} className="space-y-3 text-xs">
               {authMode === 'signup' && (
                 <div>
-                  <label className="block font-semibold text-white/80 mb-1">Full Name</label>
+                  <label className="block font-semibold text-foreground mb-1">Full Name</label>
                   <input
                     type="text"
                     required
                     value={authFullName}
                     onChange={(e) => setAuthFullName(e.target.value)}
                     placeholder="e.g. Tendai Chikore"
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#D4AF37]"
+                    className="w-full bg-secondary border border-border rounded-xl p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block font-semibold text-white/80 mb-1">
+                <label className="block font-semibold text-foreground mb-1">
                   Phone Number (No Email Required)
                 </label>
                 <input
@@ -739,32 +734,32 @@ export default function App() {
                   value={authPhone}
                   onChange={(e) => setAuthPhone(e.target.value)}
                   placeholder="e.g. 0772123456 or +263772123456"
-                  className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary border border-border rounded-xl p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-white/80 mb-1">Password</label>
+                <label className="block font-semibold text-foreground mb-1">Password</label>
                 <input
                   type="password"
                   required
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary border border-border rounded-xl p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                 />
               </div>
 
               {authMode === 'signup' && (
                 <>
                   <div>
-                    <label className="block font-semibold text-white/80 mb-1">
+                    <label className="block font-semibold text-foreground mb-1">
                       City / Location
                     </label>
                     <select
                       value={authLocation}
                       onChange={(e) => setAuthLocation(e.target.value)}
-                      className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#D4AF37]"
+                      className="w-full bg-secondary border border-border rounded-xl p-2.5 text-foreground focus:outline-hidden focus:border-primary"
                     >
                       {[
                         'Harare', 'Bulawayo', 'Chitungwiza', 'Mutare', 'Gweru', 'Kwekwe', 
@@ -772,7 +767,7 @@ export default function App() {
                         'Chegutu', 'Zvishavane', 'Bindura', 'Victoria Falls', 'Hwange', 
                         'Redcliff', 'Rusape', 'Karoi', 'Kariba', 'Chipinge', 'Gokwe', 'Shurugwi'
                       ].map(city => (
-                        <option key={city} value={city} className="bg-[#001F3F] text-white">
+                        <option key={city} value={city} className="bg-card text-foreground">
                           {city}
                         </option>
                       ))}
@@ -781,7 +776,7 @@ export default function App() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block font-semibold text-white/80 mb-1">
+                      <label className="block font-semibold text-foreground mb-1">
                         Date of Birth
                       </label>
                       <input
@@ -789,27 +784,27 @@ export default function App() {
                         required
                         value={authDateOfBirth}
                         onChange={(e) => setAuthDateOfBirth(e.target.value)}
-                        className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#D4AF37] text-xs [color-scheme:dark]"
+                        className="w-full bg-secondary border border-border rounded-xl p-2.5 text-foreground focus:outline-hidden focus:border-primary text-xs"
                       />
                     </div>
 
                     <div>
-                      <label className="block font-semibold text-white/80 mb-1">
+                      <label className="block font-semibold text-foreground mb-1">
                         Sex / Gender
                       </label>
                       <select
                         value={authGender}
                         onChange={(e) => setAuthGender(e.target.value as 'male' | 'female')}
-                        className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#D4AF37] text-xs"
+                        className="w-full bg-secondary border border-border rounded-xl p-2.5 text-foreground focus:outline-hidden focus:border-primary text-xs"
                       >
-                        <option value="male" className="bg-[#001F3F] text-white">Male (Brother)</option>
-                        <option value="female" className="bg-[#001F3F] text-white">Female (Sister)</option>
+                        <option value="male" className="bg-card text-foreground">Male (Brother)</option>
+                        <option value="female" className="bg-card text-foreground">Female (Sister)</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-white/80 mb-1">
+                    <label className="block font-semibold text-foreground mb-1">
                       Referral Code (Optional)
                     </label>
                     <input
@@ -817,7 +812,7 @@ export default function App() {
                       value={authReferralCode}
                       onChange={(e) => setAuthReferralCode(e.target.value)}
                       placeholder="Enter referral (optional)"
-                      className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#D4AF37]"
+                      className="w-full bg-secondary border border-border rounded-xl p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                     />
                   </div>
                 </>
@@ -825,23 +820,23 @@ export default function App() {
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-[#D4AF37] text-[#001F3F] font-bold uppercase tracking-wider rounded-xl shadow-lg hover:scale-[1.02] transition-transform mt-2"
+                className="w-full py-2.5 bg-primary text-primary-foreground font-semibold uppercase tracking-wider rounded-xl shadow-xs hover:bg-primary/90 transition-all mt-2"
               >
                 {authMode === 'login' ? 'Sign In to Gateway' : 'Create Covenant Account'}
               </button>
             </form>
 
-            <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
+            <div className="flex items-center justify-between pt-2 border-t border-border text-xs">
               <button
                 onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-                className="text-[#D4AF37] hover:underline font-semibold"
+                className="text-primary hover:underline font-semibold"
               >
                 {authMode === 'login' ? "Don't have an account? Sign Up" : 'Already have an account? Login'}
               </button>
 
               <button
                 onClick={handleGuestLogin}
-                className="text-white/50 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 Continue as Guest
               </button>

@@ -18,6 +18,19 @@ export default defineConfig(() => {
       {
         name: 'paynow-api-middleware',
         configureServer(server) {
+          server.middlewares.use('/api/paynow/health', (req, res) => {
+            res.setHeader('Content-Type', 'application/json');
+            res.statusCode = 200;
+            const integrationId = (process.env.PAYNOW_INTEGRATION_ID || '').trim();
+            const integrationKey = (process.env.PAYNOW_INTEGRATION_KEY || '').trim();
+            res.end(JSON.stringify({
+              success: true,
+              configured: Boolean(integrationId && integrationKey),
+              integrationId: integrationId || undefined,
+              status: 'healthy'
+            }));
+          });
+
           server.middlewares.use('/api/paynow/initiate', async (req, res) => {
             if (req.method !== 'POST') {
               res.statusCode = 405;
@@ -173,6 +186,107 @@ export default defineConfig(() => {
               res.statusCode = 500;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ status: 'Error', error: err.message }));
+            }
+          });
+
+          // Facebook Video / Live Link Resolver
+          server.middlewares.use('/api/facebook/resolve', async (req, res) => {
+            const urlObj = new URL(req.url || '', `http://${req.headers.host}`);
+            let targetUrl = urlObj.searchParams.get('url');
+
+            if (req.method === 'POST') {
+              let body = '';
+              req.on('data', chunk => { body += chunk; });
+              await new Promise(resolve => req.on('end', resolve));
+              try {
+                const parsed = JSON.parse(body || '{}');
+                if (parsed.url) targetUrl = parsed.url;
+              } catch {}
+            }
+
+            if (!targetUrl) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: false, error: 'Missing url parameter' }));
+              return;
+            }
+
+            try {
+              targetUrl = targetUrl.trim();
+              const userAgent = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+              const response = await fetch(targetUrl, {
+                headers: {
+                  'User-Agent': userAgent,
+                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                },
+                redirect: 'follow'
+              });
+
+              const resolvedUrl = response.url || targetUrl;
+              const html = await response.text();
+
+              // Extract numeric video ID
+              const idMatch = resolvedUrl.match(/\/(?:videos|reel)\/(?:[^\/]+\/)?(\d{8,25})/) ||
+                              resolvedUrl.match(/[?&]v=(\d{8,25})/) ||
+                              html.match(/\/(?:videos|reel)\/(?:[^\/]+\/)?(\d{8,25})/) ||
+                              html.match(/"video_id":"(\d{8,25})"/);
+
+              const numericVideoId = idMatch ? idMatch[1] : undefined;
+
+              // Extract OpenGraph meta tags
+              const titleMatch = html.match(/<meta\s+(?:property|name)=["']og:title["']\s+content=["']([^"']*)["']/i) ||
+                                 html.match(/<title>([^<]*)<\/title>/i);
+              let title = titleMatch ? titleMatch[1] : undefined;
+              if (title) {
+                title = title
+                  .replace(/&amp;/g, '&')
+                  .replace(/&#xb7;/g, '·')
+                  .replace(/&quot;/g, '"')
+                  .replace(/^\d+(\.\d+)?[KM]?\s+views\s+·\s+\d+\s+reactions\s+\|\s+/i, '')
+                  .trim();
+              }
+
+              const descMatch = html.match(/<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']*)["']/i);
+              let description = descMatch ? descMatch[1] : undefined;
+              if (description) {
+                description = description.replace(/&amp;/g, '&').replace(/&quot;/g, '"').trim();
+              }
+
+              const imgMatch = html.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']*)["']/i);
+              const thumbnailUrl = imgMatch ? imgMatch[1].replace(/&amp;/g, '&') : undefined;
+
+              // Generate canonical and embed URL
+              const canonicalUrl = numericVideoId
+                ? `https://www.facebook.com/watch/?v=${numericVideoId}`
+                : resolvedUrl;
+              
+              const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(canonicalUrl)}&show_text=0&width=500`;
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({
+                success: true,
+                originalUrl: targetUrl,
+                resolvedUrl,
+                canonicalUrl,
+                embedUrl,
+                numericVideoId,
+                title: title || 'Apostolic Broadcast with Apostle Joe Daniels',
+                description: description || 'Gateway Church Zimbabwe Live Altar',
+                thumbnailUrl,
+                author: 'Apostle Joe Daniels'
+              }));
+            } catch (err: any) {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({
+                success: false,
+                originalUrl: targetUrl,
+                resolvedUrl: targetUrl,
+                canonicalUrl: targetUrl,
+                embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(targetUrl)}&show_text=0&width=500`,
+                error: err.message
+              }));
             }
           });
         }

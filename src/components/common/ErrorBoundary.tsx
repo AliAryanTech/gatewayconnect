@@ -76,21 +76,21 @@ export class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#001122] text-white flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-[#D4AF37]/20 border border-[#D4AF37] flex items-center justify-center mb-4 shadow-lg animate-pulse">
-            <AlertTriangle className="w-8 h-8 text-[#D4AF37]" />
+        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-4 shadow-sm animate-pulse">
+            <AlertTriangle className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold font-serif-church text-[#D4AF37] mb-2 tracking-wide">
+          <h1 className="text-2xl font-bold font-serif-church text-primary mb-2 tracking-wide">
             Gateway Connect Recovery
           </h1>
-          <p className="text-sm text-white/80 max-w-md mb-6 leading-relaxed">
+          <p className="text-sm text-muted-foreground max-w-md mb-6 leading-relaxed">
             The application intercepted an interface state exception. Click below to instantly recover in real time.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 mb-6">
             <button
               onClick={this.handleReset}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#D4AF37] hover:bg-[#C59B27] text-[#001F3F] font-bold text-sm shadow-xl hover:scale-105 transition-all cursor-pointer"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm shadow-xs transition-all cursor-pointer"
             >
               <RefreshCw className="w-4 h-4" />
               <span>Fix & Recover in Real Time</span>
@@ -98,7 +98,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
             <button
               onClick={this.handleFreshStart}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-white/20 shadow-lg hover:scale-105 transition-all cursor-pointer"
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-semibold text-sm border border-border shadow-xs transition-all cursor-pointer"
               title="Clears all logs and corrupt cache starting afresh, keeping your users and accounts intact"
             >
               <span>Fresh Start (Keep Users)</span>
@@ -109,12 +109,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <div className="max-w-md w-full text-left">
               <button
                 onClick={() => this.setState(prev => ({ showDetails: !prev.showDetails }))}
-                className="text-[11px] text-white/50 hover:text-white/80 underline mb-2 cursor-pointer"
+                className="text-[11px] text-muted-foreground hover:text-foreground underline mb-2 cursor-pointer"
               >
                 {this.state.showDetails ? 'Hide error details' : 'Show technical error details'}
               </button>
               {this.state.showDetails && (
-                <pre className="p-3 rounded-lg bg-black/60 border border-white/10 text-[11px] text-red-400 overflow-x-auto whitespace-pre-wrap break-words font-mono">
+                <pre className="p-3 rounded-lg bg-card border border-destructive/30 text-[11px] text-destructive overflow-x-auto whitespace-pre-wrap break-words font-mono">
                   {this.state.error.toString()}
                 </pre>
               )}

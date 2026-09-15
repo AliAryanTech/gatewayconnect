@@ -383,7 +383,36 @@ export class LiveSyncService {
           if (msg.type === 'event' && msg.payload) {
             this.handleLiveEvent(msg.payload);
           } else if (msg.type === 'presence') {
-            window.dispatchEvent(new CustomEvent('gcz_live_presence_updated', { detail: msg.payload }));
+            const list = Array.isArray(msg.payload) ? msg.payload : [];
+            const uniqueMap = new Map<string, OnlineMember>();
+            for (const item of list) {
+              if (item && item.id && !uniqueMap.has(item.id)) {
+                uniqueMap.set(item.id, {
+                  id: item.id,
+                  full_name: item.full_name || 'Church Believer',
+                  handle: item.handle,
+                  avatar_url: item.avatar_url,
+                  role: item.role,
+                  city: item.city || 'Harare',
+                  badge_type: item.badge_type,
+                  online_at: item.online_at || new Date().toISOString(),
+                });
+              }
+            }
+            if (this.currentUser && !uniqueMap.has(this.currentUser.id)) {
+              uniqueMap.set(this.currentUser.id, {
+                id: this.currentUser.id,
+                full_name: this.currentUser.full_name,
+                handle: this.currentUser.handle,
+                avatar_url: this.currentUser.avatar_url,
+                role: this.currentUser.role,
+                city: this.currentUser.location || (this.currentUser as any).city_location || 'Harare',
+                badge_type: this.currentUser.badge_type,
+                online_at: new Date().toISOString(),
+              });
+            }
+            this.activeOnlineMembers = Array.from(uniqueMap.values());
+            window.dispatchEvent(new CustomEvent('gcz_live_presence_updated', { detail: this.activeOnlineMembers }));
           }
         } catch {
           // ignore malformed frame

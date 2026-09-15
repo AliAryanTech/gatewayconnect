@@ -179,7 +179,7 @@ export const AdminCyberBackground: React.FC<AdminCyberBackgroundProps> = ({
           const angle = coreRot + k * (Math.PI / 4);
           const nx = cx + Math.cos(angle) * (maxR * 0.2);
           const ny = cy + Math.sin(angle) * (maxR * 0.2);
-          ctx.fillStyle = k % 2 === 0 ? '#38bdf8' : '#00f0ff';
+          ctx.fillStyle = k % 2 === 0 ? 'rgba(56, 189, 248, 0.9)' : 'rgba(34, 211, 238, 0.9)';
           ctx.beginPath();
           ctx.arc(nx, ny, 2.5, 0, Math.PI * 2);
           ctx.fill();
@@ -278,20 +278,20 @@ export const AdminCyberBackground: React.FC<AdminCyberBackgroundProps> = ({
 
         const isLead = Math.random() > (mode === 'binary' ? 0.92 : 0.85);
         if (isLead) {
-          ctx.fillStyle = '#f8fafc'; // Bright white/cyan lead
+          ctx.fillStyle = 'rgba(248, 250, 252, 0.95)'; // Bright white lead
           ctx.shadowBlur = 6;
-          ctx.shadowColor = '#10b981';
+          ctx.shadowColor = 'rgba(16, 185, 129, 0.8)';
         } else if (i % 7 === 0) {
-          ctx.fillStyle = '#D4AF37'; // Kingdom Gold accent
+          ctx.fillStyle = 'rgba(217, 119, 6, 0.85)'; // Kingdom Gold accent
           ctx.shadowBlur = 0;
         } else if (i % 4 === 0) {
-          ctx.fillStyle = '#38bdf8'; // Cyber Cyan
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.85)'; // Cyber Cyan
           ctx.shadowBlur = 0;
         } else if (i % 5 === 0) {
-          ctx.fillStyle = '#c084fc'; // Purple hacker accent
+          ctx.fillStyle = 'rgba(192, 132, 252, 0.85)'; // Purple hacker accent
           ctx.shadowBlur = 0;
         } else {
-          ctx.fillStyle = '#10b981'; // Classic Matrix Emerald
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.85)'; // Classic Matrix Emerald
           ctx.shadowBlur = 0;
         }
 

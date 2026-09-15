@@ -59,11 +59,21 @@ export const FloatingCommentReply: React.FC<FloatingCommentReplyProps> = ({ curr
   };
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 w-[calc(100vw-32px)] max-w-sm bg-card/95 backdrop-blur-md border border-primary/40 rounded-2xl p-3.5 shadow-2xl animate-in slide-in-from-bottom-5 duration-200">
+    <>
+      {/* Click blank space to exit float */}
+      <div
+        className="fixed inset-0 z-40 bg-black/10 cursor-pointer"
+        onClick={() => setActiveItem(null)}
+        aria-hidden="true"
+      />
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="fixed bottom-28 sm:bottom-24 right-3 sm:right-6 z-50 w-[calc(100vw-24px)] max-w-sm bg-card/95 backdrop-blur-md border border-primary/30 rounded-xl p-3.5 shadow-2xl animate-in slide-in-from-bottom-5 duration-200"
+      >
       {/* Header */}
       <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
+          <div className="w-6 h-6 rounded-md bg-primary/20 text-primary flex items-center justify-center shrink-0">
             <MessageSquare className="w-3.5 h-3.5" />
           </div>
           <div className="truncate">
@@ -87,11 +97,11 @@ export const FloatingCommentReply: React.FC<FloatingCommentReplyProps> = ({ curr
       </div>
 
       {/* Incoming Comment Card */}
-      <div className="bg-secondary/60 rounded-xl p-2.5 mb-2.5 flex items-start gap-2">
+      <div className="bg-secondary/60 rounded-lg p-2.5 mb-2.5 flex items-start gap-2 border border-border/40">
         <img
           src={activeItem.comment.author_avatar || activeItem.comment.user_avatar || '/assets/apostle_joe_daniels_main.jpg'}
           alt={activeItem.comment.author_name || activeItem.comment.user_name || 'Believer'}
-          className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5"
+          className="w-7 h-7 rounded-md object-cover shrink-0 mt-0.5"
         />
         <div className="min-w-0 flex-1 text-xs">
           <div className="flex items-center justify-between">
@@ -119,19 +129,20 @@ export const FloatingCommentReply: React.FC<FloatingCommentReplyProps> = ({ curr
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             placeholder={`Reply to ${(activeItem.comment.author_name || activeItem.comment.user_name || 'Member').split(' ')[0]}...`}
-            className="flex-1 bg-secondary border border-border rounded-full px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+            className="flex-1 bg-secondary border border-border rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
             autoFocus
           />
           <button
             type="submit"
             disabled={!replyText.trim()}
-            className="p-1.5 rounded-full bg-primary text-primary-foreground disabled:opacity-40 hover:bg-primary/90 transition-colors shrink-0"
+            className="p-1.5 rounded-lg bg-primary text-primary-foreground disabled:opacity-40 hover:bg-primary/90 transition-colors shrink-0"
             title="Send reply"
           >
             <Send className="w-3.5 h-3.5" />
           </button>
         </form>
       )}
-    </div>
+      </div>
+    </>
   );
 };

@@ -101,20 +101,20 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#001122]/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-[#001F3F] border border-[#D4AF37]/60 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 my-4 text-white">
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-card border border-border rounded-2xl max-w-md w-full overflow-hidden shadow-xl animate-in zoom-in-95 duration-150 my-4 text-foreground">
         
         {/* Header */}
-        <div className="bg-[#001122] p-4 border-b border-white/10 flex items-center justify-between">
+        <div className="bg-secondary/40 p-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#D4AF37] text-[#001F3F] flex items-center justify-center font-black shadow">
+            <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-xs">
               <Crown className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm sm:text-base text-white">
+              <h3 className="font-bold text-sm sm:text-base text-foreground">
                 Upgrade Covenant Partnership
               </h3>
-              <p className="text-[11px] text-[#D4AF37]">
+              <p className="text-[11px] text-primary font-medium">
                 Elevate your fellowship and unlock kingdom privileges
               </p>
             </div>
@@ -122,7 +122,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white"
+            className="p-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -131,18 +131,18 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
         {/* Content */}
         {upgradedSuccess ? (
           <div className="p-6 text-center space-y-4">
-            <div className="w-14 h-14 rounded-full bg-amber-500/20 text-[#D4AF37] border border-[#D4AF37]/50 flex items-center justify-center mx-auto">
+            <div className="w-14 h-14 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-base font-bold text-white">Membership Upgraded!</h4>
-              <p className="text-xs text-white/70 max-w-xs mx-auto">
+              <h4 className="text-base font-bold text-foreground">Membership Upgraded!</h4>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto">
                 Your partnership status is now active with the verified rosette badge and offline streaming privileges.
               </p>
             </div>
             <button
               onClick={onClose}
-              className="w-full py-2.5 bg-[#D4AF37] text-[#001F3F] font-bold text-xs rounded-xl"
+              className="w-full py-2.5 bg-primary text-primary-foreground font-semibold text-xs rounded-lg shadow-xs hover:bg-primary/90 transition-colors"
             >
               Back to Profile
             </button>
@@ -160,26 +160,26 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
                     onClick={() => setSelectedTier(t.id)}
                     className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#001122] border-[#D4AF37] shadow-lg ring-1 ring-[#D4AF37]'
-                        : 'bg-[#001122]/60 border-white/10 hover:border-white/20'
+                        ? 'bg-secondary/70 border-primary shadow-xs ring-1 ring-primary'
+                        : 'bg-secondary/30 border-border hover:border-primary/40'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
                         <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          isSelected ? 'border-[#D4AF37] bg-[#D4AF37]' : 'border-white/30'
+                          isSelected ? 'border-primary bg-primary' : 'border-border'
                         }`}>
-                          {isSelected && <Check className="w-2.5 h-2.5 text-[#001F3F] stroke-[3]" />}
+                          {isSelected && <Check className="w-2.5 h-2.5 text-primary-foreground stroke-[3]" />}
                         </span>
-                        <span className="font-bold text-xs sm:text-sm text-white">{t.name}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-[#D4AF37]/20 text-[#D4AF37] font-semibold">
+                        <span className="font-bold text-xs sm:text-sm text-foreground">{t.name}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold">
                           {t.badge}
                         </span>
                       </div>
-                      <span className="font-bold text-xs text-[#D4AF37]">{t.price}</span>
+                      <span className="font-bold text-xs text-primary">{t.price}</span>
                     </div>
 
-                    <ul className="space-y-1 pl-6 pt-1 text-[11px] text-white/70">
+                    <ul className="space-y-1 pl-6 pt-1 text-[11px] text-muted-foreground">
                       {t.perks.map((p, i) => (
                         <li key={i} className="list-disc leading-tight">
                           {p}
@@ -192,14 +192,14 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
             </div>
 
             {/* Payment Guarantee Notice */}
-            <div className="p-2.5 bg-[#001122] rounded-xl border border-white/10 flex items-center gap-2 text-[11px] text-white/60">
-              <ShieldCheck className="w-4 h-4 text-[#D4AF37] shrink-0" />
+            <div className="p-2.5 bg-secondary/40 rounded-xl border border-border flex items-center gap-2 text-[11px] text-muted-foreground">
+              <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
               <span>Supports EcoCash, Paynow Zimbabwe, and International Cards with secure confirmation.</span>
             </div>
 
             {/* Action CTA */}
             {paymentError && (
-              <div className="rounded-xl border border-rose-500/40 bg-rose-950/40 p-3 text-xs text-rose-200">
+              <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
                 {paymentError}
               </div>
             )}
@@ -207,10 +207,10 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
               id="btn-confirm-upgrade"
               disabled={isProcessing}
               onClick={handleUpgrade}
-              className="w-full py-3 rounded-xl bg-[#D4AF37] hover:bg-[#c49f2f] text-[#001F3F] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.99] disabled:opacity-50"
+              className="w-full py-3 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] disabled:opacity-50"
             >
               {isProcessing ? (
-                <div className="w-4 h-4 border-2 border-[#001F3F] border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
                   <Zap className="w-4 h-4 fill-current" />

@@ -215,12 +215,12 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-[#001F3F] border-2 border-[#D4AF37]/50 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in duration-200 max-h-[88vh] flex flex-col">
+      <div className="bg-card border-2 border-primary/50 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in duration-200 max-h-[88vh] flex flex-col">
         
         {/* 1. Modal Top Banner (Moors Betting App Style Deposit Header) */}
-        <div className="bg-gradient-to-r from-[#001122] via-[#001F3F] to-[#001122] p-3.5 sm:p-4 border-b border-[#D4AF37]/30 flex items-center justify-between shrink-0">
+        <div className="bg-gradient-to-r from-background via-card to-background p-3.5 sm:p-4 border-b border-primary/30 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#D4AF37] text-[#001F3F] flex items-center justify-center font-black shadow-md shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-black shadow-md shrink-0">
               <Zap className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
             </div>
             <div>
@@ -232,9 +232,9 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                   SECURE SWITCH
                 </span>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-[#D4AF37] font-semibold flex items-center gap-1">
+              <p className="text-[10px] sm:text-[11px] text-primary font-semibold flex items-center gap-1">
                 <span>Account:</span>
-                <span className="font-mono font-bold bg-[#001122] px-1.5 py-0.5 rounded border border-[#D4AF37]/40 text-white">
+                <span className="font-mono font-bold bg-background px-1.5 py-0.5 rounded border border-primary/40 text-white">
                   {PAYMENT_ACCOUNT_NUMBER}
                 </span>
               </p>
@@ -267,8 +267,8 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                     onClick={() => setPaymentChannel('ecocash_express')}
                     className={`p-2 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
                       paymentChannel === 'ecocash_express'
-                        ? 'bg-[#D4AF37] text-[#001F3F] border-[#D4AF37] shadow-md font-extrabold'
-                        : 'bg-[#001122] border-white/10 text-white/70 hover:text-white'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md font-extrabold'
+                        : 'bg-background border-white/10 text-white/70 hover:text-white'
                     }`}
                   >
                     <Smartphone className="w-4 h-4" />
@@ -280,8 +280,8 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                     onClick={() => setPaymentChannel('ecocash_ussd')}
                     className={`p-2 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
                       paymentChannel === 'ecocash_ussd'
-                        ? 'bg-[#D4AF37] text-[#001F3F] border-[#D4AF37] shadow-md font-extrabold'
-                        : 'bg-[#001122] border-white/10 text-white/70 hover:text-white'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md font-extrabold'
+                        : 'bg-background border-white/10 text-white/70 hover:text-white'
                     }`}
                   >
                     <PhoneCall className="w-4 h-4" />
@@ -293,8 +293,8 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                     onClick={() => setPaymentChannel('onemoney')}
                     className={`p-2 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
                       paymentChannel === 'onemoney'
-                        ? 'bg-[#D4AF37] text-[#001F3F] border-[#D4AF37] shadow-md font-extrabold'
-                        : 'bg-[#001122] border-white/10 text-white/70 hover:text-white'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md font-extrabold'
+                        : 'bg-background border-white/10 text-white/70 hover:text-white'
                     }`}
                   >
                     <Smartphone className="w-4 h-4" />
@@ -306,8 +306,8 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                     onClick={() => setPaymentChannel('innbucks')}
                     className={`p-2 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
                       paymentChannel === 'innbucks'
-                        ? 'bg-[#D4AF37] text-[#001F3F] border-[#D4AF37] shadow-md font-extrabold'
-                        : 'bg-[#001122] border-white/10 text-white/70 hover:text-white'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md font-extrabold'
+                        : 'bg-background border-white/10 text-white/70 hover:text-white'
                     }`}
                   >
                     <Zap className="w-4 h-4" />
@@ -319,8 +319,8 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                     onClick={() => setPaymentChannel('paynow')}
                     className={`p-2 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
                       paymentChannel === 'paynow'
-                        ? 'bg-[#D4AF37] text-[#001F3F] border-[#D4AF37] shadow-md font-extrabold'
-                        : 'bg-[#001122] border-white/10 text-white/70 hover:text-white'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md font-extrabold'
+                        : 'bg-background border-white/10 text-white/70 hover:text-white'
                     }`}
                   >
                     <CreditCard className="w-4 h-4" />
@@ -332,8 +332,8 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                     onClick={() => setPaymentChannel('card')}
                     className={`p-2 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
                       paymentChannel === 'card'
-                        ? 'bg-[#D4AF37] text-[#001F3F] border-[#D4AF37] shadow-md font-extrabold'
-                        : 'bg-[#001122] border-white/10 text-white/70 hover:text-white'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md font-extrabold'
+                        : 'bg-background border-white/10 text-white/70 hover:text-white'
                     }`}
                   >
                     <Lock className="w-4 h-4" />
@@ -355,8 +355,8 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                       onClick={() => setSelectedFund(fund)}
                       className={`p-2 rounded-xl text-left border text-xs font-semibold transition-all ${
                         selectedFund === fund
-                          ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37] font-bold'
-                          : 'bg-[#001122] border-white/10 text-white/60 hover:text-white'
+                          ? 'bg-primary/20 border-primary text-primary font-bold'
+                          : 'bg-background border-white/10 text-white/60 hover:text-white'
                       }`}
                     >
                       {fund}
@@ -371,7 +371,7 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                   <label className="text-xs font-bold text-white/80">
                     Deposit Amount
                   </label>
-                  <div className="flex items-center gap-1 bg-[#001122] p-0.5 rounded-lg border border-white/10">
+                  <div className="flex items-center gap-1 bg-background p-0.5 rounded-lg border border-white/10">
                     {(['USD', 'ZiG', 'ZAR', 'GBP'] as const).map(curr => (
                       <button
                         type="button"
@@ -379,7 +379,7 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                         onClick={() => setCurrency(curr)}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
                           currency === curr
-                            ? 'bg-[#D4AF37] text-[#001F3F]'
+                            ? 'bg-primary text-primary-foreground'
                             : 'text-white/60 hover:text-white'
                         }`}
                       >
@@ -401,8 +401,8 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                       }}
                       className={`py-2 rounded-xl border text-xs font-bold transition-all ${
                         amount === amt && !customAmount
-                          ? 'bg-[#D4AF37] text-[#001F3F] border-[#D4AF37] shadow-sm font-black'
-                          : 'bg-[#001122] border-white/10 text-white hover:border-[#D4AF37]/50'
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm font-black'
+                          : 'bg-background border-white/10 text-white hover:border-primary/50'
                       }`}
                     >
                       {currency === 'USD' ? `$${amt}` : currency === 'ZiG' ? `${amt * 15} ZiG` : `${currency} ${amt}`}
@@ -418,9 +418,9 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                     value={customAmount}
                     onChange={e => setCustomAmount(e.target.value)}
                     placeholder={`Or enter custom amount in ${currency}...`}
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#D4AF37]"
+                    className="w-full bg-background border border-white/20 rounded-xl p-2.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-primary"
                   />
-                  <span className="absolute right-3 top-2.5 text-xs font-bold text-[#D4AF37]">
+                  <span className="absolute right-3 top-2.5 text-xs font-bold text-primary">
                     {currency}
                   </span>
                 </div>
@@ -428,9 +428,9 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
 
               {/* Mobile Phone Input for EcoCash / OneMoney Push */}
               {(paymentChannel === 'ecocash_express' || paymentChannel === 'onemoney') && (
-                <div className="bg-[#001122] p-3 rounded-xl border border-white/10 space-y-1.5">
+                <div className="bg-background p-3 rounded-xl border border-white/10 space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-[#D4AF37]">
+                    <span className="font-semibold text-primary">
                       Your Mobile Number (USSD Push Target)
                     </span>
                     <span className="text-[10px] text-white/50">Receives *151# PIN prompt</span>
@@ -441,35 +441,35 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                     placeholder="e.g. 0772123456 or 0712345678"
-                    className="w-full bg-[#001F3F] border border-white/15 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-[#D4AF37]"
+                    className="w-full bg-card border border-white/15 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-primary"
                   />
                   <p className="text-[11px] text-white/60">
-                    Payment will be deposited straight into church account <strong className="text-[#D4AF37]">{PAYMENT_ACCOUNT_NUMBER}</strong>.
+                    Payment will be deposited straight into church account <strong className="text-primary">{PAYMENT_ACCOUNT_NUMBER}</strong>.
                   </p>
                 </div>
               )}
 
               {/* Direct USSD Dial Instruction if chosen */}
               {paymentChannel === 'ecocash_ussd' && (
-                <div className="bg-[#001122] p-3 rounded-xl border border-[#D4AF37]/30 space-y-2">
+                <div className="bg-background p-3 rounded-xl border border-primary/30 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#D4AF37]">Quick USSD Dial String</span>
+                    <span className="text-xs font-bold text-primary">Quick USSD Dial String</span>
                     <button
                       type="button"
                       onClick={handleCopyUssd}
                       className="text-[11px] text-white/80 hover:text-white flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded"
                     >
-                      <Copy className="w-3 h-3 text-[#D4AF37]" />
+                      <Copy className="w-3 h-3 text-primary" />
                       <span>{copiedUssd ? 'Copied!' : 'Copy Code'}</span>
                     </button>
                   </div>
-                  <div className="bg-black/60 p-2.5 rounded-lg font-mono text-sm text-[#D4AF37] text-center font-bold tracking-wider">
+                  <div className="bg-black/60 p-2.5 rounded-lg font-mono text-sm text-primary text-center font-bold tracking-wider">
                     {ussdCodeString}
                   </div>
                   <div className="flex gap-2">
                     <a
                       href={`tel:${encodeURIComponent(ussdCodeString)}`}
-                      className="flex-1 py-1.5 bg-[#D4AF37] text-[#001F3F] rounded-lg text-xs font-bold text-center flex items-center justify-center gap-1"
+                      className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold text-center flex items-center justify-center gap-1"
                     >
                       <PhoneCall className="w-3 h-3" />
                       <span>Tap to Dial on Phone</span>
@@ -484,7 +484,7 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                   type="checkbox"
                   checked={isAnonymous}
                   onChange={e => setIsAnonymous(e.target.checked)}
-                  className="rounded accent-[#D4AF37]"
+                  className="rounded accent-primary"
                 />
                 <span>Keep my identity anonymous on giving wall</span>
               </label>
@@ -492,9 +492,9 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
               {/* Submit CTA Button */}
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#f1cf6d] to-[#D4AF37] text-[#001F3F] font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-primary via-amber-300 to-primary text-primary-foreground font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
               >
-                <Zap className="w-4 h-4 fill-[#001F3F]" />
+                <Zap className="w-4 h-4 fill-primary-foreground" />
                 <span>
                   Deposit {currency} {currentFinalAmount} via {paymentChannel.replace('_', ' ')}
                 </span>
@@ -511,15 +511,15 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
           {/* STATE: INITIATING / HANDSHAKE */}
           {depositState === 'initiating' && (
             <div className="py-10 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-[#D4AF37]/20 border-2 border-[#D4AF37] flex items-center justify-center mx-auto animate-spin">
-                <RotateCw className="w-8 h-8 text-[#D4AF37]" />
+              <div className="w-16 h-16 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center mx-auto animate-spin">
+                <RotateCw className="w-8 h-8 text-primary" />
               </div>
               <div>
                 <h4 className="font-bold text-base text-white">
                   Contacting Payment Switch...
                 </h4>
                 <p className="text-xs text-white/60 mt-1">
-                  Connecting to EcoCash / OneMoney network for account <strong className="text-[#D4AF37]">{PAYMENT_ACCOUNT_NUMBER}</strong>
+                  Connecting to EcoCash / OneMoney network for account <strong className="text-primary">{PAYMENT_ACCOUNT_NUMBER}</strong>
                 </p>
               </div>
             </div>
@@ -528,7 +528,7 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
           {/* STATE: USSD PIN PROMPT (Simulated Mobile Screen like Moors Betting App) */}
           {depositState === 'ussd_prompt' && (
             <div className="space-y-4">
-              <div className="bg-[#001122] border-2 border-[#D4AF37] rounded-2xl p-4 sm:p-5 text-center space-y-3 relative overflow-hidden shadow-2xl">
+              <div className="bg-background border-2 border-primary rounded-2xl p-4 sm:p-5 text-center space-y-3 relative overflow-hidden shadow-2xl">
                 
                 {/* Simulated USSD Top Pill */}
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold animate-pulse">
@@ -544,7 +544,7 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                   <p className="text-white/90">
                     Transfer <strong>{currency} {currentFinalAmount}</strong> to <strong>Gateway Church (Acct: {PAYMENT_ACCOUNT_NUMBER})</strong>?
                   </p>
-                  <p className="text-[#D4AF37]">Enter EcoCash PIN on your phone to approve:</p>
+                  <p className="text-primary">Enter EcoCash PIN on your phone to approve:</p>
                   
                   {pinError && (
                     <p className="text-xs text-rose-400 font-semibold bg-rose-950/40 p-1.5 rounded border border-rose-500/30">
@@ -562,12 +562,12 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                         if (pinError) setPinError(null);
                       }}
                       placeholder="••••"
-                      className="w-28 bg-[#001F3F] border border-[#D4AF37] rounded-lg px-3 py-1.5 text-center text-sm tracking-widest text-[#D4AF37] outline-none"
+                      className="w-28 bg-card border border-primary rounded-lg px-3 py-1.5 text-center text-sm tracking-widest text-primary outline-none"
                     />
                     <button
                       type="button"
                       onClick={handleAuthorizePin}
-                      className="flex-1 py-1.5 bg-[#D4AF37] hover:bg-[#c49f2f] text-[#001F3F] rounded-lg font-bold text-xs"
+                      className="flex-1 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-bold text-xs"
                     >
                       Authorize & Confirm
                     </button>
@@ -575,7 +575,7 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                 </div>
 
                 <p className="text-[11px] text-white/50">
-                  Did not receive the prompt? Dial <span className="text-[#D4AF37] font-mono">{ussdCodeString}</span> manually.
+                  Did not receive the prompt? Dial <span className="text-primary font-mono">{ussdCodeString}</span> manually.
                 </p>
 
                 <div className="flex gap-2 pt-1">
@@ -608,15 +608,15 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                   Payment of {activeReceipt.currency} {activeReceipt.amount} Received!
                 </h4>
                 <p className="text-xs text-white/60">
-                  Deposited into Church Payment Account <strong className="text-[#D4AF37]">{PAYMENT_ACCOUNT_NUMBER}</strong>
+                  Deposited into Church Payment Account <strong className="text-primary">{PAYMENT_ACCOUNT_NUMBER}</strong>
                 </p>
               </div>
 
               {/* Receipt Summary Card */}
-              <div className="bg-[#001122] rounded-xl p-4 border border-[#D4AF37]/40 text-xs text-left space-y-2 font-mono">
+              <div className="bg-background rounded-xl p-4 border border-primary/40 text-xs text-left space-y-2 font-mono">
                 <div className="flex justify-between border-b border-white/10 pb-1">
                   <span className="text-white/50">Reference:</span>
-                  <span className="font-bold text-[#D4AF37]">{activeReceipt.receipt_number}</span>
+                  <span className="font-bold text-primary">{activeReceipt.receipt_number}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/50">Donor / Partner:</span>
@@ -624,7 +624,7 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/50">Fund Purpose:</span>
-                  <span className="text-[#D4AF37] font-bold">{activeReceipt.fund_type}</span>
+                  <span className="text-primary font-bold">{activeReceipt.fund_type}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/50">Payment Account:</span>
@@ -636,7 +636,7 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                 </div>
                 <div className="flex justify-between border-t border-white/10 pt-1 text-sm font-sans font-bold">
                   <span className="text-white/70">Total Amount:</span>
-                  <span className="text-[#D4AF37]">{activeReceipt.currency} {activeReceipt.amount}</span>
+                  <span className="text-primary">{activeReceipt.currency} {activeReceipt.amount}</span>
                 </div>
               </div>
 
@@ -664,7 +664,7 @@ export const MoorsDepositModal: React.FC<MoorsDepositModalProps> = ({
                     setDepositState('idle');
                     onClose();
                   }}
-                  className="py-2.5 px-4 rounded-xl bg-[#D4AF37] text-[#001F3F] text-xs font-black"
+                  className="py-2.5 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-black"
                 >
                   Done
                 </button>

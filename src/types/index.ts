@@ -48,6 +48,7 @@ export interface PostComment {
   likes_count?: number;
   liked_user_ids?: string[];
   badge_type?: BadgeType;
+  status?: 'pending' | 'synced' | 'failed';
 }
 
 export interface Testimony {
@@ -71,6 +72,11 @@ export interface Testimony {
   user_liked?: boolean;
   comments_count?: number;
   comments?: PostComment[];
+  page_id?: string;
+  page_name?: string;
+  page_handle?: string;
+  page_avatar?: string;
+  page_verified?: boolean;
 }
 
 export interface Sermon {
@@ -398,7 +404,7 @@ export interface DirectMessage {
   deleted_for_users?: string[];
   reactions?: MessageReaction[];
   media_url?: string;
-  media_type?: 'image' | 'video' | 'audio';
+  media_type?: 'image' | 'video' | 'audio' | 'document';
 }
 
 export const SUPPORTED_CITIES = [
@@ -613,6 +619,61 @@ export interface GroupMediaItem {
   type: 'image' | 'video' | 'audio' | 'document';
   caption?: string;
   created_at: string;
+}
+
+export type PageCategory = 
+  | 'Worship & Arts' 
+  | 'Youth Ministry' 
+  | 'Youth & Young Adults'
+  | 'Women of Dominion' 
+  | 'Women of Virtue'
+  | 'Men of Valour' 
+  | 'Children & Family' 
+  | 'Evangelism & Missions' 
+  | 'Outreach & Missions'
+  | 'Counseling & Prayer' 
+  | 'Media & Tech' 
+  | 'Media & Broadcasting'
+  | 'Kingdom Business' 
+  | 'Sanctuary Assembly' 
+  | 'Fellowship & Cells'
+  | 'Other';
+
+export interface ChurchPage {
+  id: string;
+  name: string;
+  handle: string;
+  category: PageCategory;
+  bio: string;
+  avatar_url: string;
+  cover_url: string;
+  creator_id: string;
+  creator_name?: string;
+  admin_ids: string[];
+  website_url?: string;
+  phone_number?: string;
+  whatsapp_link?: string;
+  contact_email?: string;
+  location?: string;
+  created_at: string;
+  followers_count: number;
+  followers: string[]; // User IDs
+  verified?: boolean;
+  pinned_announcement?: string;
+  posts_count?: number;
+}
+
+export interface PagePost {
+  id: string;
+  page_id: string;
+  author_id: string;
+  author_name: string;
+  author_avatar?: string;
+  content: string;
+  image_url?: string;
+  created_at: string;
+  likes: string[]; // User IDs
+  comments_count: number;
 }
 
 

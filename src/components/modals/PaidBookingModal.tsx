@@ -115,25 +115,25 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#001122]/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-[#001F3F] border border-[#D4AF37]/50 rounded-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 my-auto text-white">
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-card border border-border rounded-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 my-auto text-foreground">
         
         {/* Header */}
-        <div className="bg-[#00172e] p-3.5 sm:p-4 border-b border-white/10 flex items-center justify-between shrink-0">
+        <div className="bg-secondary/40 p-3.5 sm:p-4 border-b border-border flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center font-black shadow shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-semibold shadow-xs shrink-0">
               <Video className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-sm sm:text-base text-white">
+                <h3 className="font-bold text-sm sm:text-base text-foreground">
                   Zoom Meetings Portal
                 </h3>
-                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/40">
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold border border-primary/20">
                   1-on-1
                 </span>
               </div>
-              <p className="text-[11px] text-white/60">
+              <p className="text-[11px] text-muted-foreground">
                 Apostle Joe Daniels consultation request
               </p>
             </div>
@@ -141,7 +141,7 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
 
           <button
             onClick={onClose}
-            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition-colors shrink-0"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -150,50 +150,50 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
         {/* Live Meetings Portal View after submission */}
         {isSubmitted ? (
           <div className="p-4 sm:p-5 text-center space-y-3.5 overflow-y-auto flex-1">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/40 shadow">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto border border-emerald-500/20 shadow-xs">
               <CheckCircle2 className="w-6 h-6" />
             </div>
 
             <div className="space-y-1">
-              <h4 className="text-base font-bold text-white">
+              <h4 className="text-base font-bold text-foreground">
                 Request Submitted Successfully!
               </h4>
-              <p className="text-xs text-white/70 leading-relaxed max-w-sm mx-auto">
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-sm mx-auto">
                 Your 1-on-1 session request has been submitted to Apostle Joe Daniels. You can join directly or share your invite link when scheduled.
               </p>
             </div>
 
             {/* Meeting Pass Card */}
-            <div className="bg-[#001428] border border-blue-500/30 rounded-2xl p-4 text-left space-y-2.5">
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <div className="bg-secondary/30 border border-border rounded-2xl p-4 text-left space-y-2.5">
+              <div className="flex items-center justify-between border-b border-border pb-2">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-blue-400">HOST & COUNSELOR</span>
-                  <p className="text-xs font-bold text-white">Apostle Joe Daniels (General Overseer)</p>
+                  <span className="text-[10px] uppercase font-bold text-primary">HOST & COUNSELOR</span>
+                  <p className="text-xs font-bold text-foreground">Apostle Joe Daniels (General Overseer)</p>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold">
+                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[10px] font-mono font-bold">
                   PORTAL ACTIVE
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                 <div>
-                  <span className="text-white/40 text-[10px]">DATE & TIME</span>
-                  <p className="text-white font-bold">{bookingDate} • {bookingTime}</p>
+                  <span className="text-muted-foreground text-[10px]">DATE & TIME</span>
+                  <p className="text-foreground font-semibold">{bookingDate} • {bookingTime}</p>
                 </div>
                 <div>
-                  <span className="text-white/40 text-[10px]">CONSULTATION</span>
-                  <p className="text-[#D4AF37] font-bold truncate">{serviceType}</p>
+                  <span className="text-muted-foreground text-[10px]">CONSULTATION</span>
+                  <p className="text-primary font-semibold truncate">{serviceType}</p>
                 </div>
               </div>
 
-              <div className="bg-[#001F3F] p-2.5 rounded-xl border border-white/10 space-y-1">
-                <span className="text-[10px] text-white/50">ZOOM MEETING LINK</span>
-                <p className="text-xs font-mono text-blue-300 break-all select-all">
+              <div className="bg-secondary/50 p-2.5 rounded-xl border border-border space-y-1">
+                <span className="text-[10px] text-muted-foreground">ZOOM MEETING LINK</span>
+                <p className="text-xs font-mono text-primary break-all select-all">
                   {confirmedZoomUrl}
                 </p>
-                <div className="flex items-center justify-between text-[10px] text-white/60 pt-1 font-mono">
-                  <span>Meeting ID: <strong>{meetingId}</strong></span>
-                  <span>Passcode: <strong>{meetingPasscode}</strong></span>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 font-mono">
+                  <span>Meeting ID: <strong className="text-foreground">{meetingId}</strong></span>
+                  <span>Passcode: <strong className="text-foreground">{meetingPasscode}</strong></span>
                 </div>
               </div>
             </div>
@@ -203,7 +203,7 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
               <button
                 id="btn-launch-zoom-session"
                 onClick={handleLaunchZoom}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:brightness-110 text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                className="w-full py-3 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-sm shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
               >
                 <Video className="w-4 h-4" />
                 <span>Launch Zoom Meeting Room Now</span>
@@ -213,9 +213,9 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={handleCopyMeetingLink}
-                  className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/10 flex items-center justify-center gap-1.5 transition-colors"
+                  className="py-2.5 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-semibold text-xs border border-border flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedLink ? 'Copied Invitation!' : 'Copy Zoom Link'}</span>
                 </button>
 
@@ -224,7 +224,7 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
                     setIsSubmitted(false);
                     onClose();
                   }}
-                  className="py-2.5 px-3 rounded-xl bg-[#D4AF37] hover:bg-amber-400 text-[#001F3F] font-bold text-xs shadow transition-colors"
+                  className="py-2.5 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-semibold text-xs border border-border transition-colors cursor-pointer"
                 >
                   Done
                 </button>
@@ -234,23 +234,23 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
         ) : (
           <form onSubmit={handleSubmitBooking} className="p-4 sm:p-5 space-y-3.5 max-h-[80vh] overflow-y-auto">
             {paymentError && (
-              <div className="rounded-xl border border-rose-500/40 bg-rose-950/40 p-3 text-xs text-rose-200">
+              <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
                 {paymentError}
               </div>
             )}
             
-            <div className="bg-[#001428] p-3 rounded-2xl border border-blue-500/30 text-xs text-white/80 flex items-start gap-2.5">
-              <Video className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+            <div className="bg-secondary/30 p-3 rounded-2xl border border-border text-xs text-muted-foreground flex items-start gap-2.5">
+              <Video className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <p className="text-[11px] leading-relaxed">
-                Connect directly with <strong className="text-white">Apostle Joe Daniels</strong> via our interactive <strong className="text-blue-400">Zoom Meetings Portal</strong>. You can use the official Gateway Zoom room or send your personal Zoom link!
+                Connect directly with <strong className="text-foreground">Apostle Joe Daniels</strong> via our interactive <strong className="text-primary">Zoom Meetings Portal</strong>. You can use the official Gateway Zoom room or send your personal Zoom link!
               </p>
             </div>
 
             {/* Name & Phone */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-[11px] font-semibold text-white/80 mb-1 flex items-center gap-1">
-                  <User className="w-3 h-3 text-[#D4AF37]" />
+                <label className="block text-[11px] font-semibold text-foreground mb-1 flex items-center gap-1">
+                  <User className="w-3 h-3 text-primary" />
                   <span>Your Full Name</span>
                 </label>
                 <input
@@ -259,13 +259,13 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Tinashe Chikwava"
-                  className="w-full bg-[#001428] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-white/80 mb-1 flex items-center gap-1">
-                  <Phone className="w-3 h-3 text-[#D4AF37]" />
+                <label className="block text-[11px] font-semibold text-foreground mb-1 flex items-center gap-1">
+                  <Phone className="w-3 h-3 text-primary" />
                   <span>Phone Number</span>
                 </label>
                 <input
@@ -274,7 +274,7 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+263 77..."
-                  className="w-full bg-[#001428] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                 />
               </div>
             </div>
@@ -282,8 +282,8 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
             {/* Location & Service Focus */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-[11px] font-semibold text-white/80 mb-1 flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-[#D4AF37]" />
+                <label className="block text-[11px] font-semibold text-foreground mb-1 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-primary" />
                   <span>Location / Country</span>
                 </label>
                 <input
@@ -292,19 +292,19 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Harare / UK / USA / Diaspora"
-                  className="w-full bg-[#001428] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-white/80 mb-1 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-[#D4AF37]" />
+                <label className="block text-[11px] font-semibold text-foreground mb-1 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-primary" />
                   <span>Consultation Focus</span>
                 </label>
                 <select
                   value={serviceType}
                   onChange={(e) => setServiceType(e.target.value)}
-                  className="w-full bg-[#001428] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-hidden focus:border-primary"
                 >
                   <option value="Prophetic Consultation & Prayer">Prophetic Consultation & Prayer</option>
                   <option value="Deliverance & Spiritual Warfare">Deliverance & Spiritual Warfare</option>
@@ -318,8 +318,8 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
             {/* Date & Time Slot */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-[11px] font-semibold text-white/80 mb-1 flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-[#D4AF37]" />
+                <label className="block text-[11px] font-semibold text-foreground mb-1 flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-primary" />
                   <span>Preferred Date</span>
                 </label>
                 <input
@@ -327,19 +327,19 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
                   required
                   value={bookingDate}
                   onChange={(e) => setBookingDate(e.target.value)}
-                  className="w-full bg-[#001428] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-hidden focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-white/80 mb-1 flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-[#D4AF37]" />
+                <label className="block text-[11px] font-semibold text-foreground mb-1 flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-primary" />
                   <span>Time Preference (CAT)</span>
                 </label>
                 <select
                   value={bookingTime}
                   onChange={(e) => setBookingTime(e.target.value)}
-                  className="w-full bg-[#001428] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-hidden focus:border-primary"
                 >
                   <option value="09:30 AM CAT">09:30 AM CAT (Morning)</option>
                   <option value="11:30 AM CAT">11:30 AM CAT (Midday)</option>
@@ -351,9 +351,9 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
             </div>
 
             {/* Zoom Meeting Link Configuration */}
-            <div className="space-y-2 bg-[#001428] p-3 rounded-2xl border border-blue-500/20">
-              <label className="block text-[11px] font-bold text-blue-300 flex items-center gap-1.5">
-                <Link2 className="w-3.5 h-3.5" />
+            <div className="space-y-2 bg-secondary/30 p-3 rounded-2xl border border-border">
+              <label className="block text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5 text-primary" />
                 <span>Zoom Connection Preference</span>
               </label>
 
@@ -361,10 +361,10 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setZoomMode('gateway_room')}
-                  className={`py-2 px-2.5 rounded-xl text-[11px] font-bold border transition-all text-left ${
+                  className={`py-2 px-2.5 rounded-xl text-[11px] font-semibold border transition-all text-left cursor-pointer ${
                     zoomMode === 'gateway_room'
-                      ? 'bg-blue-600 text-white border-blue-400 shadow'
-                      : 'bg-[#001F3F] border-white/10 text-white/70 hover:border-white/20'
+                      ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                      : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   Gateway Zoom Room
@@ -373,10 +373,10 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setZoomMode('custom_link')}
-                  className={`py-2 px-2.5 rounded-xl text-[11px] font-bold border transition-all text-left ${
+                  className={`py-2 px-2.5 rounded-xl text-[11px] font-semibold border transition-all text-left cursor-pointer ${
                     zoomMode === 'custom_link'
-                      ? 'bg-blue-600 text-white border-blue-400 shadow'
-                      : 'bg-[#001F3F] border-white/10 text-white/70 hover:border-white/20'
+                      ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                      : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   Send My Personal Link
@@ -391,22 +391,22 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
                     value={customZoomLink}
                     onChange={(e) => setCustomZoomLink(e.target.value)}
                     placeholder="Paste your Zoom/Teams meeting URL (https://zoom.us/j/...)"
-                    className="w-full bg-[#001F3F] border border-blue-400/40 rounded-xl px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none"
+                    className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                   />
-                  <p className="text-[10px] text-blue-200/70 mt-1">
+                  <p className="text-[10px] text-muted-foreground mt-1">
                     Apostle Joe Daniels will join using the link you provide.
                   </p>
                 </div>
               ) : (
-                <p className="text-[10px] text-white/60 pt-0.5">
-                  The system will connect you to Apostle Joe Daniels via official room (ID: <strong>{meetingId}</strong>).
+                <p className="text-[10px] text-muted-foreground pt-0.5">
+                  The system will connect you to Apostle Joe Daniels via official room (ID: <strong className="text-foreground">{meetingId}</strong>).
                 </p>
               )}
             </div>
 
             {/* Notes */}
             <div>
-              <label className="block text-[11px] font-semibold text-white/80 mb-1">
+              <label className="block text-[11px] font-semibold text-foreground mb-1">
                 Brief Discussion Background (Optional)
               </label>
               <textarea
@@ -414,7 +414,7 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Give a brief description of what you wish to discuss..."
-                className="w-full bg-[#001428] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#D4AF37]"
+                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
               />
             </div>
 
@@ -422,7 +422,7 @@ export const PaidBookingModal: React.FC<PaidBookingModalProps> = ({
             <button
               id="btn-submit-paid-booking"
               type="submit"
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:brightness-110 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xl transition-all active:scale-[0.99]"
+              className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] cursor-pointer"
             >
               <Video className="w-4 h-4" />
               <span>Confirm & Enter Zoom Meetings Portal</span>

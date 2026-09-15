@@ -58,11 +58,8 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
   subtitle = 'Upload a photo from your local device storage or pick an authentic photo from the ministry gallery.',
   allowGalleryPresets = true
 }) => {
-  const [activeTab, setActiveTab] = useState<'gallery' | 'upload' | 'url'>(
-    allowGalleryPresets ? 'gallery' : 'upload'
-  );
+  const [activeTab, setActiveTab] = useState<'upload' | 'gallery'>('upload');
   const [selectedImage, setSelectedImage] = useState<string>(currentImage || '/assets/apostle_joe_daniels_main.jpg');
-  const [customUrl, setCustomUrl] = useState<string>('');
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -139,27 +136,27 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#001122]/85 backdrop-blur-md flex items-center justify-center p-3 animate-fade-in">
-      <div className="bg-[#001F3F] border border-[#D4AF37]/50 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in">
+      <div className="bg-card border border-border rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
         
         {/* Header */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-[#001F3F] to-[#001122]">
+        <div className="p-4 border-b border-border flex items-center justify-between bg-secondary/40">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#D4AF37] text-[#001F3F] flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-semibold">
               <Camera className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-serif-church font-bold text-white text-base leading-tight">
+              <h3 className="font-serif-church font-bold text-foreground text-base leading-tight">
                 {title}
               </h3>
-              <p className="text-[11px] text-[#D4AF37]/80">
-                FB / Instagram-Style Photo Manager
+              <p className="text-[11px] text-primary">
+                Photo Manager
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white transition-all"
+            className="w-8 h-8 rounded-full bg-secondary hover:bg-secondary/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -167,18 +164,18 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-4 space-y-4 overflow-y-auto flex-1">
-          <p className="text-xs text-white/70 leading-relaxed">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             {subtitle}
           </p>
 
           {/* Live Preview Box */}
-          <div className="bg-[#001122] rounded-2xl border border-white/10 p-3 flex flex-col items-center justify-center">
-            <div className="text-[11px] font-bold text-white/60 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+          <div className="bg-secondary/30 rounded-2xl border border-border p-3 flex flex-col items-center justify-center">
+            <div className="text-[11px] font-semibold text-muted-foreground mb-2 flex items-center gap-1.5 uppercase tracking-wider">
               <span>Live Image Preview</span>
-              {selectedImage && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
+              {selectedImage && <span className="w-2 h-2 rounded-full bg-emerald-500"></span>}
             </div>
             
-            <div className="relative w-full max-h-56 sm:max-h-64 rounded-xl overflow-hidden bg-black/60 flex items-center justify-center border border-white/10 shadow-inner">
+            <div className="relative w-full max-h-56 sm:max-h-64 rounded-xl overflow-hidden bg-background flex items-center justify-center border border-border shadow-inner">
               {selectedImage ? (
                 <img
                   src={selectedImage}
@@ -186,7 +183,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
                   className="w-full h-full max-h-64 object-contain"
                 />
               ) : (
-                <div className="py-12 flex flex-col items-center gap-2 text-white/40">
+                <div className="py-12 flex flex-col items-center gap-2 text-muted-foreground">
                   <ImageIcon className="w-10 h-10" />
                   <span className="text-xs">No image selected</span>
                 </div>
@@ -194,55 +191,44 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
             </div>
 
             {fileName && (
-              <p className="text-[10px] text-emerald-400 font-mono mt-1.5 truncate max-w-xs">
+              <p className="text-[10px] text-emerald-500 font-mono mt-1.5 truncate max-w-xs">
                 Selected from device: {fileName}
               </p>
             )}
           </div>
 
           {/* Source Tabs */}
-          <div className="flex rounded-xl bg-[#001122] p-1 border border-white/10 gap-1 text-xs font-semibold">
+          <div className="flex rounded-xl bg-secondary p-1 border border-border gap-1 text-xs font-semibold">
+            <button
+              onClick={() => setActiveTab('upload')}
+              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                activeTab === 'upload'
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Camera & Device Photos</span>
+            </button>
             {allowGalleryPresets && (
               <button
                 onClick={() => setActiveTab('gallery')}
                 className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                   activeTab === 'gallery'
-                    ? 'bg-[#D4AF37] text-[#001F3F] font-bold shadow'
-                    : 'text-white/70 hover:text-white'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Apostle Photos</span>
+                <span>Ministry Gallery</span>
               </button>
             )}
-            <button
-              onClick={() => setActiveTab('upload')}
-              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                activeTab === 'upload'
-                  ? 'bg-[#D4AF37] text-[#001F3F] font-bold shadow'
-                  : 'text-white/70 hover:text-white'
-              }`}
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Device Storage</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('url')}
-              className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                activeTab === 'url'
-                  ? 'bg-[#D4AF37] text-[#001F3F] font-bold shadow'
-                  : 'text-white/70 hover:text-white'
-              }`}
-            >
-              <LinkIcon className="w-3.5 h-3.5" />
-              <span>Web Link</span>
-            </button>
           </div>
 
           {/* TAB 1: Ministry Photo Gallery (Pick & Tick) */}
           {activeTab === 'gallery' && (
             <div className="space-y-2">
-              <span className="text-[11px] font-bold text-[#D4AF37] uppercase tracking-wider block">
+              <span className="text-[11px] font-semibold text-primary uppercase tracking-wider block">
                 Tick Any Photo To Select
               </span>
               <div className="grid grid-cols-2 gap-2.5">
@@ -256,29 +242,29 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
                         setSelectedImage(item.url);
                         setFileName(null);
                       }}
-                      className={`relative group rounded-xl overflow-hidden border-2 text-left p-1.5 transition-all bg-[#001122] flex flex-col gap-1.5 ${
+                      className={`relative group rounded-xl overflow-hidden border text-left p-1.5 transition-all bg-secondary/30 flex flex-col gap-1.5 ${
                         isChecked
-                          ? 'border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20 bg-[#D4AF37]/10'
-                          : 'border-white/10 hover:border-white/30'
+                          ? 'border-primary shadow-sm bg-primary/10'
+                          : 'border-border hover:border-foreground/20'
                       }`}
                     >
-                      <div className="relative aspect-video rounded-lg overflow-hidden bg-black/40">
+                      <div className="relative aspect-video rounded-lg overflow-hidden bg-background">
                         <img
                           src={item.url}
                           alt={item.label}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         {isChecked && (
-                          <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-[#D4AF37] text-[#001F3F] flex items-center justify-center shadow-md">
+                          <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
                             <Check className="w-4 h-4 stroke-[3]" />
                           </div>
                         )}
                       </div>
                       <div className="px-1">
-                        <p className="text-xs font-bold text-white leading-none truncate">
+                        <p className="text-xs font-semibold text-foreground leading-none truncate">
                           {item.label}
                         </p>
-                        <p className="text-[10px] text-white/50 truncate mt-0.5">
+                        <p className="text-[10px] text-muted-foreground truncate mt-0.5">
                           {item.category}
                         </p>
                       </div>
@@ -301,57 +287,26 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
               />
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-[#D4AF37]/40 hover:border-[#D4AF37] rounded-2xl p-6 text-center cursor-pointer bg-[#001122]/60 hover:bg-[#001122] transition-all flex flex-col items-center justify-center gap-2 group"
+                className="border-2 border-dashed border-primary/40 hover:border-primary rounded-2xl p-6 text-center cursor-pointer bg-secondary/30 hover:bg-secondary/50 transition-all flex flex-col items-center justify-center gap-2 group"
               >
-                <div className="w-12 h-12 rounded-full bg-[#D4AF37]/20 group-hover:bg-[#D4AF37] text-[#D4AF37] group-hover:text-[#001F3F] flex items-center justify-center transition-all shadow-md">
-                  <Upload className="w-6 h-6" />
+                <div className="w-14 h-14 rounded-full bg-primary/10 group-hover:bg-primary text-primary group-hover:text-primary-foreground flex items-center justify-center transition-all shadow-xs">
+                  <Camera className="w-7 h-7" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">
-                    Click to pick an image from local storage
+                  <p className="text-sm font-semibold text-foreground">
+                    Choose Photo from Device / Camera
                   </p>
-                  <p className="text-xs text-white/50 mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Supports JPG, PNG, WebP, GIF from mobile gallery or PC
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="px-4 py-2 rounded-xl bg-[#D4AF37] text-[#001F3F] font-bold text-xs mt-2 shadow"
+                  className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs mt-2 shadow-xs flex items-center gap-1.5"
                 >
-                  Browse Device Photos
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>Browse Photos</span>
                 </button>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: Custom Web Link */}
-          {activeTab === 'url' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-white/80 mb-1">
-                  Paste Direct Image URL
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={customUrl}
-                    onChange={(e) => setCustomUrl(e.target.value)}
-                    placeholder="https://images.example.com/photo.jpg"
-                    className="flex-1 bg-[#001122] border border-white/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D4AF37]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (customUrl.trim()) {
-                        setSelectedImage(customUrl.trim());
-                        setFileName(null);
-                      }
-                    }}
-                    className="px-3 py-2 bg-[#D4AF37] text-[#001F3F] font-bold text-xs rounded-xl hover:brightness-110"
-                  >
-                    Load
-                  </button>
-                </div>
               </div>
             </div>
           )}
@@ -359,12 +314,12 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="p-4 border-t border-white/10 bg-[#001122] flex items-center justify-between gap-2">
+        <div className="p-4 border-t border-border bg-secondary/40 flex items-center justify-between gap-2">
           {selectedImage && (
             <button
               type="button"
               onClick={handleRemove}
-              className="px-3 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-300 text-xs font-bold flex items-center gap-1.5 border border-red-500/30 transition-all"
+              className="px-3 py-2 rounded-xl bg-destructive/10 hover:bg-destructive/20 text-destructive text-xs font-semibold flex items-center gap-1.5 border border-destructive/20 transition-all cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Remove</span>
@@ -375,14 +330,14 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold transition-all"
+              className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-xs font-semibold transition-all cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleApply}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#c49f2f] text-[#001F3F] text-xs font-black uppercase tracking-wider shadow-lg shadow-[#D4AF37]/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center gap-1.5"
+              className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold uppercase tracking-wider shadow-xs hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Check className="w-4 h-4 stroke-[3]" />
               <span>Apply Image</span>

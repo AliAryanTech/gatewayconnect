@@ -36,10 +36,11 @@ import {
   LogIn,
   Trash2,
   Film,
-  Video
+  Video,
+  Flag
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { CommunityGroup, PrayerRequest, ChurchEvent, Testimony, User, CommunityStory } from '../../types';
+import { CommunityGroup, PrayerRequest, ChurchEvent, Testimony, User, CommunityStory, ChurchPage } from '../../types';
 import { StorageService, arePhoneNumbersEqual } from '../../services/storageService';
 import { SupabaseSyncService } from '../../services/supabaseSyncService';
 import { liveSyncService, OnlineMember } from '../../services/liveSyncService';
@@ -47,6 +48,9 @@ import { ImagePickerModal } from '../modals/ImagePickerModal';
 import { VerifiedBadge } from '../common/VerifiedBadge';
 import { InstagramProfileModal } from '../modals/InstagramProfileModal';
 import { WhatsAppShareModal } from '../modals/WhatsAppShareModal';
+import { ChurchPagesSection } from '../common/ChurchPagesSection';
+import { ChurchPageViewModal } from '../modals/ChurchPageViewModal';
+import { FacebookStreamPlayer } from '../common/FacebookStreamPlayer';
 import { formatTimeAgo } from '../../utils/timeAgo';
 import { getEventCountdown } from '../../utils/eventCountdown';
 
@@ -75,7 +79,9 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
   onOpenDirectChat,
   onOpenLiveSermon
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'feed' | 'prayers' | 'groups' | 'events'>('feed');
+  const [activeSubTab, setActiveSubTab] = useState<'feed' | 'prayers' | 'groups' | 'events' | 'pages'>('feed');
+  const [selectedPostingPageId, setSelectedPostingPageId] = useState<string>('personal');
+  const [selectedViewChurchPage, setSelectedViewChurchPage] = useState<ChurchPage | null>(null);
   const [testimonyList, setTestimonyList] = useState<Testimony[]>(
     initialTestimonies && initialTestimonies.length > 0 
       ? initialTestimonies 
@@ -100,9 +106,9 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
   );
 
   const effectiveOnlineMembers = React.useMemo(() => {
-    const list = [...onlinePresenceList];
-    if (currentUser?.id && !list.some(m => m.id === currentUser.id)) {
-      list.unshift({
+    const map = new Map<string, OnlineMember>();
+    if (currentUser?.id) {
+      map.set(currentUser.id, {
         id: currentUser.id,
         full_name: currentUser.full_name,
         handle: currentUser.handle,
@@ -113,7 +119,14 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
         online_at: new Date().toISOString()
       });
     }
-    return list;
+    if (Array.isArray(onlinePresenceList)) {
+      for (const m of onlinePresenceList) {
+        if (m && m.id && !map.has(m.id)) {
+          map.set(m.id, m);
+        }
+      }
+    }
+    return Array.from(map.values());
   }, [onlinePresenceList, currentUser]);
 
   // Real-time synchronization for community posts, prayers, groups, and members
@@ -132,7 +145,13 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
     };
     const handlePresenceUpdated = (e: any) => {
       if (Array.isArray(e.detail)) {
-        setOnlinePresenceList(e.detail);
+        const unique = new Map<string, OnlineMember>();
+        for (const item of e.detail) {
+          if (item && item.id && !unique.has(item.id)) {
+            unique.set(item.id, item);
+          }
+        }
+        setOnlinePresenceList(Array.from(unique.values()));
       }
     };
     const handleLiveSync = () => {
@@ -423,16 +442,29 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
     if (!postContent.trim()) return;
 
     const currUser = StorageService.getCurrentUser() || currentUser;
-    const isVideo = mediaType === 'video' && (postVideoUrl || localImagePreview);
-    const finalVideo = isVideo ? (postVideoUrl || localImagePreview || undefined) : undefined;
+    const isFacebookOrVideoUrl = StorageService.isFacebookUrl(postImageUrl) || Boolean(StorageService.extractYoutubeId(postImageUrl)) || Boolean(postImageUrl.match(/\.(mp4|webm|mov)(\?.*)?$/i));
+    const isVideo = (mediaType === 'video' && (postVideoUrl || localImagePreview || postImageUrl)) || isFacebookOrVideoUrl;
+    const finalVideo = isVideo ? (postVideoUrl || (isFacebookOrVideoUrl ? postImageUrl : undefined) || localImagePreview || undefined) : undefined;
     const finalImage = isVideo ? undefined : (postImageUrl || localImagePreview || '/assets/apostle_joe_daniels_main.jpg');
+
+    const managedPages = StorageService.getPages().filter(
+      p => p.creator_id === currUser.id || p.admin_ids?.includes(currUser.id)
+    );
+    const postingPage = selectedPostingPageId !== 'personal'
+      ? managedPages.find(p => p.id === selectedPostingPageId)
+      : null;
 
     // New posts start with 0 likes and 0 comments until liked/commented by real users
     StorageService.submitTestimony({
       user_id: currUser.id,
-      user_name: currUser.full_name || 'Covenant Member',
-      user_handle: currUser.handle || `@${currUser.full_name.toLowerCase().replace(/\s+/g, '_')}`,
-      user_avatar: currUser.avatar_url || '/assets/apostle_joe_daniels_main.jpg',
+      user_name: postingPage ? postingPage.name : (currUser.full_name || 'Covenant Member'),
+      user_handle: postingPage ? postingPage.handle : (currUser.handle || `@${currUser.full_name.toLowerCase().replace(/\s+/g, '_')}`),
+      user_avatar: postingPage ? postingPage.avatar_url : (currUser.avatar_url || '/assets/apostle_joe_daniels_main.jpg'),
+      page_id: postingPage ? postingPage.id : undefined,
+      page_name: postingPage ? postingPage.name : undefined,
+      page_handle: postingPage ? postingPage.handle : undefined,
+      page_avatar: postingPage ? postingPage.avatar_url : undefined,
+      page_verified: postingPage ? true : undefined,
       title: postTitle.trim() || (isVideo ? 'Video / Reel Testimony' : 'Supernatural Miracle Testimony'),
       category: postCategory,
       content: postContent.trim(),
@@ -440,6 +472,17 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
       video_url: finalVideo,
       scripture_tag: postScriptureTag.trim() || undefined,
     });
+
+    if (postingPage) {
+      StorageService.createPagePost(
+        postingPage.id,
+        currUser.id,
+        postingPage.name,
+        postContent.trim(),
+        finalImage || finalVideo,
+        postingPage.avatar_url
+      );
+    }
 
     setTestimonyList(StorageService.getTestimonies());
     setShowCreatePostModal(false);
@@ -518,8 +561,8 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
     }));
   };
 
-  // Real comment submission by authenticated accounts
-  const handleAddPostComment = (postId: string, e: React.FormEvent) => {
+  // Real comment submission with optimistic UI updates (zero-latency feel)
+  const handleAddPostComment = async (postId: string, e: React.FormEvent) => {
     e.preventDefault();
     if (isGuest) {
       onRequireAuth();
@@ -529,13 +572,92 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
     if (!text) return;
 
     const currUser = StorageService.getCurrentUser() || currentUser;
-    StorageService.addCommentToTestimony(postId, text, currUser);
-    setTestimonyList(StorageService.getTestimonies());
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    
+    // 1. Create optimistic comment
+    const optimisticComment = {
+      id: tempId,
+      user_id: currUser.id,
+      user_name: currUser.full_name,
+      user_handle: currUser.handle || `@${currUser.full_name.toLowerCase().replace(/\s+/g, '_')}`,
+      user_avatar: currUser.avatar_url || '/assets/apostle_joe_daniels_main.jpg',
+      text,
+      created_at: new Date().toISOString(),
+      likes_count: 0,
+      badge_type: currUser.badge_type || (currUser.is_verified ? ('blue' as const) : ('none' as const)),
+      status: 'pending' as const
+    };
 
+    // 2. Clear input and auto-expand comments for instant feedback
     setCommentInputMap(prev => ({
       ...prev,
       [postId]: ''
     }));
+    setExpandedComments(prev => ({
+      ...prev,
+      [postId]: true
+    }));
+
+    // 3. Update UI state immediately (zero latency)
+    setTestimonyList(prevList =>
+      prevList.map(item => {
+        if (item.id === postId) {
+          const existing = item.comments || [];
+          return {
+            ...item,
+            comments: [...existing, optimisticComment],
+            comments_count: (item.comments_count || existing.length) + 1
+          };
+        }
+        return item;
+      })
+    );
+
+    // 4. Background persistence with graceful resolution
+    try {
+      const savedComment = StorageService.addCommentToTestimony(postId, text, currUser);
+      
+      // Update the temporary ID with confirmed database record
+      setTestimonyList(prevList =>
+        prevList.map(item => {
+          if (item.id === postId) {
+            return {
+              ...item,
+              comments: (item.comments || []).map(c =>
+                c.id === tempId
+                  ? {
+                      ...c,
+                      id: savedComment?.id || tempId,
+                      status: 'synced' as const
+                    }
+                  : c
+              )
+            };
+          }
+          return item;
+        })
+      );
+    } catch (err) {
+      console.warn('Optimistic comment sync failed:', err);
+      // Mark as failed and restore text to input field
+      setTestimonyList(prevList =>
+        prevList.map(item => {
+          if (item.id === postId) {
+            return {
+              ...item,
+              comments: (item.comments || []).map(c =>
+                c.id === tempId ? { ...c, status: 'failed' as const } : c
+              )
+            };
+          }
+          return item;
+        })
+      );
+      setCommentInputMap(prev => ({
+        ...prev,
+        [postId]: text
+      }));
+    }
   };
 
   const handleToggleFollow = (userId: string) => {
@@ -774,6 +896,17 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
           >
             📅 Events
           </button>
+          <button
+            id="tab-sub-pages"
+            onClick={() => setActiveSubTab('pages')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${
+              activeSubTab === 'pages'
+                ? 'bg-primary text-primary-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            🚩 Church Pages
+          </button>
         </div>
       </div>
 
@@ -945,7 +1078,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
 
             {/* Active Believers Carousel */}
             <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-none pt-0.5">
-              {effectiveOnlineMembers.map((member) => {
+              {effectiveOnlineMembers.map((member, idx) => {
                 const isSelf = member.id === currentUser?.id;
                 const memberUser = allRegisteredUsers.find(u => u.id === member.id);
                 const badge = (member.badge_type || memberUser?.verified_badge || memberUser?.badge_type || (member.role === 'developer' || member.role === 'super_admin' ? 'gold' : 'none')) as 'gold' | 'silver' | 'blue' | 'none';
@@ -955,7 +1088,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
 
                 return (
                   <div
-                    key={`presence-${member.id}`}
+                    key={`presence-${member.id || idx}`}
                     onClick={() => {
                       if (isSelf) {
                         setProfileModalUserId(currentUser.id);
@@ -1012,18 +1145,18 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                 className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 group"
               >
                 <div className="relative">
-                  <div className="w-14 h-14 rounded-full p-[2px] bg-secondary border border-border group-hover:border-primary transition-all">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full p-[2px] bg-secondary border border-border group-hover:border-primary transition-all">
                     <img
                       src={currentUser.avatar_url || '/assets/apostle_joe_daniels_main.jpg'}
                       alt="Your Story"
                       className="w-full h-full rounded-full object-cover"
                     />
                   </div>
-                  <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-primary text-primary-foreground border-2 border-background flex items-center justify-center text-[10px] font-bold">
+                  <div className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground border border-background flex items-center justify-center text-[9px] font-bold">
                     +
                   </div>
                 </div>
-                <span className="text-[10px] text-muted-foreground truncate max-w-[62px]">Your Story</span>
+                <span className="text-[10px] text-muted-foreground truncate max-w-[56px] text-center">Your Story</span>
               </div>
 
               {/* Dynamic Real User Stories */}
@@ -1056,8 +1189,8 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                     }}
                     className="flex flex-col items-center gap-1.5 cursor-pointer shrink-0 group"
                   >
-                    <div className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 group-hover:scale-105 transition-transform">
-                      <div className="w-full h-full rounded-full p-[2px] bg-card">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full p-[2px] bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 group-hover:scale-105 transition-transform">
+                      <div className="w-full h-full rounded-full p-[1.5px] bg-card">
                         <img
                           src={avatar}
                           alt={displayName}
@@ -1065,8 +1198,8 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                         />
                       </div>
                     </div>
-                    <div className="flex items-center gap-0.5 max-w-[66px]">
-                      <span className="text-[10px] text-foreground font-medium truncate">{displayName.split(' ')[0]}</span>
+                    <div className="flex items-center justify-center gap-0.5 max-w-[56px]">
+                      <span className="text-[10px] text-foreground font-medium truncate text-center">{displayName.split(' ')[0]}</span>
                       {badge !== 'none' && <VerifiedBadge type={badge} size="xs" />}
                     </div>
                   </div>
@@ -1177,9 +1310,18 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                   {/* Post Header */}
                   <div className="p-3.5 flex items-center justify-between border-b border-border/40">
                     <div 
-                      onClick={() => handleOpenUserProfile(post.user_id || post.user_handle || post.user_name)}
+                      onClick={() => {
+                        if (post.page_id) {
+                          const page = StorageService.getPageById(post.page_id);
+                          if (page) {
+                            setSelectedViewChurchPage(page);
+                            return;
+                          }
+                        }
+                        handleOpenUserProfile(post.user_id || post.user_handle || post.user_name);
+                      }}
                       className="flex items-center gap-2.5 cursor-pointer group"
-                      title="View user profile"
+                      title={post.page_id ? `View ${post.user_name} page` : "View user profile"}
                     >
                       <div className="w-10 h-10 rounded-full p-[1.5px] bg-primary transition-transform group-hover:scale-105 shrink-0">
                         <img
@@ -1193,7 +1335,15 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                           <span className="font-semibold text-xs sm:text-sm text-foreground group-hover:text-primary transition-colors">
                             {post.user_name}
                           </span>
-                          {(post.verified_by_church || isApostlePost) && (
+                          {(post.page_verified || post.page_id) && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          )}
+                          {post.page_id && (
+                            <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                              Page
+                            </span>
+                          )}
+                          {(post.verified_by_church || isApostlePost) && !post.page_id && (
                             <VerifiedBadge type="gold" size="xs" />
                           )}
                         </div>
@@ -1248,11 +1398,37 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                   {/* Post Media (Reel/Video or Photo with Double Tap to Like) */}
                   {post.video_url ? (
                     <div className="w-full bg-black flex items-center justify-center max-h-[460px] overflow-hidden relative">
-                      <video
-                        src={post.video_url}
-                        controls
-                        className="w-full max-h-[460px] object-contain"
-                        playsInline
+                      {StorageService.isFacebookUrl(post.video_url) ? (
+                        <FacebookStreamPlayer
+                          embedUrl={StorageService.getStreamEmbedInfo(post.video_url).embedUrl}
+                          directUrl={StorageService.getStreamEmbedInfo(post.video_url).facebookDirectUrl || post.video_url}
+                          title={post.title}
+                          className="w-full max-h-[460px]"
+                        />
+                      ) : StorageService.extractYoutubeId(post.video_url) ? (
+                        <iframe
+                          className="w-full aspect-video border-0"
+                          src={StorageService.getYoutubeEmbedUrl(StorageService.extractYoutubeId(post.video_url)!)}
+                          title={post.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <video
+                          src={post.video_url}
+                          controls
+                          className="w-full max-h-[460px] object-contain"
+                          playsInline
+                        />
+                      )}
+                    </div>
+                  ) : post.image_url && StorageService.isFacebookUrl(post.image_url) ? (
+                    <div className="w-full bg-black flex items-center justify-center max-h-[460px] overflow-hidden relative">
+                      <FacebookStreamPlayer
+                        embedUrl={StorageService.getStreamEmbedInfo(post.image_url).embedUrl}
+                        directUrl={StorageService.getStreamEmbedInfo(post.image_url).facebookDirectUrl || post.image_url}
+                        title={post.title}
+                        className="w-full max-h-[460px]"
                       />
                     </div>
                   ) : post.image_url ? (
@@ -1447,8 +1623,14 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                         {!expandedComments[post.id] && comments.slice(-1).map(c => (
                           <div key={c.id} className="text-xs flex items-baseline gap-1.5">
                             <span className="font-semibold text-foreground">{c.user_handle || c.user_name}:</span>
-                            <span className="text-muted-foreground">{c.text}</span>
-                            <span className="text-[9px] text-muted-foreground/60 ml-auto">{formatTimeAgo(c.created_at, 'short')}</span>
+                            <span className="text-muted-foreground truncate">{c.text}</span>
+                            {c.status === 'pending' ? (
+                              <span className="badge-optimistic ml-auto shrink-0">
+                                <Loader2 className="w-2.5 h-2.5 animate-spin text-amber-500" />
+                              </span>
+                            ) : (
+                              <span className="text-[9px] text-muted-foreground/60 ml-auto shrink-0">{formatTimeAgo(c.created_at, 'short')}</span>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1467,16 +1649,41 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                             <p className="text-[11px] text-muted-foreground italic py-1">No comments yet. Start the conversation!</p>
                           ) : (
                             comments.map((comm) => (
-                              <div key={comm.id} className="text-xs bg-card p-2.5 rounded-lg border border-border flex items-start justify-between gap-2">
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-1.5">
+                              <div
+                                key={comm.id}
+                                className={`text-xs bg-card p-2.5 rounded-lg border border-border flex items-start justify-between gap-2 transition-all ${
+                                  comm.status === 'pending'
+                                    ? 'comment-pending border-amber-500/30'
+                                    : comm.status === 'synced'
+                                    ? 'comment-synced'
+                                    : ''
+                                }`}
+                              >
+                                <div className="space-y-0.5 min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-semibold text-foreground text-xs">{comm.user_name}</span>
                                     <span className="text-[10px] text-muted-foreground">{comm.user_handle}</span>
+                                    {comm.status === 'pending' && (
+                                      <span className="badge-optimistic">
+                                        <Loader2 className="w-2.5 h-2.5 animate-spin text-amber-500" />
+                                        <span>Posting</span>
+                                      </span>
+                                    )}
+                                    {comm.status === 'synced' && (
+                                      <span className="inline-flex items-center gap-0.5 text-[9px] text-emerald-500 font-medium">
+                                        <Check className="w-2.5 h-2.5" /> Synced
+                                      </span>
+                                    )}
+                                    {comm.status === 'failed' && (
+                                      <span className="inline-flex items-center gap-0.5 text-[9px] text-destructive font-medium">
+                                        Failed
+                                      </span>
+                                    )}
                                   </div>
-                                  <p className="text-foreground text-xs">{comm.text}</p>
+                                  <p className="text-foreground text-xs break-words">{comm.text}</p>
                                 </div>
                                 <span className="text-[9px] text-muted-foreground shrink-0">
-                                  {formatTimeAgo(comm.created_at, 'short')}
+                                  {comm.status === 'pending' ? 'Just now' : formatTimeAgo(comm.created_at, 'short')}
                                 </span>
                               </div>
                             ))
@@ -1696,37 +1903,37 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full min-w-0">
             {filteredGroups.map(group => (
               <div
                 key={group.id}
-                className="bg-card border border-border rounded-xl p-4 space-y-3 shadow-sm flex flex-col justify-between"
+                className="bg-card border border-border rounded-xl p-4 space-y-3 shadow-sm flex flex-col justify-between w-full min-w-0 overflow-hidden box-border"
               >
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="px-2 py-0.5 rounded-md bg-primary/15 text-primary text-[10px] font-bold">
+                <div className="min-w-0">
+                  <div className="flex items-center justify-between mb-1.5 min-w-0">
+                    <span className="px-2 py-0.5 rounded-md bg-primary/15 text-primary text-[10px] font-bold shrink-0">
                       {group.category}
                     </span>
-                    <span className="text-[11px] text-muted-foreground">{group.member_count} Members</span>
+                    <span className="text-[11px] text-muted-foreground shrink-0">{group.member_count} Members</span>
                   </div>
-                  <h4 className="font-bold text-sm text-foreground mb-1">{group.name}</h4>
-                  <p className="text-xs text-muted-foreground mb-2">{group.description}</p>
+                  <h4 className="font-bold text-sm text-foreground mb-1 break-words line-clamp-2 min-w-0">{group.name}</h4>
+                  <p className="text-xs text-muted-foreground mb-2 line-clamp-3 break-words">{group.description}</p>
                   
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-foreground">{group.location}</span>
+                  <div className="space-y-1 text-xs text-muted-foreground min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span className="text-foreground truncate">{group.location}</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-foreground">{group.meeting_time}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span className="text-foreground truncate">{group.meeting_time}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
-                  <div className="text-xs text-muted-foreground truncate">
-                    Leader: <strong className="text-foreground">{group.leader_name}</strong>
+                <div className="pt-2 border-t border-border flex items-center justify-between gap-2 min-w-0">
+                  <div className="text-xs text-muted-foreground truncate min-w-0 flex-1">
+                    Leader: <strong className="text-foreground truncate">{group.leader_name}</strong>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {group.joined ? (
@@ -1995,6 +2202,14 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
         </div>
       )}
 
+      {/* 6. SUB-TAB: CHURCH PAGES & MINISTRIES */}
+      {activeSubTab === 'pages' && (
+        <ChurchPagesSection
+          currentUser={currentUser || StorageService.getCurrentUser()}
+          onPageSelected={(page) => setSelectedViewChurchPage(page)}
+        />
+      )}
+
       {/* MODAL: INSTAGRAM-STYLE CREATE POST (LOCAL STORAGE / URL / PRESETS) */}
       {showCreatePostModal && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -2017,6 +2232,62 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
             </div>
 
             <form onSubmit={handleCreatePost} className="space-y-3.5">
+              {/* Identity Switcher: Post as Personal vs Page */}
+              {(() => {
+                const effectiveUser = StorageService.getCurrentUser() || currentUser;
+                const managedPages = StorageService.getPages().filter(
+                  p => p.creator_id === effectiveUser.id || p.admin_ids?.includes(effectiveUser.id)
+                );
+                if (managedPages.length === 0) return null;
+
+                return (
+                  <div className="p-2.5 rounded-xl bg-secondary/60 border border-border space-y-1.5">
+                    <label className="block text-[11px] font-bold text-foreground/80">
+                      Publishing Identity:
+                    </label>
+                    <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPostingPageId('personal')}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+                          selectedPostingPageId === 'personal'
+                            ? 'bg-primary text-primary-foreground shadow-xs font-bold'
+                            : 'bg-card text-muted-foreground hover:text-foreground border border-border'
+                        }`}
+                      >
+                        <img
+                          src={effectiveUser.avatar_url || '/assets/apostle_joe_daniels_main.jpg'}
+                          alt=""
+                          className="w-4 h-4 rounded-full object-cover"
+                        />
+                        <span>{effectiveUser.full_name?.split(' ')[0] || 'Me'} (Personal)</span>
+                      </button>
+
+                      {managedPages.map(mp => (
+                        <button
+                          key={mp.id}
+                          type="button"
+                          onClick={() => setSelectedPostingPageId(mp.id)}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+                            selectedPostingPageId === mp.id
+                              ? 'bg-primary text-primary-foreground shadow-xs font-bold'
+                              : 'bg-card text-muted-foreground hover:text-foreground border border-border'
+                          }`}
+                        >
+                          <img
+                            src={mp.avatar_url}
+                            alt=""
+                            className="w-4 h-4 rounded-full object-cover"
+                          />
+                          <span>{mp.name}</span>
+                          <CheckCircle2 className="w-3 h-3 text-blue-400" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Media Selection Tabs (Only Mr Daniels gets presets/URL, regular members get device storage only) */}
               <div>
                 <label className="block text-xs font-semibold text-foreground/80 mb-1.5">
@@ -2117,13 +2388,35 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                   <input
                     type="url"
                     value={postImageUrl}
-                    onChange={e => setPostImageUrl(e.target.value)}
-                    placeholder="Paste direct image URL (https://...)"
+                    onChange={e => {
+                      const val = e.target.value;
+                      setPostImageUrl(val);
+                      if (StorageService.isFacebookUrl(val) || Boolean(StorageService.extractYoutubeId(val)) || Boolean(val.match(/\.(mp4|webm|mov)(\?.*)?$/i))) {
+                        setMediaType('video');
+                      }
+                    }}
+                    placeholder="Paste image or Facebook / YouTube video link (https://...)"
                     className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary outline-none"
                   />
                   {postImageUrl && (
-                    <div className="rounded-lg overflow-hidden border border-border max-h-44 bg-black flex items-center justify-center">
-                      <img src={postImageUrl} alt="Preview" className="w-full object-cover max-h-44" />
+                    <div className="rounded-lg overflow-hidden border border-border max-h-52 bg-black flex items-center justify-center">
+                      {StorageService.isFacebookUrl(postImageUrl) ? (
+                        <FacebookStreamPlayer
+                          embedUrl={StorageService.getStreamEmbedInfo(postImageUrl).embedUrl}
+                          directUrl={StorageService.getStreamEmbedInfo(postImageUrl).facebookDirectUrl || postImageUrl}
+                          title="Facebook Video Preview"
+                          className="w-full max-h-52"
+                        />
+                      ) : StorageService.extractYoutubeId(postImageUrl) ? (
+                        <iframe
+                          src={StorageService.getYoutubeEmbedUrl(StorageService.extractYoutubeId(postImageUrl)!)}
+                          title="YouTube Video Preview"
+                          className="w-full aspect-video border-0"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <img src={postImageUrl} alt="Preview" className="w-full object-cover max-h-52" />
+                      )}
                     </div>
                   )}
                 </div>
@@ -2354,7 +2647,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-full p-[1px] bg-[#D4AF37]">
+                  <div className="w-9 h-9 rounded-full p-[1px] bg-primary">
                     <img
                       src={activeStoryModal.avatar}
                       alt={activeStoryModal.userName}
@@ -2383,7 +2676,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
 
             {/* Center: Prophetic Scripture Decree */}
             <div className="relative z-10 px-6 text-center space-y-3 my-auto">
-              <span className="inline-block px-3 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] text-xs font-bold font-mono">
+              <span className="inline-block px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-primary text-xs font-bold font-mono">
                 {activeStoryModal.scripture}
               </span>
               <p className="text-white text-base sm:text-lg font-medium leading-relaxed drop-shadow-md">
@@ -2516,16 +2809,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                 </div>
               )}
 
-              {/* Or Direct Image URL */}
-              {!newStoryImageUrl && (
-                <input
-                  type="url"
-                  value={newStoryImageUrl}
-                  onChange={(e) => setNewStoryImageUrl(e.target.value)}
-                  placeholder="Or paste image URL (https://...)"
-                  className="w-full bg-secondary border border-border rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-                />
-              )}
+              {/* Story Photo Selected or Local File Picker */}
 
               {/* Scripture Decree */}
               <div>
@@ -2719,6 +3003,19 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
         isOpen={Boolean(shareModalPost)}
         onClose={() => setShareModalPost(null)}
       />
+
+      {/* Church Page View Modal (Instagram-style profile view for ministries & pages) */}
+      {selectedViewChurchPage && (
+        <ChurchPageViewModal
+          page={selectedViewChurchPage}
+          currentUser={currentUser || StorageService.getCurrentUser()}
+          onClose={() => setSelectedViewChurchPage(null)}
+          onUpdatePage={(updated) => {
+            setSelectedViewChurchPage(updated);
+            setTestimonyList(StorageService.getTestimonies());
+          }}
+        />
+      )}
 
     </div>
   );

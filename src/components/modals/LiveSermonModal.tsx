@@ -25,6 +25,8 @@ import { User, CongregationUnit } from '../../types';
 import { StorageService } from '../../services/storageService';
 import { liveSyncService } from '../../services/liveSyncService';
 import confetti from 'canvas-confetti';
+import { LivePouringComments } from '../broadcast/LivePouringComments';
+import { FacebookStreamPlayer } from '../common/FacebookStreamPlayer';
 
 interface LiveSermonModalProps {
   currentUser: User;
@@ -138,6 +140,15 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
           }
           return [...prev, incoming];
         });
+        window.dispatchEvent(new CustomEvent('gcz_live_comment_pop', {
+          detail: {
+            sender_name: incoming.sender_name,
+            message: incoming.message,
+            city: incoming.city,
+            is_decree: incoming.is_decree,
+            is_current_user: false
+          }
+        }));
       }
     };
     window.addEventListener('gcz_live_event_received', handleLiveStreamEvent);
@@ -161,6 +172,18 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
 
     setChatMessages((prev) => [...prev, newMsg]);
     setNewChatText('');
+
+    // Pop on screen for 1 second like Instagram/TikTok Live
+    window.dispatchEvent(new CustomEvent('gcz_live_comment_pop', {
+      detail: {
+        sender_name: currentUser.full_name,
+        message: newMsg.message,
+        city: newMsg.city,
+        is_decree: newMsg.is_decree,
+        is_current_user: true,
+        avatar_url: currentUser.avatar_url
+      }
+    }));
 
     // Broadcast chat to all other connected viewers
     liveSyncService.broadcastEvent({
@@ -238,11 +261,17 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
   const establishedCongregations = congregations.filter((c) => c.is_congregation);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+    <div 
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div 
-        className={`bg-[#001428] border rounded-2xl w-full max-w-5xl h-[92vh] max-h-[820px] flex flex-col shadow-2xl overflow-hidden text-white animate-in zoom-in-95 duration-200 transition-all ${
+        onClick={(e) => e.stopPropagation()}
+        className={`bg-card border rounded-2xl w-full max-w-5xl h-[92vh] max-h-[820px] flex flex-col shadow-2xl overflow-hidden text-white animate-in zoom-in-95 duration-200 transition-all ${
           isFacebook 
-            ? 'border-[#1877F2]/60 shadow-[0_0_35px_rgba(24,119,242,0.25)]' 
+            ? 'border-blue-500/60 shadow-lg shadow-blue-500/20' 
             : 'border-red-600/60 shadow-[0_0_35px_rgba(239,68,68,0.25)]'
         }`}
       >
@@ -251,8 +280,8 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
         <div 
           className={`px-4 py-3 flex items-center justify-between shrink-0 transition-colors ${
             isFacebook 
-              ? 'bg-[#0B1E3B] border-b border-[#1877F2]/30' 
-              : 'bg-[#180A0A] border-b border-red-600/30'
+              ? 'bg-card border-b border-blue-500/30' 
+              : 'bg-slate-950 border-b border-red-600/30'
           }`}
         >
           <div className="flex items-center gap-2 sm:gap-3">
@@ -262,7 +291,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                 <span>OFFLINE</span>
               </span>
             ) : isFacebook ? (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1877F2] text-white font-black text-xs uppercase tracking-wider shadow-sm animate-pulse">
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-600 text-white font-black text-xs uppercase tracking-wider shadow-sm animate-pulse">
                 <Radio className="w-3.5 h-3.5" />
                 <span>FB LIVE</span>
               </span>
@@ -283,7 +312,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                   <span>{onlineStreamersCount} {onlineStreamersCount === 1 ? 'Streamer Online' : 'Streamers Online'}</span>
                 </span>
                 <span className="flex items-center gap-1 text-white/60">
-                  <MapPin className="w-3 h-3 text-[#D4AF37]" />
+                  <MapPin className="w-3 h-3 text-primary" />
                   <span>Harare Assembly: <strong className="text-white">Fantasyland Cinema Number 3 Harare</strong></span>
                 </span>
               </div>
@@ -296,7 +325,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                 href={streamEmbedInfo.facebookDirectUrl || streamEmbedInfo.originalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-2.5 py-1.5 rounded-lg bg-[#1877F2] hover:bg-[#166fe5] text-xs font-bold text-white flex items-center gap-1.5 transition-colors shadow-sm"
+                className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white flex items-center gap-1.5 transition-colors shadow-sm"
                 title="Watch directly on Facebook"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -306,7 +335,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
 
             <button
               onClick={handleShare}
-              className="px-2.5 py-1.5 rounded-lg bg-[#001122] border border-white/10 hover:border-[#D4AF37] text-xs font-semibold text-white/80 hover:text-white flex items-center gap-1.5 transition-colors"
+              className="px-2.5 py-1.5 rounded-lg bg-background border border-white/10 hover:border-primary text-xs font-semibold text-white/80 hover:text-white flex items-center gap-1.5 transition-colors"
               title="Share Live Sermon Link"
             >
               {copiedLink ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
@@ -317,7 +346,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
             <button
               id="btn-instream-altar-seed-header"
               onClick={() => setShowInStreamDonation(true)}
-              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#D4AF37] to-amber-400 text-[#001F3F] font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-[#D4AF37]/20 hover:scale-105 active:scale-95 transition-all"
+              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-primary to-amber-400 text-primary-foreground font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
             >
               <Gift className="w-3.5 h-3.5 fill-current" />
               <span>Sow Altar Seed</span>
@@ -341,16 +370,13 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
             {/* Real Video Player Embed (Facebook Live or YouTube Live with audio and controls) */}
             <div className="flex-1 relative bg-black flex items-center justify-center">
               {streamEmbedInfo.isFacebook ? (
-                <iframe
-                  id="facebook-congregation-stream-player"
-                  className="w-full h-full border-0 absolute inset-0"
-                  src={streamEmbedInfo.embedUrl}
-                  title={status.title || 'Gateway Connect Zimbabwe Facebook Live Service'}
-                  style={{ border: 'none', overflow: 'hidden' }}
-                  scrolling="no"
-                  allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                  referrerPolicy="origin-when-cross-origin"
-                  allowFullScreen
+                <FacebookStreamPlayer
+                  embedUrl={streamEmbedInfo.embedUrl}
+                  directUrl={streamEmbedInfo.facebookDirectUrl || status.streamUrl}
+                  title={status.title || 'Gateway Connect Zimbabwe Live Service'}
+                  isLivePageHub={Boolean(streamEmbedInfo.isLivePageHub)}
+                  isLive={status.isLive}
+                  className="absolute inset-0 h-full !aspect-auto"
                 />
               ) : (
                 <iframe
@@ -364,14 +390,14 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                 />
               )}
 
-              {/* No Live Stream Offline Overlay */}
-              {!status.isLive && (
-                <div className="absolute inset-0 z-25 bg-[#001122]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in">
+              {/* No Live Stream Offline Overlay - only if not live and no stream URL is present */}
+              {!status.isLive && !streamEmbedInfo.embedUrl && (
+                <div className="absolute inset-0 z-20 bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in">
                   <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-amber-400 mb-3 shadow-inner">
-                    <Radio className="w-7 h-7 text-[#D4AF37]" />
+                    <Radio className="w-7 h-7 text-primary" />
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 text-[#D4AF37] text-xs font-bold mb-2">
-                    <span className="w-2 h-2 rounded-full bg-[#D4AF37]/60" />
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 text-primary text-xs font-bold mb-2">
+                    <span className="w-2 h-2 rounded-full bg-primary/60" />
                     <span>Currently no live stream session in progress.</span>
                   </div>
                   <h4 className="text-white font-bold text-base sm:text-lg mb-1">
@@ -383,47 +409,28 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C59B27] text-[#001F3F] font-bold text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95"
+                    className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95"
                   >
                     <span>Return to Home & Replays</span>
                   </button>
                 </div>
               )}
 
-              {/* Facebook Page Live Hub Launcher Overlay: prevents "Video Unavailable" for page /live links */}
-              {streamEmbedInfo.isFacebook && streamEmbedInfo.isLivePageHub && !streamEmbedInfo.hasNumericVideoId && (
-                <div className="absolute inset-0 z-20 bg-gradient-to-t from-black via-black/90 to-[#1877F2]/30 flex flex-col items-center justify-center p-6 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-[#1877F2] flex items-center justify-center text-white text-2xl font-black shadow-xl shadow-[#1877F2]/50 mb-3 animate-pulse">
-                    f
-                  </div>
-                  <h4 className="text-white font-black text-base sm:text-lg mb-1">
-                    Apostle Joe Daniels Facebook Live
-                  </h4>
-                  <p className="text-white/80 text-xs max-w-sm mb-4 leading-relaxed">
-                    Tune into the live broadcast directly on Facebook, or switch to the YouTube stream:
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center gap-2.5">
-                    <a
-                      href={streamEmbedInfo.facebookDirectUrl || streamEmbedInfo.originalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-xl bg-[#1877F2] hover:bg-[#1877F2]/90 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#1877F2]/40 hover:scale-105 active:scale-95 transition-all"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>Launch Facebook Live Broadcast</span>
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const ytUrl = 'https://youtu.be/-CibsaxijIk?si=w71mOHPl8igh5XIP';
-                        StorageService.setLiveStreamUrl(ytUrl);
-                      }}
-                      className="px-3.5 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-300 font-bold text-xs flex items-center gap-1.5 border border-red-500/30 hover:scale-105 active:scale-95 transition-all"
-                    >
-                      <Tv className="w-3.5 h-3.5" />
-                      <span>Switch to YouTube</span>
-                    </button>
-                  </div>
+              {/* Facebook Live External Link Pill (non-blocking) */}
+              {streamEmbedInfo.isFacebook && (
+                <div className="absolute top-12 right-3 z-20 flex items-center gap-1.5 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-blue-500/40">
+                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-[11px] font-bold text-blue-300">Facebook Video</span>
+                  <a
+                    href={streamEmbedInfo.facebookDirectUrl || streamEmbedInfo.originalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white/80 hover:text-white ml-1.5 flex items-center gap-1 text-[11px]"
+                    title="Open on Facebook"
+                  >
+                    <span>Open</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
                 </div>
               )}
 
@@ -435,28 +442,16 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                     Harare (Fantasyland Cinema Number 3) • Bulawayo • Chitungwiza • Gweru • Mutare
                   </span>
                 </div>
-                <span className="text-[#D4AF37] font-bold shrink-0 ml-2">
+                <span className="text-primary font-bold shrink-0 ml-2">
                   {onlineStreamersCount} Online
                 </span>
               </div>
 
-              {/* Modern Instagram / TikTok Live Floating On-Screen Comments Overlay */}
-              <div className="absolute bottom-16 left-3 sm:left-4 z-20 pointer-events-none max-w-[280px] sm:max-w-xs space-y-2 flex flex-col justify-end overflow-hidden">
-                {chatMessages.slice(-4).map((msg) => (
-                  <div 
-                    key={msg.id}
-                    className="bg-black/65 backdrop-blur-md border border-white/15 text-white px-3 py-1.5 rounded-2xl text-xs flex items-start gap-2 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300 pointer-events-auto"
-                  >
-                    <div className="w-5 h-5 rounded-full bg-[#D4AF37] text-[#001F3F] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                      {msg.sender_name.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <span className="font-bold text-[#D4AF37] mr-1.5 text-[11px]">{msg.sender_name}</span>
-                      <span className="text-white/90 text-[11px] leading-tight break-words">{msg.message}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {/* Modern Instagram / TikTok Live Floating Pouring Comments Overlay (Pops up for 1 second) */}
+              <LivePouringComments 
+                isLive={status.isLive} 
+                className="absolute bottom-16 left-3 sm:left-4 z-20 max-w-[280px] sm:max-w-xs" 
+              />
 
               {/* Floating Facebook Action Pill (if Facebook Live) */}
               {streamEmbedInfo.isFacebook && (
@@ -465,7 +460,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                     href={streamEmbedInfo.facebookDirectUrl || streamEmbedInfo.originalUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-full bg-[#1877F2] hover:bg-[#1877F2]/90 text-white font-bold text-xs flex items-center gap-1.5 shadow-xl border border-white/20 transition-all hover:scale-105"
+                    className="px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-600/90 text-white font-bold text-xs flex items-center gap-1.5 shadow-xl border border-white/20 transition-all hover:scale-105"
                     title="Watch directly on Facebook"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -491,7 +486,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                 <button
                   id="btn-stream-floating-seed"
                   onClick={() => setShowInStreamDonation(true)}
-                  className="px-3.5 py-2 rounded-full bg-gradient-to-r from-[#D4AF37] via-amber-300 to-[#D4AF37] text-[#001F3F] font-black text-xs flex items-center gap-2 shadow-2xl shadow-[#D4AF37]/50 hover:scale-105 active:scale-95 transition-all border border-white/40 animate-pulse"
+                  className="px-3.5 py-2 rounded-full bg-gradient-to-r from-primary via-amber-300 to-primary text-primary-foreground font-black text-xs flex items-center gap-2 shadow-2xl shadow-primary/50 hover:scale-105 active:scale-95 transition-all border border-white/40 animate-pulse"
                 >
                   <Gift className="w-4 h-4 fill-current" />
                   <span>Sow Altar Seed / Pay</span>
@@ -500,7 +495,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
 
               {/* IN-STREAM DONATION FLOAT: Non-blocking, leaves space to navigate and watch, with X close button */}
               {showInStreamDonation && (
-                <div className="fixed bottom-16 right-3 sm:absolute sm:bottom-4 sm:right-4 z-40 w-[calc(100vw-24px)] max-w-[340px] max-h-[60vh] overflow-y-auto bg-[#001428]/95 backdrop-blur-md border border-[#D4AF37]/80 rounded-2xl p-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-200 text-white">
+                <div className="fixed bottom-16 right-3 sm:absolute sm:bottom-4 sm:right-4 z-40 w-[calc(100vw-24px)] max-w-[340px] max-h-[60vh] overflow-y-auto bg-card/95 backdrop-blur-md border border-primary/80 rounded-2xl p-4 shadow-2xl animate-in slide-in-from-bottom-4 duration-200 text-white">
                   <button
                     onClick={() => setShowInStreamDonation(false)}
                     className="absolute top-3 right-3 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all shadow"
@@ -511,12 +506,12 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                   </button>
 
                   <div className="flex items-center gap-2.5 mb-3 pr-8">
-                    <div className="w-9 h-9 rounded-xl bg-[#D4AF37] text-[#001F3F] flex items-center justify-center font-bold shadow-md shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-md shrink-0">
                       <Gift className="w-5 h-5 fill-current" />
                     </div>
                     <div>
                       <h3 className="font-bold text-sm text-white">In-Stream Altar Seed</h3>
-                      <p className="text-[11px] text-[#D4AF37]">Give while stream continues</p>
+                      <p className="text-[11px] text-primary">Give while stream continues</p>
                     </div>
                   </div>
 
@@ -526,19 +521,19 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                           <CheckCircle2 className="w-7 h-7" />
                         </div>
                         <h4 className="font-black text-base text-white">Seed Received on the Altar!</h4>
-                        <p className="text-xs text-[#D4AF37]">
+                        <p className="text-xs text-primary">
                           "The blessing of Abraham is commanded upon your life and household." — Apostle Joe Daniels
                         </p>
                       </div>
                     ) : (
                       <form onSubmit={handleProcessInStreamSeed} className="space-y-3">
                         {/* Currency Toggle */}
-                        <div className="flex items-center justify-between bg-[#001122] p-1 rounded-xl border border-white/10">
+                        <div className="flex items-center justify-between bg-background p-1 rounded-xl border border-white/10">
                           <button
                             type="button"
                             onClick={() => setCurrency('USD')}
                             className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
-                              currency === 'USD' ? 'bg-[#D4AF37] text-[#001F3F] shadow' : 'text-white/60'
+                              currency === 'USD' ? 'bg-primary text-primary-foreground shadow' : 'text-white/60'
                             }`}
                           >
                             USD ($)
@@ -547,7 +542,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                             type="button"
                             onClick={() => setCurrency('ZiG')}
                             className={`flex-1 py-1 rounded-lg text-xs font-bold transition-all ${
-                              currency === 'ZiG' ? 'bg-[#D4AF37] text-[#001F3F] shadow' : 'text-white/60'
+                              currency === 'ZiG' ? 'bg-primary text-primary-foreground shadow' : 'text-white/60'
                             }`}
                           >
                             ZiG (Zimbabwe Gold)
@@ -567,16 +562,16 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                                 onClick={() => setSeedAmount(amt)}
                                 className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${
                                   seedAmount === amt 
-                                    ? 'bg-[#D4AF37] text-[#001F3F] border-[#D4AF37]' 
-                                    : 'bg-white/5 border-white/10 text-white hover:border-[#D4AF37]/40'
+                                    ? 'bg-primary text-primary-foreground border-primary' 
+                                    : 'bg-white/5 border-white/10 text-white hover:border-primary/40'
                                 }`}
                               >
                                 {currency === 'USD' ? `$${amt}` : `${amt} ZiG`}
                               </button>
                             ))}
                           </div>
-                          <div className="mt-2 flex items-center bg-[#001122] border border-white/15 rounded-xl px-3 py-1.5">
-                            <span className="text-xs text-[#D4AF37] font-bold mr-1.5">Custom:</span>
+                          <div className="mt-2 flex items-center bg-background border border-white/15 rounded-xl px-3 py-1.5">
+                            <span className="text-xs text-primary font-bold mr-1.5">Custom:</span>
                             <input
                               type="number"
                               min="1"
@@ -596,7 +591,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                           <select
                             value={seedCategory}
                             onChange={(e) => setSeedCategory(e.target.value as any)}
-                            className="w-full bg-[#001122] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D4AF37]"
+                            className="w-full bg-background border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
                           >
                             <option value="Altar Seed">Altar Seed (Prophetic Connection)</option>
                             <option value="Tithe">Tithe (Honor the Lord)</option>
@@ -661,7 +656,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                             value={donorPhone}
                             onChange={(e) => setDonorPhone(e.target.value)}
                             placeholder="e.g. 0772123456"
-                            className="w-full bg-[#001122] border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D4AF37]"
+                            className="w-full bg-background border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
                           />
                         </div>
 
@@ -669,7 +664,7 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                       <button
                         type="submit"
                         disabled={isDonating}
-                        className="w-full py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-amber-400 hover:brightness-110 text-[#001F3F] font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#D4AF37]/30 transition-all"
+                        className="w-full py-2 rounded-xl bg-gradient-to-r from-primary to-amber-400 hover:brightness-110 text-primary-foreground font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-primary/30 transition-all"
                       >
                         {isDonating ? (
                           <span>Connecting Secure Gateway...</span>
@@ -687,11 +682,11 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
             </div>
 
             {/* Quick Interactive Reaction Bar under Video */}
-            <div className="h-12 bg-[#001122] border-t border-white/10 px-4 flex items-center justify-between shrink-0">
+            <div className="h-12 bg-background border-t border-white/10 px-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleBurstAmen}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37]/30 text-xs font-bold transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30 text-xs font-bold transition-all"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>High Praise Amen! ({likeCount})</span>
@@ -701,13 +696,13 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
               <div className="flex items-center gap-3 text-xs">
                 <button
                   onClick={() => setShowInStreamDonation(true)}
-                  className="text-[#D4AF37] hover:underline font-bold flex items-center gap-1"
+                  className="text-primary hover:underline font-bold flex items-center gap-1"
                 >
                   <Gift className="w-3.5 h-3.5" />
                   <span>Sow Altar Seed</span>
                 </button>
                 <span className="text-white/40">•</span>
-                <span className={streamEmbedInfo.isFacebook ? "text-[#1877F2] font-semibold" : "text-emerald-400 font-semibold"}>
+                <span className={streamEmbedInfo.isFacebook ? "text-blue-500 font-semibold" : "text-emerald-400 font-semibold"}>
                   {streamEmbedInfo.isFacebook ? "Facebook Live Active" : "Live Stream Active"}
                 </span>
               </div>
@@ -715,8 +710,8 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
           </div>
 
           {/* Right: Live Chat & Intercessory Prayer Decrees Feed */}
-          <div className="w-full md:w-80 bg-[#001A33] border-t md:border-t-0 md:border-l border-white/10 flex flex-col h-64 md:h-auto">
-            <div className="p-3 border-b border-white/10 bg-[#00162B] flex items-center justify-between">
+          <div className="w-full md:w-80 bg-card border-t md:border-t-0 md:border-l border-white/10 flex flex-col h-64 md:h-auto">
+            <div className="p-3 border-b border-white/10 bg-card flex items-center justify-between">
               <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 Live Chat & Decrees
@@ -731,12 +726,12 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
                   key={msg.id}
                   className={`p-2 rounded-xl transition-all ${
                     msg.is_decree
-                      ? 'bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-white'
-                      : 'bg-[#001122]/60 border border-white/5 text-white/90'
+                      ? 'bg-primary/15 border border-primary/40 text-white'
+                      : 'bg-background/60 border border-white/5 text-white/90'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="font-bold text-[#D4AF37] text-[11px] truncate max-w-[140px]">
+                    <span className="font-bold text-primary text-[11px] truncate max-w-[140px]">
                       {msg.sender_name}
                     </span>
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-white/60">
@@ -750,18 +745,18 @@ export const LiveSermonModal: React.FC<LiveSermonModalProps> = ({
             </div>
 
             {/* Chat Input */}
-            <form onSubmit={handleSendChat} className="p-2.5 bg-[#001122] border-t border-white/10 flex gap-2">
+            <form onSubmit={handleSendChat} className="p-2.5 bg-background border-t border-white/10 flex gap-2">
               <input
                 type="text"
                 value={newChatText}
                 onChange={(e) => setNewChatText(e.target.value)}
                 placeholder="Post an Amen or decree..."
-                className="flex-1 bg-[#001F3F] border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-[#D4AF37]"
+                className="flex-1 bg-card border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-primary"
               />
               <button
                 type="submit"
                 className={`p-2 rounded-xl text-white font-bold transition-all shrink-0 ${
-                  isFacebook ? 'bg-[#1877F2] hover:bg-[#166fe5]' : 'bg-red-600 hover:bg-red-500'
+                  isFacebook ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-500'
                 }`}
               >
                 <Send className="w-4 h-4" />

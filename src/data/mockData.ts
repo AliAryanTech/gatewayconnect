@@ -207,7 +207,7 @@ export const INITIAL_USERS: User[] = [
     is_verified: true,
     badge_type: 'gold',
     is_premium: true,
-    followers_count: 1420,
+    followers_count: 1,
     following_count: 2,
     member_id: 'GCZ-002-FOUNDER',
     baptism_date: '2001-08-15',
@@ -228,8 +228,8 @@ export const INITIAL_USERS: User[] = [
     is_verified: true,
     badge_type: 'gold',
     is_premium: true,
-    followers_count: 890,
-    following_count: 3,
+    followers_count: 0,
+    following_count: 2,
     member_id: 'GCZ-003-ADMIN',
     created_at: '2020-06-01T00:00:00Z',
     saved_verses: ['1 Corinthians 15:58', 'Colossians 1:28']
@@ -639,7 +639,7 @@ export const MOCK_COMMUNITY_GROUPS: CommunityGroup[] = [
     leader_phone: '+263 77 144 5642',
     meeting_time: 'Mondays @ 7:00 PM CAT & Virtual Modules',
     member_count: 12,
-    image_url: '/assets/images/apostle_grad_dark_1788354117156.jpg',
+    image_url: '/assets/apostle_grad_dark_1788354117156.jpg',
     description: 'International School of Mentorship (ISN) - Intensive apostolic mentorship, prophetic impartation, and global kingdom leadership academy.',
     joined: false
   }
@@ -1269,10 +1269,10 @@ export const INITIAL_CHAT_GROUPS: ChatGroup[] = [
     invite_code: 'foundation-school-2026',
     created_by: 'usr_apostle_joe',
     creator_name: 'Apostle Joe Daniels',
-    admin_ids: ['usr_apostle_joe', 'usr_developer'],
+    admin_ids: ['usr_apostle_joe', 'usr_prophetess_melinda', 'usr_pastor_easter', 'usr_developer'],
     avatar_url: '/assets/apostle_joe_daniels_grad.jpg',
     created_at: '2026-02-10T00:00:00Z',
-    member_ids: ['usr_apostle_joe', 'usr_developer', 'usr_prophetess_melinda', 'usr_pastor_easter', 'usr_pastor_tendai', 'usr_chipo', 'usr_tinashe', 'usr_kuda'],
+    member_ids: ['usr_apostle_joe', 'usr_prophetess_melinda', 'usr_pastor_easter', 'usr_developer', 'usr_pastor_tendai', 'usr_chipo', 'usr_tinashe', 'usr_kuda'],
     pinned_notice: 'Apostolic curriculum term enrolled. Term duration: 3 months ($150 membership).'
   },
   {
@@ -1301,10 +1301,10 @@ export const INITIAL_CHAT_GROUPS: ChatGroup[] = [
     invite_code: 'isn-mentorship-2026',
     created_by: 'usr_apostle_joe',
     creator_name: 'Apostle Joe Daniels',
-    admin_ids: ['usr_apostle_joe', 'usr_developer', 'usr_prophetess_melinda'],
-    avatar_url: '/assets/images/apostle_grad_dark_1788354117156.jpg',
+    admin_ids: ['usr_apostle_joe', 'usr_prophetess_melinda', 'usr_pastor_easter', 'usr_developer'],
+    avatar_url: '/assets/apostle_grad_dark_1788354117156.jpg',
     created_at: '2026-03-01T00:00:00Z',
-    member_ids: ['usr_apostle_joe', 'usr_developer', 'usr_prophetess_melinda', 'usr_pastor_easter', 'usr_pastor_tendai'],
+    member_ids: ['usr_apostle_joe', 'usr_prophetess_melinda', 'usr_pastor_easter', 'usr_developer', 'usr_pastor_tendai'],
     pinned_notice: 'Welcome to ISN International School of Mentorship. Classes, live modules, and prophetic assignments begin every Monday.'
   }
 ];

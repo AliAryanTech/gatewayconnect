@@ -51,23 +51,23 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div 
-        className="w-full max-w-[92vw] sm:max-w-md bg-[#001122] border border-[#D4AF37]/30 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto transition-all animate-in fade-in zoom-in-95 duration-200"
+        className="w-full max-w-[92vw] sm:max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col my-auto transition-all animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Top Header */}
-        <div className="px-4 py-3 bg-[#00172e] border-b border-white/10 flex items-center justify-between">
+        <div className="px-4 py-3 bg-secondary/50 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
               <Share2 className="w-3.5 h-3.5" />
             </div>
-            <h3 className="font-bold text-xs sm:text-sm text-[#D4AF37]">
+            <h3 className="font-bold text-xs sm:text-sm text-primary">
               {shareTitle}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-white/50 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+            className="p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-secondary transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -75,11 +75,11 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
 
         {/* Visual Card Preview (Safe bounded box - No mobile screen overlap) */}
         <div className="p-4 space-y-3.5 overflow-y-auto max-h-[70vh]">
-          <div className="bg-[#001F3F] border border-white/15 rounded-2xl p-3.5 space-y-3 shadow-inner">
+          <div className="bg-secondary/40 border border-border rounded-xl p-3.5 space-y-3 shadow-inner">
             
             {/* Church branding bar */}
-            <div className="flex items-center justify-between text-[10px] text-white/60 pb-2 border-b border-white/10">
-              <span className="font-bold text-[#D4AF37] tracking-wider uppercase">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground pb-2 border-b border-border">
+              <span className="font-bold text-primary tracking-wider uppercase">
                 Gateway International Church
               </span>
               <span>Apostle Joe Daniels</span>
@@ -87,7 +87,7 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
 
             {/* Post Picture if available */}
             {post?.image_url && (
-              <div className="w-full rounded-xl overflow-hidden max-h-48 sm:max-h-56 bg-black/40 border border-white/10">
+              <div className="w-full rounded-xl overflow-hidden max-h-48 sm:max-h-56 bg-background border border-border">
                 <img
                   src={post.image_url}
                   alt={post.title}
@@ -98,7 +98,7 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
 
             {/* Event Banner if available */}
             {event?.banner_url && (
-              <div className="w-full rounded-xl overflow-hidden max-h-48 sm:max-h-56 bg-black/40 border border-white/10">
+              <div className="w-full rounded-xl overflow-hidden max-h-48 sm:max-h-56 bg-background border border-border">
                 <img
                   src={event.banner_url}
                   alt={event.title}
@@ -111,11 +111,11 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
               {post && (
                 <>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-semibold">
                     {post.category}
                   </span>
                   {post.scripture_tag && (
-                    <span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30 text-[10px] font-bold flex items-center gap-1">
+                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-semibold flex items-center gap-1">
                       <BookOpen className="w-2.5 h-2.5" />
                       <span>{post.scripture_tag}</span>
                     </span>
@@ -124,14 +124,14 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
               )}
 
               {prayer && (
-                <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-semibold flex items-center gap-1">
                   <Heart className="w-2.5 h-2.5" />
                   <span>Altar Prayer: {prayer.category}</span>
                 </span>
               )}
 
               {event && (
-                <span className="px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 text-[10px] font-bold flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[10px] font-semibold flex items-center gap-1">
                   <Calendar className="w-2.5 h-2.5" />
                   <span>{event.category}</span>
                 </span>
@@ -141,10 +141,10 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
             {/* Content Display */}
             {post && (
               <div className="space-y-1">
-                <h4 className="font-bold text-xs sm:text-sm text-white leading-snug">
+                <h4 className="font-bold text-xs sm:text-sm text-foreground leading-snug">
                   {post.title}
                 </h4>
-                <p className="text-xs text-white/80 leading-relaxed italic line-clamp-4">
+                <p className="text-xs text-muted-foreground leading-relaxed italic line-clamp-4">
                   "{post.content}"
                 </p>
               </div>
@@ -152,15 +152,15 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
 
             {prayer && (
               <div className="space-y-1.5">
-                <h4 className="font-bold text-xs sm:text-sm text-white leading-snug flex items-center gap-1.5">
+                <h4 className="font-bold text-xs sm:text-sm text-foreground leading-snug flex items-center gap-1.5">
                   <span>Altar Request</span>
-                  <span className="text-white/60 font-normal text-[11px]">• {prayer.is_anonymous ? 'Anonymous' : prayer.user_name}</span>
+                  <span className="text-muted-foreground font-normal text-[11px]">• {prayer.is_anonymous ? 'Anonymous' : prayer.user_name}</span>
                 </h4>
-                <p className="text-xs text-white/80 leading-relaxed italic line-clamp-4 bg-black/20 p-2.5 rounded-lg border border-white/5">
+                <p className="text-xs text-muted-foreground leading-relaxed italic line-clamp-4 bg-secondary p-2.5 rounded-lg border border-border">
                   "{prayer.request_text}"
                 </p>
                 {prayer.apostle_notes && (
-                  <p className="text-[11px] text-[#D4AF37] bg-[#D4AF37]/10 p-2 rounded border border-[#D4AF37]/20">
+                  <p className="text-[11px] text-primary bg-primary/10 p-2 rounded border border-primary/20">
                     <strong>Apostle Daniels:</strong> {prayer.apostle_notes}
                   </p>
                 )}
@@ -169,19 +169,19 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
 
             {event && (
               <div className="space-y-1.5">
-                <h4 className="font-bold text-xs sm:text-sm text-white leading-snug">
+                <h4 className="font-bold text-xs sm:text-sm text-foreground leading-snug">
                   {event.title}
                 </h4>
-                <p className="text-xs text-white/80 leading-relaxed line-clamp-3">
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
                   {event.description}
                 </p>
-                <div className="text-[11px] text-white/70 space-y-0.5 pt-1">
+                <div className="text-[11px] text-muted-foreground space-y-0.5 pt-1">
                   <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3 h-3 text-[#D4AF37]" />
+                    <Calendar className="w-3 h-3 text-primary" />
                     <span>{event.date} • {event.time}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3 h-3 text-[#D4AF37]" />
+                    <MapPin className="w-3 h-3 text-primary" />
                     <span className="truncate">{event.location}</span>
                   </div>
                 </div>
@@ -189,8 +189,8 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
             )}
 
             {/* Author / Minister stamp */}
-            <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-              <div className="w-6 h-6 rounded-full overflow-hidden border border-[#D4AF37]/40">
+            <div className="flex items-center gap-2 pt-2 border-t border-border">
+              <div className="w-6 h-6 rounded-full overflow-hidden border border-primary/30">
                 <img
                   src={post?.user_avatar || '/assets/apostle_joe_daniels_main.jpg'}
                   alt={post?.user_name || 'Gateway'}
@@ -198,10 +198,10 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
                 />
               </div>
               <div className="text-[11px] leading-tight">
-                <span className="font-bold text-white block">
+                <span className="font-bold text-foreground block">
                   {post?.user_name || event?.speaker || (prayer?.is_anonymous ? 'Gateway Prayer Partner' : prayer?.user_name)}
                 </span>
-                <span className="text-white/40 text-[9px]">
+                <span className="text-muted-foreground text-[9px]">
                   {post?.user_handle || '@gateway_church'}
                 </span>
               </div>
@@ -210,11 +210,11 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
         </div>
 
         {/* Bottom Actions */}
-        <div className="p-3.5 bg-[#00172e] border-t border-white/10 flex flex-col sm:flex-row items-center gap-2">
+        <div className="p-3.5 bg-secondary/50 border-t border-border flex flex-col sm:flex-row items-center gap-2">
           <button
             id="btn-whatsapp-share-now"
             onClick={handleOpenWhatsApp}
-            className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+            className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer"
           >
             <Send className="w-4 h-4 -rotate-12" />
             <span>Open & Share to WhatsApp</span>
@@ -222,12 +222,12 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
           
           <button
             onClick={handleCopy}
-            className="w-full sm:w-auto py-3 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors border border-white/10 cursor-pointer"
+            className="w-full sm:w-auto py-3 px-4 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors border border-border cursor-pointer"
           >
             {copied ? (
               <>
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span className="text-emerald-400 font-bold">Copied!</span>
+                <Check className="w-4 h-4 text-emerald-500" />
+                <span className="text-emerald-500 font-bold">Copied!</span>
               </>
             ) : (
               <>

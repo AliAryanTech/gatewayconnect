@@ -34,9 +34,9 @@ export const LocalImagePicker: React.FC<LocalImagePickerProps> = ({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-white text-[11px] font-semibold transition-colors"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 border border-border text-foreground text-[11px] font-semibold transition-colors"
       >
-        <ImagePlus className="w-3.5 h-3.5 text-[#D4AF37]" />
+        <ImagePlus className="w-3.5 h-3.5 text-primary" />
         <span>{label}</span>
       </button>
       {value?.startsWith('data:image/') && (

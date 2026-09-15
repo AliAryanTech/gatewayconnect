@@ -181,22 +181,17 @@ export const Header: React.FC<HeaderProps> = ({
           id="btn-low-data-toggle"
           onClick={onToggleLowData}
           title={lowDataMode ? "Lite Low-Data Mode Active (Click for HD)" : "HD Stream Active (Click for Lite Mode)"}
-          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all border cursor-pointer shrink-0 ${
+          aria-label={lowDataMode ? "Lite Low-Data Mode" : "HD Stream Mode"}
+          className={`p-1.5 sm:p-2 rounded-lg text-xs font-semibold transition-all border cursor-pointer shrink-0 ${
             lowDataMode
               ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
               : 'bg-secondary/50 text-foreground/80 border-border hover:bg-secondary'
           }`}
         >
           {lowDataMode ? (
-            <>
-              <WifiOff className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="text-[10px] font-bold tracking-tight text-emerald-500">SD</span>
-            </>
+            <WifiOff className="w-4 h-4 text-emerald-500" />
           ) : (
-            <>
-              <Wifi className="w-3.5 h-3.5 text-primary" />
-              <span className="text-[10px] font-bold tracking-tight text-foreground">HD</span>
-            </>
+            <Wifi className="w-4 h-4 text-primary" />
           )}
         </button>
 
@@ -220,8 +215,9 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="btn-flutter-export"
             onClick={onOpenFlutterExport}
-            className="hidden md:flex items-center justify-center p-2 rounded-lg bg-secondary/50 border border-border text-foreground hover:bg-secondary text-xs transition-all shadow-sm cursor-pointer shrink-0"
+            className="hidden md:flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-secondary/50 border border-border text-foreground hover:bg-secondary text-xs transition-all shadow-sm cursor-pointer shrink-0"
             title="Database Schema & Specs"
+            aria-label="Database Schema & Specs"
           >
             <Database className="w-4 h-4 text-primary" />
           </button>
@@ -232,11 +228,11 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="btn-quick-admin"
             onClick={onOpenAdminPanel}
-            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground hover:brightness-105 text-xs font-bold shadow-sm transition-all cursor-pointer shrink-0"
+            className="flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-primary text-primary-foreground hover:brightness-105 shadow-sm transition-all cursor-pointer shrink-0"
             title="Apostolic Command Panel"
+            aria-label="Apostolic Command Panel"
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-[11px]">Admin</span>
+            <ShieldCheck className="w-4 h-4" />
           </button>
         )}
 
@@ -259,15 +255,10 @@ export const Header: React.FC<HeaderProps> = ({
             id="btn-guest-login-header"
             onClick={onOpenAuthModal}
             title="Guest Believer - Click to Log In"
-            className="flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-lg bg-secondary/50 border border-border hover:border-primary/40 hover:bg-secondary transition-all text-left shadow-sm group cursor-pointer"
+            aria-label="Sign In / Log In"
+            className="flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-primary text-primary-foreground hover:brightness-105 shadow-sm transition-all cursor-pointer shrink-0"
           >
-            <div className="flex flex-col items-end">
-              <span className="text-[9px] text-primary font-semibold uppercase tracking-wider">Guest</span>
-              <span className="text-xs text-foreground font-bold group-hover:text-primary transition-colors leading-none">Log In</span>
-            </div>
-            <div className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shadow shrink-0">
-              <LogIn className="w-3.5 h-3.5" />
-            </div>
+            <LogIn className="w-4 h-4" />
           </button>
         ) : (
           <button

@@ -39,7 +39,10 @@ import {
   MessageReaction,
   GroupMediaItem,
   NotificationSettings,
-  Receipt
+  Receipt,
+  ChurchPage,
+  PagePost,
+  PageCategory
 } from '../types';
 
 import { 
@@ -62,6 +65,22 @@ import {
 } from '../data/mockData';
 import { SupabaseSyncService } from './supabaseSyncService';
 import { CONFIG } from '../../config';
+import { LocalMediaStore } from './localMediaStore';
+
+export interface ResolvedFacebookInfo {
+  success: boolean;
+  originalUrl: string;
+  resolvedUrl: string;
+  canonicalUrl: string;
+  embedUrl: string;
+  numericVideoId?: string;
+  title?: string;
+  description?: string;
+  thumbnailUrl?: string;
+  author?: string;
+}
+
+const fbResolutionCache = new Map<string, ResolvedFacebookInfo>();
 
 export function arePhoneNumbersEqual(phone1?: string, phone2?: string): boolean {
   if (!phone1 || !phone2) return false;
@@ -122,7 +141,10 @@ const KEYS = {
   THEME: 'gcz_theme_v1',
   DISSOLVED_GROUPS: 'gcz_dissolved_groups_v1',
   OVERRIDE_PLAYING_VIDEO: 'gcz_override_playing_video_v1',
-  SAVED_POSTS: 'gcz_saved_posts_v1'
+  SAVED_POSTS: 'gcz_saved_posts_v1',
+  BROADCAST_LIKES_TABLE: 'gcz_broadcast_likes_v1',
+  CHURCH_PAGES: 'gcz_church_pages_v1',
+  PAGE_POSTS: 'gcz_page_posts_v1'
 };
 
 // In-memory fallback dictionary for when third-party cookies or localStorage are restricted/blocked
@@ -204,6 +226,10 @@ export function playNotificationChime(): void {
     // AudioContext blocked or not supported
   }
 }
+
+const INITIAL_PAGES: ChurchPage[] = [];
+
+const INITIAL_PAGE_POSTS: PagePost[] = [];
 
 export class StorageService {
   // Sound effects
@@ -303,6 +329,19 @@ export class StorageService {
       saved.push(...remaining);
       changed = true;
     }
+
+    // Deduplicate any repeated user IDs across the storage array
+    const uniqueUserMap = new Map<string, User>();
+    for (const u of saved) {
+      if (u && u.id && !uniqueUserMap.has(u.id)) {
+        uniqueUserMap.set(u.id, u);
+      }
+    }
+    if (uniqueUserMap.size !== saved.length) {
+      saved.length = 0;
+      saved.push(...uniqueUserMap.values());
+      changed = true;
+    }
     let devUser = saved.find(u => u.id === 'usr_developer' || u.role === 'developer' || arePhoneNumbersEqual(u.phone, '0780699988'));
     if (!devUser) {
       const initDev = INITIAL_USERS.find(u => u.id === 'usr_developer');
@@ -333,6 +372,20 @@ export class StorageService {
         u.avatar_url = customAvatars[u.id] || customAvatars[u.phone];
       }
     });
+
+    // Synchronize real followers and following counts across all users (no fake numbers)
+    try {
+      const followRecords = this.getUserFollowsRecords();
+      saved.forEach(u => {
+        const effectiveId = (u.id === 'usr_daniels' || u.id === 'usr_pastor_joe') ? 'usr_apostle_joe' : u.id;
+        const realFollowersCount = followRecords.filter(r => r.following_id === effectiveId || r.following_id === u.id).length;
+        const realFollowingCount = followRecords.filter(r => r.follower_id === effectiveId || r.follower_id === u.id).length;
+        u.followers_count = realFollowersCount;
+        u.following_count = realFollowingCount;
+      });
+    } catch (e) {
+      // Safe fallback
+    }
 
     if (changed) {
       setLocal(KEYS.ALL_USERS, saved);
@@ -542,6 +595,41 @@ export class StorageService {
     const updated: User = { ...curr, ...updates };
     this.setCurrentUser(updated);
     this.saveUser(updated);
+
+    // Update authored testimonies and comments across app in real time
+    try {
+      const testimonies = this.getTestimonies();
+      let changed = false;
+      testimonies.forEach(t => {
+        if (t.user_id === curr.id || (t.user_handle && t.user_handle === curr.handle) || (t.user_name && t.user_name === curr.full_name)) {
+          if (updates.full_name) t.user_name = updates.full_name;
+          if (updates.avatar_url) t.user_avatar = updates.avatar_url;
+          if (updates.handle) t.user_handle = updates.handle;
+          changed = true;
+        }
+        if (t.comments && t.comments.length > 0) {
+          t.comments.forEach(c => {
+            if (c.user_id === curr.id || c.user_name === curr.full_name) {
+              if (updates.full_name) c.user_name = updates.full_name;
+              if (updates.avatar_url) c.user_avatar = updates.avatar_url;
+              changed = true;
+            }
+          });
+        }
+      });
+      if (changed) {
+        setLocal(KEYS.TESTIMONIES, testimonies);
+      }
+    } catch {}
+
+    // Sync to Supabase in background
+    SupabaseSyncService.syncUser(updated).catch(() => {});
+
+    // Dispatch global real-time event
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_user_profile_updated', { detail: updated }));
+    }
+
     return updated;
   }
 
@@ -556,13 +644,60 @@ export class StorageService {
 
   // Sermons
   static getSermons(): Sermon[] {
-    return getLocal<Sermon[]>(KEYS.SERMONS, MOCK_SERMONS);
+    const list = getLocal<Sermon[]>(KEYS.SERMONS, MOCK_SERMONS);
+    // Inject any cached IndexedDB object URLs if present
+    return list.map(s => {
+      const cached = LocalMediaStore.getCachedMediaUrl(s.id);
+      if (cached) {
+        if (s.video_url?.startsWith('indexeddb://')) return { ...s, video_url: cached };
+        if (s.audio_url?.startsWith('indexeddb://')) return { ...s, audio_url: cached };
+      }
+      return s;
+    });
   }
 
   static addSermon(sermon: Sermon): void {
-    const sermons = this.getSermons();
-    sermons.unshift(sermon);
+    const sermons = getLocal<Sermon[]>(KEYS.SERMONS, MOCK_SERMONS);
+    const filtered = sermons.filter(s => s.id !== sermon.id);
+    filtered.unshift(sermon);
+    setLocal(KEYS.SERMONS, filtered);
+    window.dispatchEvent(new CustomEvent('gcz_sermon_added', { detail: sermon }));
+  }
+
+  static updateSermon(sermon: Sermon): void {
+    const sermons = getLocal<Sermon[]>(KEYS.SERMONS, MOCK_SERMONS);
+    const idx = sermons.findIndex(s => s.id === sermon.id);
+    if (idx !== -1) {
+      sermons[idx] = sermon;
+      setLocal(KEYS.SERMONS, sermons);
+      window.dispatchEvent(new CustomEvent('gcz_sermon_updated', { detail: sermon }));
+    }
+  }
+
+  static deleteSermon(sermonId: string): void {
+    const sermons = getLocal<Sermon[]>(KEYS.SERMONS, MOCK_SERMONS).filter(s => s.id !== sermonId);
     setLocal(KEYS.SERMONS, sermons);
+    LocalMediaStore.deleteSermonMedia(sermonId).catch(() => {});
+    window.dispatchEvent(new CustomEvent('gcz_sermon_deleted', { detail: sermonId }));
+  }
+
+  static async resolveSermonMedia(sermon: Sermon): Promise<{ video_url?: string; audio_url?: string }> {
+    let video_url = sermon.video_url;
+    let audio_url = sermon.audio_url;
+
+    if (video_url?.startsWith('indexeddb://')) {
+      const mediaId = video_url.replace('indexeddb://', '');
+      const blobUrl = await LocalMediaStore.getSermonMediaUrl(mediaId);
+      if (blobUrl) video_url = blobUrl;
+    }
+
+    if (audio_url?.startsWith('indexeddb://')) {
+      const mediaId = audio_url.replace('indexeddb://', '');
+      const blobUrl = await LocalMediaStore.getSermonMediaUrl(mediaId);
+      if (blobUrl) audio_url = blobUrl;
+    }
+
+    return { video_url, audio_url };
   }
 
   static toggleOfflineSermon(sermonId: string, currentUser?: User | null): { success: boolean; isDownloaded: boolean; message: string } {
@@ -757,6 +892,49 @@ export class StorageService {
     return allUsers.filter(u => followerIds.includes(u.id));
   }
 
+  // BROADCAST LIKES & LIKERS MANAGEMENT (REAL USERS ONLY)
+  static getBroadcastLikes(): string[] {
+    // Initial real likes by active registered ministry members: Pastor Tendai and Pastor Grace
+    const defaultLikes = ['usr_pastor_tendai', 'usr_pastor_grace'];
+    return getLocal<string[]>(KEYS.BROADCAST_LIKES_TABLE, defaultLikes);
+  }
+
+  static getBroadcastLikerUsers(): User[] {
+    const ids = this.getBroadcastLikes();
+    const allUsers = this.getAllUsers();
+    return allUsers.filter(u => ids.includes(u.id));
+  }
+
+  static hasUserLikedBroadcast(userId?: string): boolean {
+    const uid = userId || this.getCurrentUser()?.id;
+    if (!uid) return false;
+    const likes = this.getBroadcastLikes();
+    return likes.includes(uid);
+  }
+
+  static toggleBroadcastLike(userId?: string): { isLiked: boolean; count: number; likerUsers: User[] } {
+    const uid = userId || this.getCurrentUser()?.id || 'guest';
+    const likes = this.getBroadcastLikes();
+    const idx = likes.indexOf(uid);
+    let isLiked = false;
+    if (idx >= 0) {
+      likes.splice(idx, 1);
+      isLiked = false;
+    } else {
+      likes.push(uid);
+      isLiked = true;
+    }
+    setLocal(KEYS.BROADCAST_LIKES_TABLE, likes);
+    const allUsers = this.getAllUsers();
+    const likerUsers = allUsers.filter(u => likes.includes(u.id));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_broadcast_likes_updated', {
+        detail: { isLiked, count: likes.length, likerUsers }
+      }));
+    }
+    return { isLiked, count: likes.length, likerUsers };
+  }
+
   static async hydrateFollowsFromSupabase(userId: string): Promise<void> {
     if (!userId || userId === 'guest') return;
     try {
@@ -919,6 +1097,9 @@ export class StorageService {
 
     // Return mapped copy where joined is computed dynamically for targetUserId ONLY
     return list.map(group => {
+      if (group.id === 'group_isn_mentorship' && (!group.image_url || group.image_url.includes('/assets/images/'))) {
+        group.image_url = '/assets/apostle_grad_dark_1788354117156.jpg';
+      }
       const cg = chatGroups.find(c => c.id === group.id);
       const memberCount = cg ? cg.member_ids.length : (group.member_count || 0);
       const hasExited = targetUserId ? this.hasUserExitedGroup(group.id, targetUserId) : false;
@@ -2771,7 +2952,14 @@ export class StorageService {
     });
   }
 
-  static sendDirectMessage(senderId: string, receiverId: string, text: string, replyTo?: { id: string; sender_name: string; text: string }): DirectMessage {
+  static sendDirectMessage(
+    senderId: string, 
+    receiverId: string, 
+    text: string, 
+    replyTo?: { id: string; sender_name: string; text: string },
+    mediaUrl?: string,
+    mediaType?: 'image' | 'video' | 'audio' | 'document'
+  ): DirectMessage {
     const all = getLocal<DirectMessage[]>(KEYS.DIRECT_MESSAGES, []);
     const newMsg: DirectMessage = {
       id: `dm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -2780,7 +2968,9 @@ export class StorageService {
       text: text.trim(),
       created_at: new Date().toISOString(),
       is_read: false,
-      reply_to: replyTo
+      reply_to: replyTo,
+      media_url: mediaUrl,
+      media_type: mediaType
     };
     all.push(newMsg);
     setLocal(KEYS.DIRECT_MESSAGES, all);
@@ -2949,13 +3139,16 @@ export class StorageService {
   // LIVE SERMON NOTIFICATION & STREAMING MANAGEMENT
   static getLiveSermonStatus(): { isLive: boolean; title: string; sermonId: string; viewerCount: number; streamUrl?: string } {
     const savedUrl = this.getLiveStreamUrl();
+    const realViewersCount = this.getStreamViewers().length;
     const status = getLocal(KEYS.LIVE_SERMON, {
       isLive: true,
       title: 'Church & Politics (Controversial Issues) • Apostle Joe Daniels Live',
       sermonId: 'sermon_church_politics',
-      viewerCount: 1429,
+      viewerCount: realViewersCount,
       streamUrl: savedUrl
     });
+    // Ensure viewerCount reflects real streamers
+    status.viewerCount = Math.max(status.viewerCount || 0, realViewersCount);
     if (!status.streamUrl) {
       status.streamUrl = savedUrl;
     }
@@ -3305,11 +3498,11 @@ export class StorageService {
     return getLocal<string>(KEYS.LIVE_STREAM_URL, 'https://youtu.be/-CibsaxijIk?si=w71mOHPl8igh5XIP');
   }
 
-  static getOverridePlayingVideo(): { id: string; title: string; youtube_id: string } | null {
-    return getLocal<{ id: string; title: string; youtube_id: string } | null>(KEYS.OVERRIDE_PLAYING_VIDEO, null);
+  static getOverridePlayingVideo(): { id: string; title: string; youtube_id?: string; video_url?: string; audio_url?: string; thumbnail_url?: string; speaker?: string; series?: string } | null {
+    return getLocal<{ id: string; title: string; youtube_id?: string; video_url?: string; audio_url?: string; thumbnail_url?: string; speaker?: string; series?: string } | null>(KEYS.OVERRIDE_PLAYING_VIDEO, null);
   }
 
-  static setOverridePlayingVideo(video: { id: string; title: string; youtube_id: string } | null): void {
+  static setOverridePlayingVideo(video: { id: string; title: string; youtube_id?: string; video_url?: string; audio_url?: string; thumbnail_url?: string; speaker?: string; series?: string } | null): void {
     if (video) {
       setLocal(KEYS.OVERRIDE_PLAYING_VIDEO, video);
     } else {
@@ -3363,7 +3556,7 @@ export class StorageService {
 
     let input = urlOrIframe.trim();
 
-    // Check if user pasted an entire iframe snippet
+    // 1. Check if user pasted an entire iframe snippet
     const iframeSrcMatch = input.match(/<iframe.*?src=["'](.*?)["']/i);
     if (iframeSrcMatch && iframeSrcMatch[1]) {
       input = iframeSrcMatch[1];
@@ -3372,18 +3565,8 @@ export class StorageService {
     // Replace HTML entities like &amp; with &
     input = input.replace(/&amp;/g, '&');
 
-    // If it's already a Facebook plugin iframe URL
+    // 2. If it's already a Facebook plugin iframe URL, extract inner href
     if (input.includes('/plugins/video.php') || input.includes('/plugins/post.php')) {
-      let embedUrl = input;
-      // Ensure autoplay and show_text
-      if (!embedUrl.includes('show_text=')) {
-        embedUrl += '&show_text=false';
-      }
-      if (!embedUrl.includes('autoplay=')) {
-        embedUrl += '&autoplay=true';
-      }
-
-      // Try to extract original href
       let directUrl = 'https://www.facebook.com';
       let extractedVid: string | undefined;
       try {
@@ -3391,12 +3574,15 @@ export class StorageService {
         const hrefParam = urlObj.searchParams.get('href');
         if (hrefParam) {
           directUrl = decodeURIComponent(hrefParam);
-          const vM = directUrl.match(/[?&]v=(\d+)/) || directUrl.match(/\/(\d{8,20})/);
+          const vM = directUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/) || directUrl.match(/\/(\d{8,20})/);
           if (vM && vM[1]) extractedVid = vM[1];
         }
       } catch {
         directUrl = input;
       }
+
+      // Reconstruct clean, responsive embedUrl with valid params
+      const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(directUrl)}&show_text=0&width=500`;
 
       return { 
         embedUrl, 
@@ -3407,16 +3593,16 @@ export class StorageService {
       };
     }
 
-    // Clean tracking query params while keeping v= param
+    // 3. Clean tracking query params while preserving video identifiers
     let cleanUrl = input;
     try {
       if (cleanUrl.startsWith('http')) {
         const u = new URL(cleanUrl);
-        // Normalize mobile / regional subdomains
-        if (u.hostname === 'm.facebook.com' || u.hostname === 'web.facebook.com' || u.hostname === 'mobile.facebook.com') {
+        // Normalize mobile / regional subdomains to www.facebook.com
+        if (u.hostname === 'm.facebook.com' || u.hostname === 'web.facebook.com' || u.hostname === 'mobile.facebook.com' || u.hostname === 'touch.facebook.com') {
           u.hostname = 'www.facebook.com';
         }
-        // Remove tracking params
+        // Remove marketing / tracking parameters
         u.searchParams.delete('fbclid');
         u.searchParams.delete('mibextid');
         u.searchParams.delete('ref');
@@ -3429,48 +3615,54 @@ export class StorageService {
       // ignore
     }
 
-    // Comprehensive videoId extraction across all Facebook URL styles
+    // 4. Comprehensive videoId extraction across all Facebook URL styles
     let videoId: string | undefined;
     
-    // 1. Check ?v= or &v= (e.g. /watch/?v=12345 or /watch/live/?v=12345)
-    const vMatch = cleanUrl.match(/[?&]v=(\d+)/);
+    // Check ?v= or &v= (e.g. /watch/?v=12345 or /watch/live/?v=12345)
+    const vMatch = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
     if (vMatch && vMatch[1]) {
       videoId = vMatch[1];
     } else {
-      // 2. Check /videos/{page_id}/{video_id} or /videos/{video_id}
-      const vidPathMatch = cleanUrl.match(/\/videos\/(?:[^\/]+\/)?(\d+)/);
+      // Check /videos/{page_id}/{video_id} or /videos/{video_id}
+      const vidPathMatch = cleanUrl.match(/\/videos\/(?:[^\/]+\/)?([a-zA-Z0-9_-]+)/);
       if (vidPathMatch && vidPathMatch[1]) {
         videoId = vidPathMatch[1];
       } else {
-        // 3. Check /reel/{id}
-        const reelMatch = cleanUrl.match(/\/reel\/(\d+)/);
+        // Check /reel/{id}
+        const reelMatch = cleanUrl.match(/\/reel\/([a-zA-Z0-9_-]+)/);
         if (reelMatch && reelMatch[1]) {
           videoId = reelMatch[1];
         } else {
-          // 4. Check /posts/{id}
-          const postMatch = cleanUrl.match(/\/posts\/(\d+)/);
+          // Check /posts/{id}
+          const postMatch = cleanUrl.match(/\/posts\/([a-zA-Z0-9_-]+)/);
           if (postMatch && postMatch[1]) {
             videoId = postMatch[1];
           } else {
-            // 5. Check /share/[vrp]/{id}
-            const shareMatch = cleanUrl.match(/\/share\/[vrp]\/(\d+)/);
+            // Check /share/[vrp]/{id}
+            const shareMatch = cleanUrl.match(/\/share\/[vrp]\/([a-zA-Z0-9_-]+)/);
             if (shareMatch && shareMatch[1]) {
               videoId = shareMatch[1];
             } else {
-              // 6. Check /live/{id}
-              const livePathMatch = cleanUrl.match(/\/live\/(\d+)/);
-              if (livePathMatch && livePathMatch[1]) {
+              // Check /live/{id}
+              const livePathMatch = cleanUrl.match(/\/live\/([a-zA-Z0-9_-]+)/);
+              if (livePathMatch && livePathMatch[1] && livePathMatch[1] !== 'live') {
                 videoId = livePathMatch[1];
               } else {
-                // 7. Check story_fbid={id}
-                const storyMatch = cleanUrl.match(/story_fbid=(\d+)/);
-                if (storyMatch && storyMatch[1]) {
-                  videoId = storyMatch[1];
+                // Check fb.watch/{id}
+                const fbWatchMatch = cleanUrl.match(/fb\.watch\/([a-zA-Z0-9_-]+)/);
+                if (fbWatchMatch && fbWatchMatch[1]) {
+                  videoId = fbWatchMatch[1];
                 } else {
-                  // 8. Standalone 8-20 digits in path
-                  const numMatch = cleanUrl.match(/(?:^|\/|\?|&|=)(\d{9,20})(?:$|\/|\?|&)/);
-                  if (numMatch && numMatch[1]) {
-                    videoId = numMatch[1];
+                  // Check story_fbid={id}
+                  const storyMatch = cleanUrl.match(/story_fbid=(\d+)/);
+                  if (storyMatch && storyMatch[1]) {
+                    videoId = storyMatch[1];
+                  } else {
+                    // Standalone 8-20 digits in path
+                    const numMatch = cleanUrl.match(/(?:^|\/|\?|&|=)(\d{8,20})(?:$|\/|\?|&)/);
+                    if (numMatch && numMatch[1]) {
+                      videoId = numMatch[1];
+                    }
                   }
                 }
               }
@@ -3480,23 +3672,98 @@ export class StorageService {
       }
     }
 
-    const isLivePageHub = !videoId && cleanUrl.toLowerCase().includes('/live');
+    // Check if we already have a cached resolved info for this URL
+    const cachedResolved = fbResolutionCache.get(cleanUrl) || fbResolutionCache.get(input);
+    if (cachedResolved && cachedResolved.canonicalUrl) {
+      return {
+        embedUrl: cachedResolved.embedUrl,
+        directUrl: cachedResolved.canonicalUrl,
+        videoId: cachedResolved.numericVideoId || videoId,
+        hasNumericVideoId: !!cachedResolved.numericVideoId,
+        isLivePageHub: false
+      };
+    }
 
-    // When a video ID is detected, we construct the canonical Facebook Watch URL.
-    // This is crucial because Facebook's video.php plugin rejects /share/ or /reel/ URLs with "Video Unavailable"!
-    const canonicalVideoUrl = videoId 
-      ? `https://www.facebook.com/watch/?v=${videoId}`
-      : cleanUrl;
+    const isLivePageHub = cleanUrl.toLowerCase().includes('/live') && (!videoId || videoId === 'live');
+    const isNumericId = !!videoId && /^\d{8,25}$/.test(videoId);
 
-    const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(canonicalVideoUrl)}&show_text=false&width=auto&autoplay=true`;
+    // 5. Construct canonical URL for Facebook's embed plugin
+    let canonicalVideoUrl = cleanUrl;
+    if (videoId && videoId !== 'live') {
+      if (cleanUrl.includes('/reel/') || cleanUrl.includes('/share/r/')) {
+        canonicalVideoUrl = isNumericId ? `https://www.facebook.com/reel/${videoId}` : cleanUrl;
+      } else if (isNumericId) {
+        // Universal canonical format accepted by Facebook embed plugin
+        canonicalVideoUrl = `https://www.facebook.com/watch/?v=${videoId}`;
+      } else {
+        // Alphanumeric share token (e.g. /share/v/1HjSnFD3Bh/) - DO NOT construct watch/?v=1HjSnFD3Bh
+        // as Facebook plugin rejects it with "Video unavailable".
+        // Keep original cleanUrl and auto-resolve via API
+        canonicalVideoUrl = cleanUrl;
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            StorageService.resolveFacebookUrl(cleanUrl).catch(() => {});
+          }, 50);
+        }
+      }
+    }
+
+    // Valid Facebook plugin URL: width=500, show_text=0 (responsive via CSS)
+    const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(canonicalVideoUrl)}&show_text=0&width=500`;
 
     return {
       embedUrl,
       directUrl: canonicalVideoUrl,
       videoId,
-      hasNumericVideoId: !!videoId,
+      hasNumericVideoId: isNumericId,
       isLivePageHub
     };
+  }
+
+  static async resolveFacebookUrl(url: string): Promise<ResolvedFacebookInfo> {
+    if (!url) {
+      return {
+        success: false,
+        originalUrl: '',
+        resolvedUrl: '',
+        canonicalUrl: '',
+        embedUrl: ''
+      };
+    }
+
+    const trimmed = url.trim();
+    if (fbResolutionCache.has(trimmed)) {
+      return fbResolutionCache.get(trimmed)!;
+    }
+
+    try {
+      const resp = await fetch(`/api/facebook/resolve?url=${encodeURIComponent(trimmed)}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data: ResolvedFacebookInfo = await resp.json();
+      if (data && data.success) {
+        fbResolutionCache.set(trimmed, data);
+        if (data.resolvedUrl) fbResolutionCache.set(data.resolvedUrl, data);
+        if (data.canonicalUrl) fbResolutionCache.set(data.canonicalUrl, data);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('gcz_facebook_resolved', { detail: data }));
+        }
+      }
+      return data;
+    } catch (err: any) {
+      const fallback: ResolvedFacebookInfo = {
+        success: false,
+        originalUrl: trimmed,
+        resolvedUrl: trimmed,
+        canonicalUrl: trimmed,
+        embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(trimmed)}&show_text=0&width=500`
+      };
+      return fallback;
+    }
+  }
+
+  static getResolvedFacebookInfo(url: string): ResolvedFacebookInfo | undefined {
+    if (!url) return undefined;
+    return fbResolutionCache.get(url.trim());
   }
 
   static getYoutubeEmbedUrl(videoId: string, autoplay = true): string {
@@ -3705,8 +3972,72 @@ export class StorageService {
           g.member_ids.push('usr_prophetess_melinda');
           changed = true;
         }
+        if (g.id === 'group_isn_mentorship' && (!g.avatar_url || g.avatar_url.includes('/assets/images/'))) {
+          g.avatar_url = '/assets/apostle_grad_dark_1788354117156.jpg';
+          changed = true;
+        }
       }
     });
+
+    // Ensure all Super Admins are in Discipleship & Foundation School groups and marked active
+    const allUsers = this.getAllUsers();
+    const superAdminUsers = allUsers.filter(u => u.role === 'super_admin' || u.role === 'developer');
+    const superAdminIds = Array.from(new Set([
+      'usr_apostle_joe',
+      'usr_prophetess_melinda',
+      'usr_pastor_easter',
+      'usr_developer',
+      ...superAdminUsers.map(u => u.id)
+    ]));
+
+    const memberships = getLocal<GroupMembership[]>(KEYS.GROUP_MEMBERSHIPS, []);
+    let membershipsChanged = false;
+
+    list.forEach(g => {
+      const isDiscipleship = 
+        g.id === 'group_foundation_school' ||
+        g.id === 'group_isn_mentorship' ||
+        (g.category && ['School', 'Discipleship', 'Mentorship'].includes(g.category)) ||
+        (g.name && /foundation|mentorship|discipleship|curriculum/i.test(g.name)) ||
+        (g.description && /discipleship|mature in the Kingdom|foundation school/i.test(g.description));
+
+      if (isDiscipleship) {
+        if (!g.admin_ids) g.admin_ids = [];
+        if (!g.member_ids) g.member_ids = [];
+
+        superAdminIds.forEach(saId => {
+          if (!g.member_ids.includes(saId)) {
+            g.member_ids.push(saId);
+            changed = true;
+          }
+          if (!g.admin_ids.includes(saId)) {
+            g.admin_ids.push(saId);
+            changed = true;
+          }
+
+          // Ensure active membership record
+          const mem = memberships.find(m => m.group_id === g.id && m.user_id === saId);
+          if (!mem) {
+            memberships.push({
+              user_id: saId,
+              group_id: g.id,
+              joined_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+              status: 'active',
+              paid_amount: 150
+            });
+            membershipsChanged = true;
+          } else if (mem.status !== 'active') {
+            mem.status = 'active';
+            delete mem.left_at;
+            membershipsChanged = true;
+          }
+        });
+      }
+    });
+
+    if (membershipsChanged) {
+      setLocal(KEYS.GROUP_MEMBERSHIPS, memberships);
+    }
 
     if (changed) {
       setLocal(KEYS.CHAT_GROUPS, list);
@@ -3809,13 +4140,14 @@ export class StorageService {
     Object.assign(grp, updates);
     setLocal(KEYS.CHAT_GROUPS, groups);
 
-    // Synchronize name/description in community groups if applicable
-    if (updates.name || updates.description) {
+    // Synchronize name, description, and avatar/image in community groups if applicable
+    if (updates.name || updates.description || updates.avatar_url) {
       const comm = getLocal<CommunityGroup[]>(KEYS.GROUPS, MOCK_COMMUNITY_GROUPS);
       const cg = comm.find(c => c.id === groupId);
       if (cg) {
         if (updates.name) cg.name = updates.name;
         if (updates.description) cg.description = updates.description;
+        if (updates.avatar_url) cg.image_url = updates.avatar_url;
         setLocal(KEYS.GROUPS, comm);
       }
     }
@@ -3825,6 +4157,14 @@ export class StorageService {
     }
 
     return { success: true, group: grp, message: 'Group settings updated successfully.' };
+  }
+
+  static updateGroupInfo(groupId: string, updates: Partial<ChatGroup>): { success: boolean; group?: ChatGroup; message: string } {
+    return this.updateGroupSettings(groupId, updates);
+  }
+
+  static updateChatGroup(groupId: string, updates: Partial<ChatGroup>): { success: boolean; group?: ChatGroup; message: string } {
+    return this.updateGroupSettings(groupId, updates);
   }
 
   static createChatGroup(groupData: Omit<ChatGroup, 'id' | 'created_at' | 'invite_code' | 'member_ids'> & { initial_member_ids?: string[] }): ChatGroup {
@@ -4059,7 +4399,32 @@ export class StorageService {
 
   static getGroupMembership(groupId: string, userId: string): GroupMembership | undefined {
     const memberships = getLocal<GroupMembership[]>(KEYS.GROUP_MEMBERSHIPS, []);
-    return memberships.find(m => m.group_id === groupId && m.user_id === userId);
+    const existing = memberships.find(m => m.group_id === groupId && m.user_id === userId);
+
+    // If user is a super admin or developer, guarantee active status in discipleship groups
+    if (['usr_apostle_joe', 'usr_prophetess_melinda', 'usr_pastor_easter', 'usr_developer'].includes(userId)) {
+      if (groupId === 'group_foundation_school' || groupId === 'group_isn_mentorship') {
+        return {
+          user_id: userId,
+          group_id: groupId,
+          joined_at: existing?.joined_at || new Date().toISOString(),
+          status: 'active',
+          paid_amount: 150
+        };
+      }
+    }
+    const user = this.getAllUsers().find(u => u.id === userId);
+    if ((user?.role === 'super_admin' || user?.role === 'developer') && (groupId === 'group_foundation_school' || groupId === 'group_isn_mentorship')) {
+      return {
+        user_id: userId,
+        group_id: groupId,
+        joined_at: existing?.joined_at || new Date().toISOString(),
+        status: 'active',
+        paid_amount: 150
+      };
+    }
+
+    return existing;
   }
 
   static triggerFoundationSchoolExpiryNotice(userId: string): void {
@@ -4377,6 +4742,60 @@ export class StorageService {
     setLocal(KEYS.DIRECT_MESSAGES, all);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('gcz_dms_updated'));
+    }
+    return true;
+  }
+
+  static toggleReactionDirectMessage(messageId: string, userId: string, emoji: string, userName?: string): boolean {
+    const all = getLocal<DirectMessage[]>(KEYS.DIRECT_MESSAGES, []);
+    const msg = all.find(m => m.id === messageId);
+    if (!msg) return false;
+
+    if (!msg.reactions) msg.reactions = [];
+    const existingIndex = msg.reactions.findIndex(r => r.user_id === userId);
+    if (existingIndex >= 0) {
+      if (msg.reactions[existingIndex].emoji === emoji) {
+        msg.reactions.splice(existingIndex, 1);
+      } else {
+        msg.reactions[existingIndex].emoji = emoji;
+        if (userName) msg.reactions[existingIndex].user_name = userName;
+      }
+    } else {
+      msg.reactions.push({ user_id: userId, emoji, user_name: userName });
+    }
+
+    setLocal(KEYS.DIRECT_MESSAGES, all);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated', { detail: msg }));
+      window.dispatchEvent(new CustomEvent('gcz_dms_updated'));
+    }
+    return true;
+  }
+
+  static toggleReactionGroupMessage(groupId: string, messageId: string, userId: string, emoji: string, userName?: string): boolean {
+    const allMsgs = getLocal<Record<string, ChatGroupMessage[]>>(KEYS.CHAT_GROUP_MESSAGES, INITIAL_CHAT_GROUP_MESSAGES);
+    const groupMsgs = allMsgs[groupId];
+    if (!groupMsgs) return false;
+    const msg = groupMsgs.find(m => m.id === messageId);
+    if (!msg) return false;
+
+    if (!msg.reactions) msg.reactions = [];
+    const existingIndex = msg.reactions.findIndex(r => r.user_id === userId);
+    if (existingIndex >= 0) {
+      if (msg.reactions[existingIndex].emoji === emoji) {
+        msg.reactions.splice(existingIndex, 1);
+      } else {
+        msg.reactions[existingIndex].emoji = emoji;
+        if (userName) msg.reactions[existingIndex].user_name = userName;
+      }
+    } else {
+      msg.reactions.push({ user_id: userId, emoji, user_name: userName });
+    }
+
+    setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', { detail: { groupId, messageId, message: msg } }));
+      window.dispatchEvent(new CustomEvent('gcz_groups_updated'));
     }
     return true;
   }
@@ -4733,16 +5152,6 @@ export class StorageService {
     }
   }
 
-  static updateGroupInfo(groupId: string, data: { name?: string; description?: string; avatar_url?: string }): boolean {
-    const groups = this.getChatGroups();
-    const grp = groups.find(g => g.id === groupId);
-    if (!grp) return false;
-    if (data.name) grp.name = data.name.trim();
-    if (data.description !== undefined) grp.description = data.description.trim();
-    if (data.avatar_url !== undefined) grp.avatar_url = data.avatar_url.trim();
-    setLocal(KEYS.CHAT_GROUPS, groups);
-    return true;
-  }
 
   static togglePromoteGroupAdmin(groupId: string, targetUserId: string): boolean {
     const groups = this.getChatGroups();
@@ -4944,6 +5353,123 @@ export class StorageService {
       // Ignore background network error
     }
     return null;
+  }
+
+  // =========================================================================
+  // CHURCH PAGES & PAGE POSTS (Facebook Pages feature in Instagram UI/UX)
+  // =========================================================================
+  static getPages(): ChurchPage[] {
+    const DEMO_IDS = ['page_gcz_worship', 'page_youth_flame', 'page_kingdom_business'];
+    const pages = getLocal<ChurchPage[]>(KEYS.CHURCH_PAGES, []);
+    const validPages = pages.filter(p => !DEMO_IDS.includes(p.id));
+    if (validPages.length !== pages.length) {
+      setLocal(KEYS.CHURCH_PAGES, validPages);
+    }
+    return validPages;
+  }
+
+  static getPage(id: string): ChurchPage | undefined {
+    return this.getPages().find(p => p.id === id);
+  }
+
+  static getPageById(id: string): ChurchPage | undefined {
+    return this.getPage(id);
+  }
+
+  static createPage(pageData: Omit<ChurchPage, 'id' | 'created_at' | 'followers_count' | 'followers'>): ChurchPage {
+    const pages = this.getPages();
+    const newPage: ChurchPage = {
+      ...pageData,
+      id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      created_at: new Date().toISOString(),
+      followers_count: 1,
+      followers: [pageData.creator_id]
+    };
+    pages.unshift(newPage);
+    setLocal(KEYS.CHURCH_PAGES, pages);
+    return newPage;
+  }
+
+  static updatePage(pageId: string, updates: Partial<ChurchPage>): ChurchPage | null {
+    const pages = this.getPages();
+    const idx = pages.findIndex(p => p.id === pageId);
+    if (idx === -1) return null;
+    pages[idx] = { ...pages[idx], ...updates };
+    setLocal(KEYS.CHURCH_PAGES, pages);
+    return pages[idx];
+  }
+
+  static deletePage(pageId: string): boolean {
+    const pages = this.getPages();
+    const filtered = pages.filter(p => p.id !== pageId);
+    if (filtered.length !== pages.length) {
+      setLocal(KEYS.CHURCH_PAGES, filtered);
+      return true;
+    }
+    return false;
+  }
+
+  static toggleFollowPage(pageId: string, userId: string): { isFollowing: boolean; count: number } {
+    const pages = this.getPages();
+    const page = pages.find(p => p.id === pageId);
+    if (!page) return { isFollowing: false, count: 0 };
+    
+    const isFollowing = page.followers.includes(userId);
+    if (isFollowing) {
+      page.followers = page.followers.filter(id => id !== userId);
+    } else {
+      page.followers.push(userId);
+    }
+    page.followers_count = page.followers.length;
+    setLocal(KEYS.CHURCH_PAGES, pages);
+    return { isFollowing: !isFollowing, count: page.followers_count };
+  }
+
+  static isUserFollowingPage(pageId: string, userId: string): boolean {
+    const page = this.getPage(pageId);
+    return Boolean(page?.followers.includes(userId));
+  }
+
+  static getPagePosts(pageId: string): PagePost[] {
+    const all = getLocal<PagePost[]>(KEYS.PAGE_POSTS, []);
+    if (all.length === 0) {
+      setLocal(KEYS.PAGE_POSTS, INITIAL_PAGE_POSTS);
+      return INITIAL_PAGE_POSTS.filter(p => p.page_id === pageId);
+    }
+    return all.filter(p => p.page_id === pageId);
+  }
+
+  static createPagePost(pageId: string, authorId: string, authorName: string, content: string, imageUrl?: string, authorAvatar?: string): PagePost {
+    const all = getLocal<PagePost[]>(KEYS.PAGE_POSTS, []);
+    const newPost: PagePost = {
+      id: `post_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      page_id: pageId,
+      author_id: authorId,
+      author_name: authorName,
+      author_avatar: authorAvatar,
+      content: content.trim(),
+      image_url: imageUrl,
+      created_at: new Date().toISOString(),
+      likes: [],
+      comments_count: 0
+    };
+    all.unshift(newPost);
+    setLocal(KEYS.PAGE_POSTS, all);
+    return newPost;
+  }
+
+  static toggleLikePagePost(postId: string, userId: string): boolean {
+    const all = getLocal<PagePost[]>(KEYS.PAGE_POSTS, []);
+    const post = all.find(p => p.id === postId);
+    if (!post) return false;
+    const isLiked = post.likes.includes(userId);
+    if (isLiked) {
+      post.likes = post.likes.filter(id => id !== userId);
+    } else {
+      post.likes.push(userId);
+    }
+    setLocal(KEYS.PAGE_POSTS, all);
+    return !isLiked;
   }
 }
 

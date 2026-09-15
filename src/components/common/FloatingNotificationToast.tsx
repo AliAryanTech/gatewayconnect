@@ -59,6 +59,20 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
       return;
     }
 
+    // Suppress any "join live stream" or viewer join toasts; leave only the official live broadcast toast
+    const lowerTitle = (notif.title || '').toLowerCase();
+    const lowerMsg = (notif.message || '').toLowerCase();
+    if (
+      lowerTitle.includes('join live') || 
+      lowerMsg.includes('join live') || 
+      lowerTitle.includes('joined stream') || 
+      lowerMsg.includes('joined stream') || 
+      lowerTitle.includes('joined live') || 
+      lowerMsg.includes('joined live')
+    ) {
+      return;
+    }
+
     if (timerRef.current) clearTimeout(timerRef.current);
     setCurrentNotif(notif);
     setIsVisible(true);
@@ -80,6 +94,26 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
 
     window.addEventListener('gcz_new_notification' as any, handleNewNotif);
 
+    // Listen for live broadcast starting
+    const handleLiveBroadcast = (e: any) => {
+      const status = e?.detail || StorageService.getLiveSermonStatus();
+      if (status?.isLive) {
+        showNotification({
+          id: `broadcast_${Date.now()}`,
+          actor_id: 'apostle_joe_daniels',
+          actor_name: 'Apostle Joe Daniels',
+          actor_avatar: '/assets/apostle_joe_daniels_main.jpg',
+          title: 'Apostle Joe Daniels Live Broadcast',
+          message: status.title || 'Sanctuary broadcast is now live on Home. Tap to watch.',
+          type: 'broadcast',
+          target_type: 'live',
+          created_at: new Date().toISOString(),
+          is_read: false
+        });
+      }
+    };
+    window.addEventListener('gcz_live_broadcast_started' as any, handleLiveBroadcast);
+
     // 2. On mount, preview the latest unread notification for this specific user
     const previewTimer = setTimeout(() => {
       const activeUser = currentUser || StorageService.getCurrentUser();
@@ -93,6 +127,7 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
 
     return () => {
       window.removeEventListener('gcz_new_notification' as any, handleNewNotif);
+      window.removeEventListener('gcz_live_broadcast_started' as any, handleLiveBroadcast);
       clearTimeout(previewTimer);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
@@ -109,13 +144,10 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
     setIsVisible(false);
     StorageService.markNotificationRead(currentNotif.id);
 
-    // 1. Live stream
+    // 1. Live stream - stream directly on home
     if (currentNotif.target_type === 'live' || currentNotif.type === 'broadcast' || currentNotif.title.toLowerCase().includes('live')) {
-      if (onOpenLiveSermon) {
-        onOpenLiveSermon();
-      } else {
-        onNavigateTab('home');
-      }
+      onNavigateTab('home');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -197,7 +229,7 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
 
   const getActionLabel = () => {
     if (currentNotif.target_type === 'live' || currentNotif.type === 'broadcast' || currentNotif.title.toLowerCase().includes('live')) {
-      return 'Join Live Stream';
+      return 'Live Broadcast';
     }
     if (currentNotif.target_type === 'group' || (currentNotif.target_id && (currentNotif.target_id.startsWith('grp_') || currentNotif.target_id.startsWith('group_')))) {
       return 'Open Group Chat';
@@ -242,13 +274,13 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
             handleRedirect();
           }
         }}
-        className="group relative bg-[#00172e] border-2 border-[#D4AF37] hover:border-[#F4C430] text-white rounded-2xl p-3.5 shadow-2xl backdrop-blur-md cursor-pointer transition-all hover:scale-[1.02] flex items-start gap-3 text-left"
+        className="group relative bg-card border border-primary/40 hover:border-primary text-foreground rounded-2xl p-3.5 shadow-xl backdrop-blur-md cursor-pointer transition-all hover:scale-[1.02] flex items-start gap-3 text-left"
       >
         {/* Glow accent */}
-        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-[#D4AF37] animate-ping" />
+        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary animate-ping" />
 
         {/* Icon / Avatar */}
-        <div className="w-10 h-10 rounded-xl bg-[#D4AF37] text-[#001F3F] flex items-center justify-center shrink-0 shadow-md">
+        <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-xs">
           {currentNotif.actor_avatar ? (
             <img 
               src={currentNotif.actor_avatar} 
@@ -268,36 +300,36 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center justify-between gap-1">
             <span className={cn(
-              "text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded",
+              "text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded",
               currentNotif.target_type === 'group'
-                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                : "bg-[#D4AF37]/20 text-[#D4AF37]"
+                ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                : "bg-primary/10 text-primary border border-primary/20"
             )}>
               {currentNotif.target_type === 'group' ? 'Group Message' : 'New Notification'}
             </span>
             <button
               id="btn-dismiss-floating-toast"
               onClick={handleDismiss}
-              className="p-1 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               title="Dismiss"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <h4 className="text-xs font-bold text-white truncate group-hover:text-[#D4AF37] transition-colors">
+          <h4 className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
             {currentNotif.title}
           </h4>
 
-          <p className="text-xs text-white/70 line-clamp-2 leading-snug">
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
             {currentNotif.message}
           </p>
 
           <div className="pt-1 flex items-center justify-between">
-            <span className="text-[10px] text-white/40">
+            <span className="text-[10px] text-muted-foreground">
               Tap float to redirect
             </span>
-            <div className="flex items-center gap-1 text-[11px] text-[#D4AF37] font-bold group-hover:translate-x-1 transition-transform">
+            <div className="flex items-center gap-1 text-[11px] text-primary font-semibold group-hover:translate-x-1 transition-transform">
               <span>{actionLabel}</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </div>

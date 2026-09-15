@@ -50,7 +50,10 @@ import {
   Film,
   Mic,
   Upload,
-  XCircle
+  XCircle,
+  Camera,
+  Key,
+  Smile
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { User, DirectMessage, DmThread, ChatGroup, ChatGroupMessage, GroupMembership, GroupInvite } from '../../types';
@@ -59,6 +62,7 @@ import { SupabaseSyncService } from '../../services/supabaseSyncService';
 import { PaynowService } from '../../services/paynowService';
 import { LocalImagePicker } from '../common/LocalImagePicker';
 import { InstagramProfileModal } from './InstagramProfileModal';
+import { GroupInfoModal } from '../chat/GroupInfoModal';
 
 interface DirectMessagesModalProps {
   currentUser: User;
@@ -68,6 +72,62 @@ interface DirectMessagesModalProps {
 }
 
 const EMOJI_REACTIONS = ['🙏', '❤️', '🔥', '✝️', '🕊️', '🙌', '👑', '🌟'];
+
+const formatMessageDateDivider = (dateStr?: string): string => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    if (isNaN(d.getTime())) return '';
+    
+    if (d.toDateString() === now.toDateString()) return 'Today';
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    
+    const isSameYear = d.getFullYear() === now.getFullYear();
+    return d.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      ...(isSameYear ? {} : { year: 'numeric' })
+    });
+  } catch {
+    return '';
+  }
+};
+
+const getBubbleRounding = (isMine: boolean, isFirstInGroup: boolean, isLastInGroup: boolean): string => {
+  if (isMine) {
+    if (isFirstInGroup && isLastInGroup) return 'rounded-2xl rounded-tr-xs';
+    if (isFirstInGroup) return 'rounded-2xl rounded-tr-xs rounded-br-md';
+    if (isLastInGroup) return 'rounded-2xl rounded-br-xs rounded-tr-md';
+    return 'rounded-2xl rounded-r-md';
+  } else {
+    if (isFirstInGroup && isLastInGroup) return 'rounded-2xl rounded-tl-xs';
+    if (isFirstInGroup) return 'rounded-2xl rounded-tl-xs rounded-bl-md';
+    if (isLastInGroup) return 'rounded-2xl rounded-bl-xs rounded-tl-md';
+    return 'rounded-2xl rounded-l-md';
+  }
+};
+
+const getSenderNameColor = (name: string, role?: string): string => {
+  if (role === 'super_admin') return 'text-amber-600 dark:text-amber-400 font-bold';
+  if (role === 'developer') return 'text-purple-600 dark:text-purple-400 font-bold';
+  if (role === 'pastor') return 'text-blue-600 dark:text-blue-400 font-bold';
+  const colors = [
+    'text-emerald-600 dark:text-emerald-400 font-semibold',
+    'text-teal-600 dark:text-teal-400 font-semibold',
+    'text-sky-600 dark:text-sky-400 font-semibold',
+    'text-rose-600 dark:text-rose-400 font-semibold',
+    'text-indigo-600 dark:text-indigo-400 font-semibold',
+    'text-orange-600 dark:text-orange-400 font-semibold',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+};
 
 export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   currentUser,
@@ -113,6 +173,10 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   const [groupMessages, setGroupMessages] = useState<ChatGroupMessage[]>([]);
   const [groupInputText, setGroupInputText] = useState('');
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const [showGroupEmojiPicker, setShowGroupEmojiPicker] = useState<boolean>(false);
+  const [threadFilter, setThreadFilter] = useState<'all' | 'unread' | 'pinned'>('all');
+  const [groupFilter, setGroupFilter] = useState<'all' | 'joined' | 'paid' | 'open'>('all');
 
   // Reactively respond to initialRecipientId and initialGroupId props
   useEffect(() => {
@@ -161,6 +225,21 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   const [newGroupPrice, setNewGroupPrice] = useState(150);
   const [newGroupDuration, setNewGroupDuration] = useState(3);
   const [newGroupPinnedNotice, setNewGroupPinnedNotice] = useState('');
+  const groupAvatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleGroupAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setNewGroupAvatar(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const groupMessagesEndRef = useRef<HTMLDivElement>(null);
@@ -172,7 +251,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   const [editGroupDesc, setEditGroupDesc] = useState('');
 
   // WhatsApp-style Reply, Tagging, and Exit states
-  const [replyingToMessage, setReplyingToMessage] = useState<ChatGroupMessage | null>(null);
+  const [replyingToMessage, setReplyingToMessage] = useState<{ id: string; sender_name: string; text: string } | null>(null);
   const [showExitGroupConfirm, setShowExitGroupConfirm] = useState(false);
   const [mentionSuggestionsOpen, setMentionSuggestionsOpen] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
@@ -298,28 +377,49 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   };
 
   const handleConfirmSendMedia = () => {
-    if (!activeGroup || !stagedLocalMedia) return;
-    if (StorageService.hasUserExitedGroup(activeGroup.id, currentUser.id)) {
-      alert('You cannot send media because you exited this group fellowship. Please rejoin to participate.');
-      return;
+    if (!stagedLocalMedia) return;
+
+    if (activeGroup) {
+      if (StorageService.hasUserExitedGroup(activeGroup.id, currentUser.id)) {
+        alert('You cannot send media because you exited this group fellowship. Please rejoin to participate.');
+        return;
+      }
+
+      StorageService.sendChatGroupMessage(activeGroup.id, {
+        sender_id: currentUser.id,
+        sender_name: currentUser.full_name,
+        sender_avatar: currentUser.avatar_url,
+        sender_role: currentUser.role,
+        text: shareMediaCaption.trim() || (stagedLocalMedia.type === 'video' ? `Shared a video: ${stagedLocalMedia.name}` : stagedLocalMedia.type === 'audio' ? `Shared an audio: ${stagedLocalMedia.name}` : stagedLocalMedia.type === 'document' ? `Shared a document: ${stagedLocalMedia.name}` : 'Shared a photo'),
+        media_url: stagedLocalMedia.url,
+        media_type: stagedLocalMedia.type
+      });
+
+      setStagedLocalMedia(null);
+      setShareMediaCaption('');
+      setShowShareMediaPrompt(false);
+      refreshGroupsData();
+      setCopyFeedback('Media shared to fellowship group!');
+      setTimeout(() => setCopyFeedback(null), 3000);
+    } else if (activeUserId && activeUser) {
+      const msgText = shareMediaCaption.trim() || (stagedLocalMedia.type === 'video' ? `Shared a video: ${stagedLocalMedia.name}` : stagedLocalMedia.type === 'audio' ? `Shared an audio: ${stagedLocalMedia.name}` : stagedLocalMedia.type === 'document' ? `Shared a document: ${stagedLocalMedia.name}` : 'Shared a photo');
+      StorageService.sendDirectMessage(
+        currentUser.id,
+        activeUserId,
+        msgText,
+        undefined,
+        stagedLocalMedia.url,
+        stagedLocalMedia.type
+      );
+
+      setStagedLocalMedia(null);
+      setShareMediaCaption('');
+      setShowShareMediaPrompt(false);
+      refreshMessages();
+      refreshThreads();
+      setCopyFeedback('Media sent!');
+      setTimeout(() => setCopyFeedback(null), 3000);
     }
-
-    StorageService.sendChatGroupMessage(activeGroup.id, {
-      sender_id: currentUser.id,
-      sender_name: currentUser.full_name,
-      sender_avatar: currentUser.avatar_url,
-      sender_role: currentUser.role,
-      text: shareMediaCaption.trim() || (stagedLocalMedia.type === 'video' ? `Shared a video: ${stagedLocalMedia.name}` : stagedLocalMedia.type === 'audio' ? `Shared an audio: ${stagedLocalMedia.name}` : stagedLocalMedia.type === 'document' ? `Shared a document: ${stagedLocalMedia.name}` : 'Shared a photo'),
-      media_url: stagedLocalMedia.url,
-      media_type: stagedLocalMedia.type
-    });
-
-    setStagedLocalMedia(null);
-    setShareMediaCaption('');
-    setShowShareMediaPrompt(false);
-    refreshGroupsData();
-    setCopyFeedback('Media shared to fellowship group!');
-    setTimeout(() => setCopyFeedback(null), 3000);
   };
 
   const isPrivilegedAdminOrDev = 
@@ -391,7 +491,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       return;
     }
     // Close active chat and remain inside the chat box
-    setActiveUserId(null);
+    setActiveUserId('');
     setActiveGroupId('');
   };
 
@@ -506,6 +606,18 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
     StorageService.markGroupMessagesAsRead(groupId, currentUser.id);
     const msgs = StorageService.getChatGroupMessagesForUser(groupId, currentUser.id);
     setGroupMessages(msgs);
+  };
+
+  // Modern interactive reaction toggle handler
+  const handleToggleReaction = (messageId: string, emoji: string, isGroup: boolean) => {
+    if (isGroup && activeGroupId) {
+      StorageService.toggleReactionGroupMessage(activeGroupId, messageId, currentUser.id, emoji, currentUser.full_name);
+      const msgs = StorageService.getChatGroupMessagesForUser(activeGroupId, currentUser.id);
+      setGroupMessages(msgs);
+    } else if (activeUserId) {
+      StorageService.toggleReactionDirectMessage(messageId, currentUser.id, emoji, currentUser.full_name);
+      refreshMessages();
+    }
   };
 
   useEffect(() => {
@@ -649,6 +761,20 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   const totalUnreadGroups = StorageService.getTotalUnreadGroupMessagesCount(currentUser.id);
 
   const activeGroup = groups.find(g => g.id === activeGroupId) || (typeof window !== 'undefined' && !isMobile ? (visibleGroups[0] || null) : null);
+
+  const groupOnlineCount = React.useMemo(() => {
+    if (!activeGroup || !activeGroup.member_ids) return 0;
+    const allUsers = StorageService.getAllUsers();
+    return activeGroup.member_ids.reduce((acc, mid) => {
+      if (mid === currentUser.id) return acc + 1;
+      const u = allUsers.find(user => user.id === mid);
+      if (u) {
+        const lastSeen = StorageService.getUserLastSeen(u);
+        if (lastSeen.toLowerCase() === 'online') return acc + 1;
+      }
+      return acc;
+    }, 0);
+  }, [activeGroup, currentUser.id]);
 
   const activeGroupMembership = activeGroup 
     ? StorageService.getGroupMembership(activeGroup.id, currentUser.id) 
@@ -1039,7 +1165,8 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       );
     }
 
-    const parts = text.split(/(@[A-Za-z0-9_'\s]+?(?=\s@|\s[.,!?]|$|[.,!?]))/g);
+    // Split by @mentions or URLs (http/https)
+    const parts = text.split(/(@[A-Za-z0-9_'\s]+?(?=\s@|\s[.,!?]|$|[.,!?])|https?:\/\/[^\s]+)/g);
     return parts.map((part, index) => {
       if (part.startsWith('@')) {
         const rawName = part.slice(1).trim();
@@ -1056,6 +1183,22 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
           >
             @{rawName}
           </button>
+        );
+      }
+      if (/^https?:\/\//i.test(part)) {
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-blue-400 hover:text-blue-300 underline underline-offset-2 font-medium break-all inline-flex items-center gap-0.5 mx-0.5"
+            title={`Open link: ${part}`}
+          >
+            <span>{part}</span>
+            <ExternalLink className="w-3 h-3 inline-block shrink-0" />
+          </a>
         );
       }
       return part;
@@ -1093,18 +1236,18 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
         <div>{renderFormattedMessageText(msg.text)}</div>
 
         {matchedGroup && (
-          <div className="bg-[#001020] border border-[#D4AF37]/50 rounded-2xl p-3 space-y-2.5 text-xs shadow-xl text-white max-w-sm mt-1">
+          <div className="bg-card border border-border rounded-xl p-3 space-y-2.5 text-xs shadow-md text-foreground max-w-sm mt-1">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#D4AF37] to-amber-700 text-[#001F3F] flex items-center justify-center font-black text-sm shadow shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
                 {matchedGroup.name.slice(0, 1)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-[#D4AF37]" />
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Official Group Invitation</span>
+                  <ShieldCheck className="w-3 h-3 text-primary" />
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-primary">Official Group Invitation</span>
                 </div>
-                <h4 className="font-bold text-white text-xs truncate">{matchedGroup.name}</h4>
-                <p className="text-[10px] text-white/50">{matchedGroup.member_ids.length} members • Official Admin & Mod Link</p>
+                <h4 className="font-bold text-foreground text-xs truncate">{matchedGroup.name}</h4>
+                <p className="text-[10px] text-muted-foreground">{matchedGroup.member_ids.length} members • Official Admin & Mod Link</p>
               </div>
             </div>
 
@@ -1139,7 +1282,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                       triggerJoiningAnimation(matchedGroup);
                     }
                   }}
-                  className="text-[10px] text-[#D4AF37] underline font-bold hover:text-amber-300"
+                  className="text-[10px] text-primary underline font-bold hover:text-primary/80"
                 >
                   Change Mind & Join
                 </button>
@@ -1484,10 +1627,14 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
   );
 
   const filteredThreads = threads
-    .filter(t => 
-      t.other_user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.other_user.role && t.other_user.role.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+    .filter(t => {
+      const matchesSearch = t.other_user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (t.other_user.role && t.other_user.role.toLowerCase().includes(searchQuery.toLowerCase()));
+      if (!matchesSearch) return false;
+      if (threadFilter === 'unread') return t.unread_count > 0;
+      if (threadFilter === 'pinned') return pinnedDms.includes(t.other_user.id);
+      return true;
+    })
     .sort((a, b) => {
       const aP = pinnedDms.includes(a.other_user.id) ? 1 : 0;
       const bP = pinnedDms.includes(b.other_user.id) ? 1 : 0;
@@ -1495,20 +1642,28 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
     });
 
   const filteredGroups = visibleGroups
-    .filter(g =>
-      g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      g.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (g.category && g.category.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+    .filter(g => {
+      const matchesSearch = g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        g.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (g.category && g.category.toLowerCase().includes(searchQuery.toLowerCase()));
+      if (!matchesSearch) return false;
+      const isMember = g.member_ids.includes(currentUser.id);
+      if (groupFilter === 'joined') return isMember;
+      if (groupFilter === 'paid') return Boolean(g.is_paid);
+      if (groupFilter === 'open') return !g.is_paid;
+      return true;
+    })
     .sort((a, b) => {
       const aP = a.pinned_by_users?.includes(currentUser.id) ? 1 : 0;
       const bP = b.pinned_by_users?.includes(currentUser.id) ? 1 : 0;
       return bP - aP;
     });
 
+  const isMobileChatActive = isMobile && ((activeTab === 'direct' && Boolean(activeUserId) && !showNewChatPicker) || (activeTab === 'groups' && Boolean(activeGroupId)));
+
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -1516,16 +1671,27 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       }}
     >
       <div 
-        className="bg-card border-t sm:border border-border rounded-t-3xl sm:rounded-2xl w-full max-w-4xl h-[94vh] sm:h-[90vh] sm:max-h-[780px] flex flex-col shadow-2xl overflow-hidden text-card-foreground animate-in slide-in-from-bottom-5 sm:zoom-in-95 duration-200"
+        className="bg-card border-0 sm:border border-border/80 rounded-none sm:rounded-2xl w-full max-w-5xl h-[100dvh] sm:h-[88vh] sm:max-h-[820px] flex flex-col shadow-2xl overflow-hidden text-card-foreground animate-in slide-in-from-bottom-3 sm:zoom-in-95 duration-200 pb-[env(safe-area-inset-bottom,0px)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Mobile Pull/Drag handle indicator */}
-        <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto my-1.5 sm:hidden shrink-0" />
+        {!isMobileChatActive && (
+          <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto my-1.5 sm:hidden shrink-0" />
+        )}
 
-        {/* Top Header Bar & Mode Selector */}
-        <div className="h-13 bg-card border-b border-border px-3 sm:px-4 flex items-center justify-between shrink-0">
+        {/* Global Local Storage Media Picker: image, video, audio, document */}
+        <input
+          ref={mediaFileInputRef}
+          type="file"
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+          onChange={handleLocalMediaSelect}
+          className="hidden"
+        />
+
+        {/* Top Header Bar & Mode Selector (Seamlessly hides on mobile when chatting to give full native chat screen) */}
+        <div className={`h-14 bg-card border-b border-border/80 px-3 sm:px-4 ${isMobileChatActive ? 'hidden sm:flex' : 'flex'} items-center justify-between shrink-0`}>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="bg-secondary/70 p-1 rounded-xl border border-border/60 flex items-center gap-1">
               <button
                 id="tab-direct-messages"
                 onClick={() => {
@@ -1535,7 +1701,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs sm:text-sm transition-all ${
                   activeTab === 'direct'
                     ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
                 }`}
               >
                 <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -1558,7 +1724,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs sm:text-sm transition-all ${
                   activeTab === 'groups'
                     ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
                 }`}
               >
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -1592,15 +1758,15 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
               </span>
             )}
 
-            {/* Quick close active chat button if a conversation is open */}
+            {/* Quick close active chat button if a conversation is open on desktop */}
             {(activeUserId || activeGroupId) && (
               <button
                 onClick={handleCloseActiveChat}
-                className="text-xs px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground border border-border flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                className="hidden sm:flex text-xs px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground border border-border items-center gap-1 font-medium transition-colors cursor-pointer"
                 title="Close active chat (stay in chat box)"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Close Chat</span>
+                <span>Close Chat</span>
               </button>
             )}
 
@@ -1622,12 +1788,12 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
           {/* ========================================================================= */}
           {/* LEFT COLUMN (Sidebar for Direct Messages OR Church Groups) */}
           {/* ========================================================================= */}
-          <div className={`w-full sm:w-80 bg-card sm:bg-secondary/30 border-r border-border flex flex-col relative ${
-            (activeTab === 'direct' ? activeUserId && !showNewChatPicker : activeGroupId) ? 'hidden sm:flex' : 'flex'
+          <div className={`w-full sm:w-84 md:w-92 bg-card border-r border-border/80 flex flex-col relative ${
+            isMobileChatActive ? 'hidden sm:flex' : 'flex'
           }`}>
             
             {/* Search & Actions Bar */}
-            <div className="p-3 border-b border-border flex items-center gap-2">
+            <div className="p-3 border-b border-border/60 flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
@@ -1639,7 +1805,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                       ? (showNewChatPicker ? "Search all believers..." : "Search messages...")
                       : "Search church groups..."
                   }
-                  className="w-full bg-secondary/70 border border-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full bg-secondary/70 border border-border/70 rounded-xl pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
 
@@ -1648,7 +1814,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                   id="btn-new-chat-plus"
                   onClick={() => setShowNewChatPicker(!showNewChatPicker)}
                   title={showNewChatPicker ? "View Conversations" : "New Chat (+)"}
-                  className={`p-2 rounded-lg transition-all font-semibold flex items-center justify-center shrink-0 shadow-sm ${
+                  className={`p-2 rounded-xl transition-all font-semibold flex items-center justify-center shrink-0 shadow-sm ${
                     showNewChatPicker 
                       ? 'bg-destructive/15 text-destructive border border-destructive/30 hover:bg-destructive/25' 
                       : 'bg-primary text-primary-foreground hover:brightness-105'
@@ -1661,7 +1827,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                   <button
                     onClick={() => setShowJoinByCodeModal(true)}
                     title="Join via link or code"
-                    className="p-2 rounded-lg bg-secondary border border-border text-foreground hover:bg-secondary/80 text-xs font-semibold"
+                    className="p-2 rounded-xl bg-secondary border border-border text-foreground hover:bg-secondary/80 text-xs font-semibold cursor-pointer"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
@@ -1670,7 +1836,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                       id="btn-create-church-group"
                       onClick={() => setShowCreateGroupModal(true)}
                       title="Create Church Group"
-                      className="p-2 rounded-lg bg-primary text-primary-foreground hover:brightness-105 transition-all font-semibold shadow-sm"
+                      className="p-2 rounded-xl bg-primary text-primary-foreground hover:brightness-105 transition-all font-semibold shadow-sm cursor-pointer"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -1678,6 +1844,94 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Filter Chips row */}
+            {!showNewChatPicker && (
+              <div className="px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-border/50 text-[11px] bg-secondary/20">
+                {activeTab === 'direct' ? (
+                  <>
+                    <button
+                      onClick={() => setThreadFilter('all')}
+                      className={`px-2.5 py-1 rounded-full font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                        threadFilter === 'all'
+                          ? 'bg-primary text-primary-foreground shadow-xs'
+                          : 'bg-secondary/80 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setThreadFilter('unread')}
+                      className={`px-2.5 py-1 rounded-full font-semibold whitespace-nowrap transition-colors flex items-center gap-1 cursor-pointer ${
+                        threadFilter === 'unread'
+                          ? 'bg-primary text-primary-foreground shadow-xs'
+                          : 'bg-secondary/80 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <span>Unread</span>
+                      {totalUnreadDms > 0 && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setThreadFilter('pinned')}
+                      className={`px-2.5 py-1 rounded-full font-semibold whitespace-nowrap transition-colors flex items-center gap-1 cursor-pointer ${
+                        threadFilter === 'pinned'
+                          ? 'bg-primary text-primary-foreground shadow-xs'
+                          : 'bg-secondary/80 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Pin className="w-2.5 h-2.5" />
+                      <span>Pinned</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setGroupFilter('all')}
+                      className={`px-2.5 py-1 rounded-full font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                        groupFilter === 'all'
+                          ? 'bg-primary text-primary-foreground shadow-xs'
+                          : 'bg-secondary/80 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setGroupFilter('joined')}
+                      className={`px-2.5 py-1 rounded-full font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                        groupFilter === 'joined'
+                          ? 'bg-primary text-primary-foreground shadow-xs'
+                          : 'bg-secondary/80 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      My Fellowships
+                    </button>
+                    <button
+                      onClick={() => setGroupFilter('paid')}
+                      className={`px-2.5 py-1 rounded-full font-semibold whitespace-nowrap transition-colors flex items-center gap-1 cursor-pointer ${
+                        groupFilter === 'paid'
+                          ? 'bg-primary text-primary-foreground shadow-xs'
+                          : 'bg-secondary/80 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Crown className="w-2.5 h-2.5 text-amber-400" />
+                      <span>Discipleship</span>
+                    </button>
+                    <button
+                      onClick={() => setGroupFilter('open')}
+                      className={`px-2.5 py-1 rounded-full font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                        groupFilter === 'open'
+                          ? 'bg-primary text-primary-foreground shadow-xs'
+                          : 'bg-secondary/80 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Free / Open
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* DIRECT CHATS VIEW */}
             {activeTab === 'direct' && (
@@ -1730,13 +1984,13 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="flex-1 overflow-y-auto divide-y divide-border">
+                  <div className="flex-1 overflow-y-auto py-1">
                     {filteredThreads.length === 0 ? (
                       <div className="p-6 text-center text-muted-foreground text-xs space-y-2">
                         <p>No active conversations yet.</p>
                         <button
                           onClick={() => setShowNewChatPicker(true)}
-                          className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:brightness-105 transition-colors inline-flex items-center gap-1 shadow-sm"
+                          className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:brightness-105 transition-colors inline-flex items-center gap-1 shadow-sm cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>Start a chat</span>
@@ -1749,8 +2003,8 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                           <button
                             key={thread.other_user.id}
                             onClick={() => setActiveUserId(thread.other_user.id)}
-                            className={`w-full p-3 flex items-center gap-3 transition-colors text-left ${
-                              isSelected ? 'bg-primary/10 border-l-4 border-primary text-foreground' : 'hover:bg-secondary/60 text-foreground'
+                            className={`w-[calc(100%-16px)] mx-2 my-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all text-left cursor-pointer ${
+                              isSelected ? 'bg-primary/15 text-foreground font-medium shadow-xs ring-1 ring-primary/20' : 'hover:bg-secondary/60 text-foreground'
                             }`}
                           >
                             <div className="relative shrink-0">
@@ -1801,7 +2055,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
 
             {/* CHURCH GROUPS VIEW */}
             {activeTab === 'groups' && (
-              <div className="flex-1 overflow-y-auto divide-y divide-border">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden divide-y divide-border min-w-0 w-full">
                 {/* Pending WhatsApp Invites */}
                 {pendingInvites.length > 0 && (
                   <div className="p-3 bg-secondary/80 border-b border-border space-y-2.5">
@@ -1848,7 +2102,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                 {filteredGroups.map(grp => {
                   const isSelected = grp.id === activeGroupId;
                   const isMember = grp.member_ids.includes(currentUser.id);
-                  const isFs = grp.id === 'group_foundation_school';
+                  const isFs = grp.id === 'group_foundation_school' || grp.id === 'group_isn_mentorship';
                   const grpUnread = StorageService.getUnreadGroupMessagesCount(grp.id, currentUser.id);
                   const grpMsgs = StorageService.getChatGroupMessagesForUser(grp.id, currentUser.id);
                   const lastMsg = grpMsgs[grpMsgs.length - 1];
@@ -1858,8 +2112,8 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     <button
                       key={grp.id}
                       onClick={() => handleSelectGroup(grp.id)}
-                      className={`w-full p-3 flex items-center gap-3 transition-colors text-left ${
-                        isSelected ? 'bg-primary/10 border-l-4 border-primary text-foreground' : 'hover:bg-secondary/60 text-foreground'
+                      className={`w-[calc(100%-16px)] max-w-[calc(100%-16px)] mx-2 my-1 px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all text-left cursor-pointer min-w-0 overflow-hidden box-border ${
+                        isSelected ? 'bg-primary/15 text-foreground font-medium shadow-xs ring-1 ring-primary/20' : 'hover:bg-secondary/60 text-foreground'
                       }`}
                     >
                       <div className="relative shrink-0">
@@ -1882,32 +2136,32 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1 mb-0.5">
-                          <h4 className={`text-xs sm:text-sm truncate flex items-center gap-1 ${
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-center justify-between gap-1.5 mb-0.5 min-w-0">
+                          <h4 className={`text-xs sm:text-sm flex items-center gap-1 min-w-0 flex-1 overflow-hidden ${
                             grpUnread > 0 ? 'font-bold text-foreground' : 'font-semibold text-foreground/90'
                           }`}>
                             {grp.pinned_by_users?.includes(currentUser.id) && (
                               <Pin className="w-3 h-3 text-primary fill-primary shrink-0" />
                             )}
-                            <span>{grp.name}</span>
+                            <span className="truncate min-w-0 block">{grp.name}</span>
                           </h4>
                           <div className="flex items-center gap-1.5 shrink-0">
                             {lastMsgTime && (
-                              <span className={`text-[10px] ${grpUnread > 0 ? 'text-emerald-500 font-bold' : 'text-muted-foreground'}`}>
+                              <span className={`text-[10px] whitespace-nowrap ${grpUnread > 0 ? 'text-emerald-500 font-bold' : 'text-muted-foreground'}`}>
                                 {lastMsgTime}
                               </span>
                             )}
                             {grp.is_paid ? (
-                              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20">
+                              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20 shrink-0 whitespace-nowrap">
                                 ${grp.price_usd}/3m
                               </span>
                             ) : null}
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between gap-2">
-                          <p className={`text-[11px] truncate flex-1 ${
+                        <div className="flex items-center justify-between gap-2 min-w-0">
+                          <p className={`text-[11px] truncate flex-1 min-w-0 ${
                             grpUnread > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'
                           }`}>
                             {lastMsg 
@@ -1923,12 +2177,12 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-secondary text-muted-foreground font-semibold uppercase tracking-wider border border-border">
+                        <div className="flex items-center gap-2 mt-1 min-w-0">
+                          <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-secondary text-muted-foreground font-semibold uppercase tracking-wider border border-border shrink-0">
                             {grp.category || 'Group'}
                           </span>
 
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-[10px] text-muted-foreground truncate">
                             {grp.member_ids.length} members
                           </span>
 
@@ -1994,9 +2248,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
           {/* RIGHT COLUMN (Active Conversation Canvas for Direct OR Group) */}
           {/* ========================================================================= */}
           <div className={`flex-1 flex flex-col bg-background ${
-            activeTab === 'direct' 
-              ? (!activeUserId && 'hidden sm:flex') 
-              : (!activeGroupId && 'hidden sm:flex')
+            (activeTab === 'direct' ? !activeUserId : !activeGroupId) ? 'hidden sm:flex' : 'flex'
           }`}>
             
             {/* DIRECT CHAT ACTIVE CANVAS */}
@@ -2036,32 +2288,36 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="h-14 bg-card border-b border-border px-4 flex items-center justify-between shrink-0">
-                      <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-16 bg-card border-b border-border px-3 sm:px-4 flex items-center justify-between shrink-0 shadow-xs">
+                      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                         <button
                           onClick={handleBackOrClose}
-                          className="sm:hidden p-1 rounded-lg hover:bg-secondary text-muted-foreground"
+                          className="sm:hidden p-2 -ml-1 rounded-full hover:bg-secondary text-muted-foreground active:scale-95 transition-transform cursor-pointer"
+                          title="Back to conversations"
                         >
                           <ArrowLeft className="w-5 h-5" />
                         </button>
                         <button
                           type="button"
                           onClick={() => setViewUserProfile(activeUser)}
-                          className="flex items-center gap-2.5 text-left p-1 rounded-lg hover:bg-secondary/60 transition-colors cursor-pointer min-w-0"
+                          className="flex items-center gap-2.5 text-left p-1 rounded-xl hover:bg-secondary/60 transition-colors cursor-pointer min-w-0"
                           title="View profile"
                         >
-                          <div className="w-9 h-9 rounded-full border border-border overflow-hidden bg-secondary flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                          <div className="relative w-10 h-10 rounded-full border border-border overflow-hidden bg-secondary flex items-center justify-center text-xs font-bold text-primary shrink-0">
                             {activeUser.avatar_url ? (
                               <img src={activeUser.avatar_url} alt={activeUser.full_name} className="w-full h-full object-cover" />
                             ) : (
                               activeUser.full_name.slice(0, 2).toUpperCase()
                             )}
+                            {(StorageService.getUserLastSeen(activeUser) === 'online' || activeUser.role === 'developer' || activeUser.phone === '0780699988') && (
+                              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-card" title="Online" />
+                            )}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-semibold text-xs sm:text-sm text-foreground flex items-center gap-1 truncate">
+                            <h3 className="font-semibold text-xs sm:text-sm text-foreground flex items-center gap-1.5 truncate">
                               <span className="truncate">{activeUser.full_name}</span>
                               {activeUser.role === 'super_admin' && (
-                                <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-primary/10 text-primary border border-primary/20 font-bold shrink-0">
+                                <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold shrink-0">
                                   Apostolic Lead
                                 </span>
                               )}
@@ -2077,20 +2333,24 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                 <span className="truncate font-mono">{activeUser.full_name} typing...</span>
                               </p>
                             ) : (
-                              <p className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
+                              <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 truncate">
                                 {activeUser.role === 'developer' || activeUser.phone === '0780699988' ? (
                                   <>
-                                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
-                                    <span className="truncate">Lead Developer • Online</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                                    <span className="truncate text-emerald-600 dark:text-emerald-400 font-semibold">Online</span>
                                   </>
                                 ) : (
                                   <>
-                                    {StorageService.getUserLastSeen(activeUser) === 'online' && (
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                    {StorageService.getUserLastSeen(activeUser) === 'online' ? (
+                                      <>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                                        <span className="truncate text-emerald-600 dark:text-emerald-400 font-semibold">Online</span>
+                                      </>
+                                    ) : (
+                                      <span className="truncate font-medium">
+                                        {StorageService.getUserLastSeen(activeUser) || `Active • ${activeUser.location || 'Harare'}`}
+                                      </span>
                                     )}
-                                    <span className="truncate font-medium">
-                                      {StorageService.getUserLastSeen(activeUser) || `Active • ${activeUser.location || 'Harare'}`}
-                                    </span>
                                   </>
                                 )}
                               </p>
@@ -2103,16 +2363,22 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                       <div className="relative flex items-center gap-1 sm:gap-1.5">
                         <button
                           onClick={() => setShowDirectTopMenu(prev => !prev)}
-                          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          className="p-2 rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                           title="More options"
                         >
                           <MoreVertical className="w-4 h-4" />
                         </button>
 
                         <button
-                          onClick={() => setActiveUserId(null)}
-                          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                          title="Close Chat"
+                          onClick={() => {
+                            if (isMobile) {
+                              onClose();
+                            } else {
+                              setActiveUserId('');
+                            }
+                          }}
+                          className="p-2 rounded-xl hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                          title={isMobile ? "Close Messages" : "Close Chat"}
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -2233,65 +2499,103 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                     </div>
                   )}
 
-                  {/* Messages Bubbles Area */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-background">
-                    {messages.map((msg) => {
+                  {/* Messages Bubbles Area - Modern Thread-based Layout */}
+                  <div className="flex-1 overflow-y-auto p-2.5 sm:p-4 bg-[#efeae2]/30 dark:bg-[#0b141a] bg-[radial-gradient(#00000008_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff08_1px,transparent_1px)] bg-[size:16px_16px] overscroll-contain">
+                    {messages.map((msg, index) => {
                       const isMine = msg.sender_id === currentUser.id;
                       const isSelected = selectedMessageIds.includes(msg.id);
                       const isDeleted = Boolean(msg.deleted_for_everyone || msg.text === 'This message was deleted');
 
+                      const prevMsg = index > 0 ? messages[index - 1] : null;
+                      const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
+
+                      // Date grouping
+                      const msgDate = new Date(msg.created_at).toDateString();
+                      const prevMsgDate = prevMsg ? new Date(prevMsg.created_at).toDateString() : null;
+                      const showDateDivider = !prevMsgDate || msgDate !== prevMsgDate;
+
+                      // Thread clustering within 5 minutes
+                      const isSameSenderAsPrev = prevMsg && prevMsg.sender_id === msg.sender_id && !prevMsg.deleted_for_everyone && (new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 300000);
+                      const isSameSenderAsNext = nextMsg && nextMsg.sender_id === msg.sender_id && !nextMsg.deleted_for_everyone && (new Date(nextMsg.created_at).getTime() - new Date(msg.created_at).getTime() < 300000);
+
+                      const isFirstInCluster = !isSameSenderAsPrev || showDateDivider;
+                      const isLastInCluster = !isSameSenderAsNext || (nextMsg && new Date(nextMsg.created_at).toDateString() !== msgDate);
+
+                      const bubbleRoundingClass = getBubbleRounding(isMine, isFirstInCluster, isLastInCluster);
+
                       return (
-                        <div
-                          key={msg.id}
-                          onClick={() => {
-                            if (isSelectMode) handleToggleSelectMessage(msg.id);
-                          }}
-                          className={`group/msg flex items-end gap-2 transition-colors rounded-xl p-1 ${
-                            isSelectMode ? 'cursor-pointer hover:bg-secondary/60' : ''
-                          } ${isSelected ? 'bg-primary/15' : ''} ${isMine ? 'justify-end' : 'justify-start'}`}
-                        >
-                          {isSelectMode && (
-                            <div className="shrink-0 mb-2">
-                              {isSelected ? (
-                                <CheckSquare className="w-4 h-4 text-primary" />
-                              ) : (
-                                <Square className="w-4 h-4 text-muted-foreground" />
-                              )}
+                        <React.Fragment key={msg.id}>
+                          {/* Floating Date Divider */}
+                          {showDateDivider && (
+                            <div className="flex justify-center my-3 sm:my-4 sticky top-1 z-10 pointer-events-none">
+                              <span className="px-3 py-1 rounded-full bg-card/90 dark:bg-card/90 backdrop-blur-md text-[10px] sm:text-[11px] font-semibold text-muted-foreground border border-border/80 shadow-2xs tracking-wide">
+                                {formatMessageDateDivider(msg.created_at)}
+                              </span>
                             </div>
                           )}
 
-                          <div className={`max-w-[80%] sm:max-w-[70%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
-                            <div
-                              className={`px-3.5 py-2.5 rounded-2xl text-xs break-words shadow-sm leading-relaxed ${
-                                isDeleted 
-                                  ? 'bg-secondary border border-border text-muted-foreground italic'
-                                  : isMine
-                                    ? 'bg-primary text-primary-foreground rounded-br-none'
-                                    : 'bg-card border border-border text-card-foreground rounded-bl-none'
-                              }`}
-                            >
-                              {renderMessageContent(msg)}
-                            </div>
+                          <div
+                            onClick={() => {
+                              if (isSelectMode) handleToggleSelectMessage(msg.id);
+                            }}
+                            className={`group/msg relative flex items-end gap-2 transition-all duration-150 px-1 ${
+                              isFirstInCluster ? 'mt-3 sm:mt-3.5' : 'mt-1 sm:mt-1.5'
+                            } ${isSelectMode ? 'cursor-pointer hover:bg-secondary/40 rounded-xl' : ''} ${
+                              isSelected ? 'bg-primary/15 rounded-xl' : ''
+                            } ${isMine ? 'justify-end' : 'justify-start'}`}
+                          >
+                            {isSelectMode && (
+                              <div className="shrink-0 mb-2">
+                                {isSelected ? (
+                                  <CheckSquare className="w-4 h-4 text-primary" />
+                                ) : (
+                                  <Square className="w-4 h-4 text-muted-foreground" />
+                                )}
+                              </div>
+                            )}
 
-                            <div className="flex items-center gap-2 text-[9px] text-muted-foreground mt-1 px-1">
-                              <span>
-                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                              {isMine && !isDeleted && (
-                                <span title={msg.is_read ? "Read" : "Delivered"} className="inline-flex items-center">
-                                  <CheckCheck className={`w-3.5 h-3.5 inline ${msg.is_read ? 'text-primary' : 'text-muted-foreground'}`} />
-                                </span>
-                              )}
-
+                            <div className={`relative max-w-[85%] xs:max-w-[80%] sm:max-w-[70%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                              {/* Hover / Tap Quick Reaction Bar */}
                               {!isSelectMode && !isDeleted && (
-                                <div className="opacity-80 sm:opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1.5 ml-1">
+                                <div className={`opacity-0 group-hover/msg:opacity-100 transition-opacity absolute -top-8.5 z-20 flex items-center gap-0.5 bg-card/95 backdrop-blur-md border border-border/80 shadow-md rounded-full px-2 py-0.5 ${
+                                  isMine ? 'right-0' : 'left-0'
+                                }`}>
+                                  {['🙏', '❤️', '🔥', '👍', '😂', '🕊️'].map((emoji) => (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleReaction(msg.id, emoji, false);
+                                      }}
+                                      className="hover:scale-130 transition-transform text-xs p-1 cursor-pointer active:scale-90"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                  <div className="w-[1px] h-3 bg-border mx-1" />
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setReplyingToMessage({
+                                        id: msg.id,
+                                        sender_name: isMine ? 'You' : activeUser.full_name,
+                                        text: msg.text
+                                      });
+                                    }}
+                                    className="p-1 hover:text-primary text-muted-foreground transition-colors cursor-pointer"
+                                    title="Reply"
+                                  >
+                                    <Reply className="w-3 h-3" />
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleStartSelectMode(msg.id);
                                     }}
-                                    className="hover:text-foreground text-muted-foreground p-0.5"
+                                    className="p-1 hover:text-foreground text-muted-foreground transition-colors cursor-pointer"
                                     title="Select message"
                                   >
                                     <CheckSquare className="w-3 h-3" />
@@ -2302,33 +2606,188 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                       e.stopPropagation();
                                       handleDeleteSingleMessage(msg.id, false);
                                     }}
-                                    className="hover:text-destructive text-muted-foreground p-0.5"
+                                    className="p-1 hover:text-destructive text-muted-foreground transition-colors cursor-pointer"
                                     title="Delete message"
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </button>
                                 </div>
                               )}
+
+                              {/* Shared Media / Photo / Video / Audio / Document in 1-on-1 DM */}
+                              {msg.media_url && !isDeleted && (
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedMediaPreview({
+                                      url: msg.media_url!,
+                                      type: msg.media_type || 'image',
+                                      caption: msg.text !== 'Shared a photo' ? msg.text : undefined,
+                                      sender_name: isMine ? currentUser.full_name : activeUser.full_name,
+                                      created_at: msg.created_at
+                                    });
+                                  }}
+                                  className="mb-1.5 rounded-2xl overflow-hidden max-w-xs cursor-pointer group/media relative border border-border/80 shadow-2xs"
+                                >
+                                  {msg.media_type === 'video' ? (
+                                    <video src={msg.media_url} controls className="w-full max-h-60 object-contain bg-black" />
+                                  ) : msg.media_type === 'audio' ? (
+                                    <div className="p-3 min-w-[240px] bg-secondary/80">
+                                      <div className="flex items-center gap-2 mb-1.5 text-xs font-semibold text-foreground">
+                                        <Music className="w-4 h-4 text-primary" />
+                                        <span>Voice / Audio Note</span>
+                                      </div>
+                                      <audio src={msg.media_url} controls className="w-full h-8" />
+                                    </div>
+                                  ) : msg.media_type === 'document' ? (
+                                    <div className="p-3 min-w-[220px] bg-secondary/80 flex items-center gap-3">
+                                      <FileText className="w-7 h-7 text-primary shrink-0" />
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-semibold truncate text-foreground">
+                                          {msg.text.replace(/^Shared a document:\s*/, '') || 'Document'}
+                                        </p>
+                                        <a
+                                          href={msg.media_url}
+                                          download
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="text-[10px] text-primary hover:underline font-bold inline-flex items-center gap-1"
+                                        >
+                                          <Download className="w-3 h-3" />
+                                          <span>Download document</span>
+                                        </a>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={msg.media_url}
+                                      alt="Shared Media"
+                                      className="w-full max-h-60 object-cover group-hover/media:scale-105 transition-transform duration-200"
+                                    />
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Message Bubble */}
+                              <div
+                                className={`px-3.5 py-2 sm:px-4 sm:py-2.5 ${bubbleRoundingClass} text-xs sm:text-[13px] break-words shadow-xs leading-relaxed transition-shadow duration-150 ${
+                                  isDeleted 
+                                    ? 'bg-secondary/70 border border-border/80 text-muted-foreground italic'
+                                    : isMine
+                                      ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white dark:bg-[#005c4b] dark:from-[#005c4b] dark:to-[#005c4b] dark:text-[#e9edef] border border-amber-500/30 dark:border-[#005c4b]/50 shadow-sm'
+                                      : 'bg-card dark:bg-[#202c33] border border-border/85 dark:border-white/5 text-foreground dark:text-[#e9edef] shadow-2xs'
+                                }`}
+                              >
+                                {/* Quoted Reply preview inside message */}
+                                {msg.reply_to && !isDeleted && (
+                                  <div className={`mb-2 p-2 rounded-xl text-left text-[11px] leading-snug border-l-3 ${
+                                    isMine 
+                                      ? 'bg-black/20 border-white/80 text-white' 
+                                      : 'bg-secondary/80 border-primary text-foreground'
+                                  }`}>
+                                    <div className={`font-semibold text-[10px] flex items-center gap-1 ${isMine ? 'text-white' : 'text-primary'}`}>
+                                      <Reply className="w-3 h-3" />
+                                      <span>{msg.reply_to.sender_name}</span>
+                                    </div>
+                                    <p className="line-clamp-2 text-[11px] mt-0.5 opacity-90">
+                                      {msg.reply_to.text}
+                                    </p>
+                                  </div>
+                                )}
+
+                                <div className="leading-relaxed">
+                                  {renderMessageContent(msg)}
+                                </div>
+
+                                {/* Micro Timestamp & Delivery Receipt */}
+                                <div className={`flex items-center justify-end gap-1 text-[9.5px] sm:text-[10px] mt-1 select-none font-medium tracking-tight ${
+                                  isMine ? 'text-white/80 dark:text-[#8696a0]' : 'text-muted-foreground/80 dark:text-[#8696a0]'
+                                }`}>
+                                  <span>
+                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  {isMine && !isDeleted && (
+                                    <span title={msg.is_read ? "Read" : "Delivered"} className="inline-flex items-center ml-0.5">
+                                      <CheckCheck className={`w-3.5 h-3.5 inline ${msg.is_read ? 'text-sky-300 dark:text-[#53bdeb]' : 'text-white/70 dark:text-[#8696a0]'}`} />
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Interactive Message Reactions Chips */}
+                              {msg.reactions && msg.reactions.length > 0 && (
+                                <div className={`flex flex-wrap items-center gap-1 -mt-2 z-10 ${
+                                  isMine ? 'justify-end pr-1' : 'justify-start pl-1'
+                                }`}>
+                                  {Array.from(new Set(msg.reactions.map((r) => r.emoji))).map((emoji) => {
+                                    const count = msg.reactions!.filter((r) => r.emoji === emoji).length;
+                                    const reactedByMe = msg.reactions!.some((r) => r.emoji === emoji && r.user_id === currentUser.id);
+                                    return (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleToggleReaction(msg.id, emoji, false);
+                                        }}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold shadow-2xs border transition-transform active:scale-90 cursor-pointer ${
+                                          reactedByMe
+                                            ? 'bg-primary/15 border-primary/40 text-primary'
+                                            : 'bg-card/95 backdrop-blur-xs border-border text-foreground hover:bg-secondary'
+                                        }`}
+                                        title={msg.reactions!.filter((r) => r.emoji === emoji).map((r) => r.user_name || 'Believer').join(', ')}
+                                      >
+                                        <span>{emoji}</span>
+                                        {count > 1 && <span className="text-[10px]">{count}</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           </div>
-                        </div>
+                        </React.Fragment>
                       );
                     })}
                     <div ref={messagesEndRef} />
                   </div>
 
-                  {/* Quick Emoji Bar */}
-                  <div className="px-4 py-1.5 bg-card border-t border-border flex items-center gap-2 text-xs">
-                    {EMOJI_REACTIONS.map((emoji) => (
+                  {/* Collapsible Quick Emoji Bar */}
+                  {showEmojiPicker && (
+                    <div className="px-3 py-2 bg-secondary/50 border-t border-border flex items-center gap-2 text-xs overflow-x-auto">
+                      <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider shrink-0">Reactions:</span>
+                      {EMOJI_REACTIONS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => setInputText((prev) => prev + emoji)}
+                          className="hover:scale-125 transition-transform text-base p-1 cursor-pointer"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Quoted Reply Preview Bar if replying */}
+                  {replyingToMessage && (
+                    <div className="px-3.5 py-2 bg-secondary/90 border-t border-border flex items-center justify-between text-xs animate-in slide-in-from-bottom-2">
+                      <div className="flex items-center gap-2 border-l-3 border-primary pl-2.5 min-w-0">
+                        <Reply className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-primary truncate">Replying to {replyingToMessage.sender_name}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{replyingToMessage.text}</p>
+                        </div>
+                      </div>
                       <button
-                        key={emoji}
-                        onClick={() => setInputText((prev) => prev + emoji)}
-                        className="hover:scale-125 transition-transform text-sm cursor-pointer"
+                        type="button"
+                        onClick={() => setReplyingToMessage(null)}
+                        className="p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-secondary cursor-pointer"
+                        title="Cancel reply"
                       >
-                        {emoji}
+                        <X className="w-4 h-4" />
                       </button>
-                    ))}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Message Input Box */}
                   <form
@@ -2336,8 +2795,28 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                       e.preventDefault();
                       handleSendMessage();
                     }}
-                    className="p-3 bg-card border-t border-border flex items-center gap-2"
+                    className="p-2 sm:p-2.5 bg-card border-t border-border flex items-center gap-1.5 sm:gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
                   >
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(prev => !prev)}
+                      title="Quick Reactions"
+                      className={`p-2 rounded-full border transition-colors shrink-0 cursor-pointer ${
+                        showEmojiPicker 
+                          ? 'bg-primary/20 text-primary border-primary/30' 
+                          : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground border-border'
+                      }`}
+                    >
+                      <Smile className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => mediaFileInputRef.current?.click()}
+                      title="Attach photo, video, audio or document"
+                      className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary border border-border transition-colors shrink-0 cursor-pointer"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </button>
                     <input
                       type="text"
                       value={inputText}
@@ -2356,24 +2835,47 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                         }
                       }}
                       placeholder={`Message ${activeUser.full_name}...`}
-                      className="flex-1 bg-secondary border border-border rounded-lg px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="flex-1 bg-secondary/80 border border-border rounded-full px-4 py-2 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1.5 focus:ring-primary shadow-2xs"
                     />
                     <button
                       type="submit"
                       disabled={!inputText.trim()}
-                      className="p-2.5 rounded-lg bg-primary hover:brightness-105 disabled:opacity-40 text-primary-foreground font-semibold transition-all shadow-sm shrink-0"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary hover:brightness-105 disabled:opacity-40 text-primary-foreground font-semibold flex items-center justify-center transition-all shadow-sm shrink-0 cursor-pointer active:scale-95"
+                      title="Send message"
                     >
-                      <Send className="w-4 h-4" />
+                      <Send className="w-4 h-4 ml-0.5" />
                     </button>
                   </form>
                 </>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-muted-foreground bg-background">
-                  <Send className="w-12 h-12 text-primary/40 mb-2" />
-                  <h3 className="font-semibold text-foreground text-sm">Your Direct Messages</h3>
-                  <p className="text-xs text-muted-foreground max-w-xs mt-1">
-                    Send private prayers, direct words of faith, or connect with Ministry Leaders.
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-background select-none">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-4 shadow-sm">
+                    <MessageCircle className="w-8 h-8" />
+                  </div>
+                  <h3 className="font-bold text-foreground text-base">Direct Apostolic Fellowship</h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mt-1.5 leading-relaxed">
+                    Select a conversation from the sidebar or start a new direct message with Apostle Joe Daniels, ministry leaders, or church brethren.
                   </p>
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      onClick={() => setShowNewChatPicker(true)}
+                      className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:brightness-105 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Start New Conversation</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('groups')}
+                      className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold border border-border transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5 text-primary" />
+                      <span>Explore Groups</span>
+                    </button>
+                  </div>
+                  <div className="mt-8 pt-6 border-t border-border flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <Lock className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Private & locally encrypted church messaging</span>
+                  </div>
                 </div>
               )
             )}
@@ -2415,11 +2917,12 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="h-16 bg-card border-b border-border px-3 sm:px-4 flex items-center justify-between shrink-0 gap-2 shadow-sm">
-                      <div className="flex items-center gap-2 min-w-0">
+                    <div className="h-16 bg-card border-b border-border px-3 sm:px-4 flex items-center justify-between shrink-0 gap-2 shadow-xs">
+                      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                         <button
                           onClick={handleBackOrClose}
-                          className="sm:hidden p-1 rounded-lg hover:bg-secondary text-muted-foreground"
+                          className="sm:hidden p-2 -ml-1 rounded-full hover:bg-secondary text-muted-foreground active:scale-95 transition-transform cursor-pointer"
+                          title="Back to conversations"
                         >
                           <ArrowLeft className="w-5 h-5" />
                         </button>
@@ -2428,14 +2931,17 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                         <button
                           type="button"
                           onClick={() => setShowGroupInfoModal(true)}
-                          className="flex items-center gap-2.5 text-left p-1 rounded-lg hover:bg-secondary/60 transition-colors cursor-pointer group/hdr min-w-0"
+                          className="flex items-center gap-2.5 text-left p-1 rounded-xl hover:bg-secondary/60 transition-colors cursor-pointer group/hdr min-w-0"
                           title="Click to see group info and members"
                         >
-                          <div className="w-10 h-10 rounded-full border border-border overflow-hidden bg-secondary flex items-center justify-center text-xs font-bold text-primary shrink-0 transition-colors">
+                          <div className="relative w-10 h-10 rounded-full border border-border overflow-hidden bg-secondary flex items-center justify-center text-xs font-bold text-primary shrink-0 transition-colors">
                             {activeGroup.avatar_url ? (
                               <img src={activeGroup.avatar_url} alt={activeGroup.name} className="w-full h-full object-cover" />
                             ) : (
                               activeGroup.name.slice(0, 2).toUpperCase()
+                            )}
+                            {groupOnlineCount > 0 && (
+                              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-card" title={`${groupOnlineCount} members online`} />
                             )}
                           </div>
                           <div className="min-w-0">
@@ -2456,7 +2962,10 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                               <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 truncate">
                                 <span>{activeGroup.member_ids.length} members</span>
                                 <span>•</span>
-                                <span className="text-primary font-medium">Group Info</span>
+                                <span className="text-emerald-600 dark:text-emerald-400 font-semibold inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                                  <span>{groupOnlineCount} online</span>
+                                </span>
                               </p>
                             )}
                           </div>
@@ -2468,7 +2977,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                         <button
                           onClick={() => handleCopyLink(activeGroup.invite_code)}
                           title="Copy Group Invite Link"
-                          className="p-1.5 px-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground border border-border text-xs flex items-center gap-1 font-medium transition-colors"
+                          className="p-1.5 px-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground border border-border text-xs flex items-center gap-1 font-medium transition-colors cursor-pointer"
                         >
                           <Share2 className="w-3.5 h-3.5 text-primary" />
                           <span className="hidden md:inline">Invite</span>
@@ -2478,7 +2987,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                         <div className="relative">
                           <button
                             onClick={() => setShowGroupTopMenu(prev => !prev)}
-                            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                            className="p-2 rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                             title="More group options"
                           >
                             <MoreVertical className="w-4 h-4" />
@@ -2609,9 +3118,15 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                         </div>
 
                         <button
-                          onClick={() => setActiveGroupId('')}
-                          className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                          title="Close Group"
+                          onClick={() => {
+                            if (isMobile) {
+                              onClose();
+                            } else {
+                              setActiveGroupId('');
+                            }
+                          }}
+                          className="p-2 rounded-xl hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                          title={isMobile ? "Close Messages" : "Close Group"}
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -2734,148 +3249,116 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                   ) : (
                     <>
                       {/* Messages History */}
-                      <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-background">
-                        {groupMessages.map((msg) => {
+                      {/* Group Messages Bubbles Area - Modern Thread-based Layout */}
+                      <div className="flex-1 overflow-y-auto p-2.5 sm:p-4 bg-[#efeae2]/30 dark:bg-[#0b141a] bg-[radial-gradient(#00000008_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff08_1px,transparent_1px)] bg-[size:16px_16px] overscroll-contain">
+                        {groupMessages.map((msg, index) => {
                           const isMine = msg.sender_id === currentUser.id;
                           const isSelected = selectedMessageIds.includes(msg.id);
                           const isDeleted = Boolean(msg.deleted_for_everyone || msg.text === 'This message was deleted');
 
                           if (msg.is_system) {
                             return (
-                              <div key={msg.id} className="flex justify-center my-2">
-                                <span className="text-[10px] px-3 py-1 rounded-full bg-secondary border border-border text-muted-foreground text-center font-medium">
+                              <div key={msg.id} className="flex justify-center my-3">
+                                <span className="text-[10px] sm:text-[11px] px-3.5 py-1 rounded-full bg-secondary/80 border border-border text-muted-foreground text-center font-medium shadow-2xs">
                                   {msg.text}
                                 </span>
                               </div>
                             );
                           }
 
+                          const prevMsg = index > 0 ? groupMessages[index - 1] : null;
+                          const nextMsg = index < groupMessages.length - 1 ? groupMessages[index + 1] : null;
+
+                          // Date grouping
+                          const msgDate = new Date(msg.created_at).toDateString();
+                          const prevMsgDate = prevMsg && !prevMsg.is_system ? new Date(prevMsg.created_at).toDateString() : null;
+                          const showDateDivider = !prevMsgDate || msgDate !== prevMsgDate;
+
+                          // Thread clustering within 5 minutes
+                          const isSameSenderAsPrev = prevMsg && !prevMsg.is_system && prevMsg.sender_id === msg.sender_id && !prevMsg.deleted_for_everyone && (new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 300000);
+                          const isSameSenderAsNext = nextMsg && !nextMsg.is_system && nextMsg.sender_id === msg.sender_id && !nextMsg.deleted_for_everyone && (new Date(nextMsg.created_at).getTime() - new Date(msg.created_at).getTime() < 300000);
+
+                          const isFirstInCluster = !isSameSenderAsPrev || showDateDivider;
+                          const isLastInCluster = !isSameSenderAsNext || (nextMsg && new Date(nextMsg.created_at).toDateString() !== msgDate);
+
+                          const bubbleRoundingClass = getBubbleRounding(isMine, isFirstInCluster, isLastInCluster);
+
                           return (
-                            <div
-                              key={msg.id}
-                              onClick={() => {
-                                if (isSelectMode) handleToggleSelectMessage(msg.id);
-                              }}
-                              className={`group/msg flex items-start gap-2.5 transition-colors rounded-xl p-1 ${
-                                isSelectMode ? 'cursor-pointer hover:bg-secondary/60' : ''
-                              } ${isSelected ? 'bg-primary/15' : ''} ${isMine ? 'flex-row-reverse' : ''}`}
-                            >
-                              {isSelectMode && (
-                                <div className="shrink-0 mt-2">
-                                  {isSelected ? (
-                                    <CheckSquare className="w-4 h-4 text-primary" />
-                                  ) : (
-                                    <Square className="w-4 h-4 text-muted-foreground" />
-                                  )}
+                            <React.Fragment key={msg.id}>
+                              {/* Floating Date Divider */}
+                              {showDateDivider && (
+                                <div className="flex justify-center my-3 sm:my-4 sticky top-1 z-10 pointer-events-none">
+                                  <span className="px-3 py-1 rounded-full bg-card/90 dark:bg-card/90 backdrop-blur-md text-[10px] sm:text-[11px] font-semibold text-muted-foreground border border-border/80 shadow-2xs tracking-wide">
+                                    {formatMessageDateDivider(msg.created_at)}
+                                  </span>
                                 </div>
                               )}
 
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenUserProfile(msg.sender_name);
+                              <div
+                                onClick={() => {
+                                  if (isSelectMode) handleToggleSelectMessage(msg.id);
                                 }}
-                                className="w-8 h-8 rounded-full border border-border overflow-hidden bg-secondary flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5 cursor-pointer"
-                                title={`View ${msg.sender_name}'s profile`}
+                                className={`group/msg relative flex items-end gap-2 transition-all duration-150 px-1 ${
+                                  isFirstInCluster ? 'mt-3 sm:mt-3.5' : 'mt-1 sm:mt-1.5'
+                                } ${isSelectMode ? 'cursor-pointer hover:bg-secondary/40 rounded-xl' : ''} ${
+                                  isSelected ? 'bg-primary/15 rounded-xl' : ''
+                                } ${isMine ? 'justify-end' : 'justify-start'}`}
                               >
-                                {msg.sender_avatar ? (
-                                  <img src={msg.sender_avatar} alt={msg.sender_name} className="w-full h-full object-cover" />
-                                ) : (
-                                  msg.sender_name.slice(0, 2).toUpperCase()
+                                {isSelectMode && (
+                                  <div className="shrink-0 mb-2">
+                                    {isSelected ? (
+                                      <CheckSquare className="w-4 h-4 text-primary" />
+                                    ) : (
+                                      <Square className="w-4 h-4 text-muted-foreground" />
+                                    )}
+                                  </div>
                                 )}
-                              </button>
 
-                              <div className={`max-w-[85%] sm:max-w-[75%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
-                                <div className="flex items-center gap-1.5 mb-1 px-1">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleOpenUserProfile(msg.sender_name);
-                                    }}
-                                    className="text-[11px] font-semibold text-foreground hover:text-primary transition-colors cursor-pointer"
-                                  >
-                                    {isMine ? 'You' : msg.sender_name}
-                                  </button>
-                                  {msg.sender_role === 'super_admin' && (
-                                    <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-primary/10 text-primary font-bold border border-primary/20">
-                                      Apostle ✦
-                                    </span>
-                                  )}
-                                  {msg.sender_role === 'developer' && (
-                                    <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold border border-purple-500/20">
-                                      Dev 🛡️
-                                    </span>
-                                  )}
-                                </div>
+                                {/* Sender Avatar in Group Chat (shown next to last message in cluster for clean alignment) */}
+                                {!isMine && (
+                                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-border overflow-hidden bg-secondary flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mb-1 select-none">
+                                    {isLastInCluster ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenUserProfile(msg.sender_name);
+                                        }}
+                                        className="w-full h-full cursor-pointer"
+                                        title={`View ${msg.sender_name}'s profile`}
+                                      >
+                                        {msg.sender_avatar ? (
+                                          <img src={msg.sender_avatar} alt={msg.sender_name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          msg.sender_name.slice(0, 2).toUpperCase()
+                                        )}
+                                      </button>
+                                    ) : (
+                                      <span className="opacity-0">.</span>
+                                    )}
+                                  </div>
+                                )}
 
-                                <div
-                                  className={`px-3.5 py-2.5 rounded-2xl text-xs break-words shadow-sm leading-relaxed ${
-                                    isDeleted
-                                      ? 'bg-secondary border border-border text-muted-foreground italic'
-                                      : isMine
-                                        ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                        : 'bg-card border border-border text-card-foreground rounded-tl-none'
-                                  }`}
-                                >
-                                  {/* WhatsApp-style Quoted Reply Banner inside Message */}
-                                  {msg.reply_to && !isDeleted && (
-                                    <div className="mb-2 p-2 rounded-lg bg-secondary/80 border-l-4 border-primary text-left text-[11px] leading-snug">
-                                      <div className="font-semibold text-primary text-[10px] flex items-center gap-1">
-                                        <Reply className="w-3 h-3" />
-                                        <span>{msg.reply_to.sender_name}</span>
-                                      </div>
-                                      <p className="text-foreground line-clamp-2 text-[11px] mt-0.5">
-                                        {msg.reply_to.text}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Shared Media / Photo */}
-                                  {msg.media_url && !isDeleted && (
-                                    <div
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedMediaPreview({
-                                          url: msg.media_url!,
-                                          type: msg.media_type || 'image',
-                                          caption: msg.text !== 'Shared a photo' ? msg.text : undefined,
-                                          sender_name: msg.sender_name,
-                                          created_at: msg.created_at
-                                        });
-                                      }}
-                                      className="mb-2 rounded-lg overflow-hidden max-w-xs cursor-pointer group/media relative border border-border shadow-sm"
-                                    >
-                                      {msg.media_type === 'video' ? (
-                                        <video src={msg.media_url} controls className="w-full max-h-60 object-contain bg-black" />
-                                      ) : msg.media_type === 'audio' ? (
-                                        <div className="p-4 min-w-[250px]"><Music className="w-7 h-7 text-primary mb-2" /><audio src={msg.media_url} controls className="w-full" /></div>
-                                      ) : msg.media_type === 'document' ? (
-                                        <div className="p-4 min-w-[220px] flex items-center gap-3"><FileText className="w-8 h-8 text-primary shrink-0" /><div className="min-w-0"><p className="text-xs font-semibold truncate">{msg.text.replace(/^Shared a document:\s*/, '')}</p><a href={msg.media_url} download className="text-[10px] text-primary font-bold">Download document</a></div></div>
-                                      ) : (
-                                        <img src={msg.media_url} alt="Group Media" className="w-full max-h-60 object-cover group-hover/media:scale-105 transition-transform duration-200" />
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Formatted message text with @ mentions highlighted */}
-                                  <div>{renderMessageContent(msg)}</div>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-[9px] text-muted-foreground mt-1 px-1">
-                                  <span>
-                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-
-                                  {isMine && !isDeleted && (
-                                    <span title={(msg.read_by_user_ids && msg.read_by_user_ids.length > 1) ? "Read by group members" : "Delivered"} className="inline-flex items-center">
-                                      <CheckCheck className={`w-3.5 h-3.5 inline ${(msg.read_by_user_ids && msg.read_by_user_ids.length > 1) ? 'text-primary' : 'text-muted-foreground'}`} />
-                                    </span>
-                                  )}
-
+                                <div className={`relative max-w-[85%] xs:max-w-[80%] sm:max-w-[72%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                                  {/* Quick Action Reaction Bar on Hover / Focus */}
                                   {!isSelectMode && !isDeleted && (
-                                    <div className="flex items-center gap-1.5 opacity-80 group-hover/msg:opacity-100 transition-opacity">
+                                    <div className={`opacity-0 group-hover/msg:opacity-100 transition-opacity absolute -top-8.5 z-20 flex items-center gap-0.5 bg-card/95 backdrop-blur-md border border-border/80 shadow-md rounded-full px-2 py-0.5 ${
+                                      isMine ? 'right-0' : 'left-0'
+                                    }`}>
+                                      {['🙏', '❤️', '🔥', '👍', '😂', '🕊️'].map((emoji) => (
+                                        <button
+                                          key={emoji}
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleToggleReaction(msg.id, emoji, true);
+                                          }}
+                                          className="hover:scale-130 transition-transform text-xs p-1 cursor-pointer active:scale-90"
+                                        >
+                                          {emoji}
+                                        </button>
+                                      ))}
+                                      <div className="w-[1px] h-3 bg-border mx-1" />
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -2883,43 +3366,202 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                           setReplyingToMessage(msg);
                                           setTimeout(() => groupInputRef.current?.focus(), 50);
                                         }}
-                                        className="hover:text-primary p-0.5 transition-colors flex items-center gap-0.5 font-medium cursor-pointer"
-                                        title={`Reply to ${msg.sender_name}`}
+                                        className="p-1 hover:text-primary text-muted-foreground transition-colors cursor-pointer"
+                                        title="Reply"
                                       >
                                         <Reply className="w-3 h-3" />
-                                        <span>Reply</span>
                                       </button>
-                                      <span>•</span>
                                       <button
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleQuickTagUser(msg.sender_name);
                                         }}
-                                        className="hover:text-primary p-0.5 transition-colors flex items-center gap-0.5 font-medium cursor-pointer"
+                                        className="p-1 hover:text-primary text-muted-foreground transition-colors cursor-pointer"
                                         title={`Tag @${msg.sender_name}`}
                                       >
                                         <AtSign className="w-3 h-3" />
-                                        <span>Tag</span>
                                       </button>
-                                      <span>•</span>
                                       <button
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleDeleteSingleMessage(msg.id, true);
                                         }}
-                                        className="hover:text-destructive p-0.5 transition-colors flex items-center gap-0.5 font-medium cursor-pointer"
+                                        className="p-1 hover:text-destructive text-muted-foreground transition-colors cursor-pointer"
                                         title="Delete message"
                                       >
                                         <Trash2 className="w-3 h-3" />
-                                        <span>Delete</span>
                                       </button>
+                                    </div>
+                                  )}
+
+                                  {/* Sender name on first message of cluster for received group messages */}
+                                  {!isMine && isFirstInCluster && (
+                                    <div className="flex items-center gap-1.5 mb-1 px-1">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenUserProfile(msg.sender_name);
+                                        }}
+                                        className={`text-[11px] font-bold ${getSenderNameColor(msg.sender_name, msg.sender_role)} hover:underline transition-colors cursor-pointer`}
+                                      >
+                                        {msg.sender_name}
+                                      </button>
+                                      {msg.sender_role === 'super_admin' && (
+                                        <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/30">
+                                          Apostle ✦
+                                        </span>
+                                      )}
+                                      {msg.sender_role === 'developer' && (
+                                        <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-purple-500/15 text-purple-600 dark:text-purple-400 font-bold border border-purple-500/30">
+                                          Dev 🛡️
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Message Bubble */}
+                                  <div
+                                    className={`px-3.5 py-2 sm:px-4 sm:py-2.5 ${bubbleRoundingClass} text-xs sm:text-[13px] break-words shadow-xs leading-relaxed transition-shadow duration-150 ${
+                                      isDeleted
+                                        ? 'bg-secondary/70 border border-border/80 text-muted-foreground italic'
+                                        : isMine
+                                          ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-white dark:bg-[#005c4b] dark:from-[#005c4b] dark:to-[#005c4b] dark:text-[#e9edef] border border-amber-500/30 dark:border-[#005c4b]/50 shadow-sm'
+                                          : 'bg-card dark:bg-[#202c33] border border-border/85 dark:border-white/5 text-foreground dark:text-[#e9edef] shadow-2xs'
+                                    }`}
+                                  >
+                                    {/* WhatsApp-style Quoted Reply Banner inside Message */}
+                                    {msg.reply_to && !isDeleted && (
+                                      <div className={`mb-2 p-2 rounded-xl text-left text-[11px] leading-snug border-l-3 ${
+                                        isMine 
+                                          ? 'bg-black/20 border-white/80 text-white' 
+                                          : 'bg-secondary/80 border-primary text-foreground'
+                                      }`}>
+                                        <div className={`font-semibold text-[10px] flex items-center gap-1 ${isMine ? 'text-white' : 'text-primary'}`}>
+                                          <Reply className="w-3 h-3" />
+                                          <span>{msg.reply_to.sender_name}</span>
+                                        </div>
+                                        <p className="line-clamp-2 text-[11px] mt-0.5 opacity-90">
+                                          {msg.reply_to.text}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Shared Media / Photo */}
+                                    {msg.media_url && !isDeleted && (
+                                      <div
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedMediaPreview({
+                                            url: msg.media_url!,
+                                            type: msg.media_type || 'image',
+                                            caption: msg.text !== 'Shared a photo' ? msg.text : undefined,
+                                            sender_name: msg.sender_name,
+                                            created_at: msg.created_at
+                                          });
+                                        }}
+                                        className="mb-2 rounded-xl overflow-hidden max-w-xs cursor-pointer group/media relative border border-border shadow-sm"
+                                      >
+                                        {msg.media_type === 'video' ? (
+                                          <video src={msg.media_url} controls className="w-full max-h-60 object-contain bg-black" />
+                                        ) : msg.media_type === 'audio' ? (
+                                          <div className="p-3 min-w-[240px] bg-secondary/80">
+                                            <div className="flex items-center gap-2 mb-1.5 text-xs font-semibold text-foreground">
+                                              <Music className="w-4 h-4 text-primary" />
+                                              <span>Voice / Audio Note</span>
+                                            </div>
+                                            <audio src={msg.media_url} controls className="w-full h-8" />
+                                          </div>
+                                        ) : msg.media_type === 'document' ? (
+                                          <div className="p-3 min-w-[220px] bg-secondary/80 flex items-center gap-3">
+                                            <FileText className="w-7 h-7 text-primary shrink-0" />
+                                            <div className="min-w-0 flex-1">
+                                              <p className="text-xs font-semibold truncate text-foreground">
+                                                {msg.text.replace(/^Shared a document:\s*/, '') || 'Document'}
+                                              </p>
+                                              <a
+                                                href={msg.media_url}
+                                                download
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="text-[10px] text-primary hover:underline font-bold inline-flex items-center gap-1"
+                                              >
+                                                <Download className="w-3 h-3" />
+                                                <span>Download document</span>
+                                              </a>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <img
+                                            src={msg.media_url}
+                                            alt="Group Media"
+                                            className="w-full max-h-60 object-cover group-hover/media:scale-105 transition-transform duration-200"
+                                          />
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Formatted message text with @ mentions highlighted */}
+                                    <div className="leading-relaxed">{renderMessageContent(msg)}</div>
+
+                                    {/* Micro Timestamp & Delivery / Read Receipt */}
+                                    <div className={`flex items-center justify-end gap-1 text-[9.5px] sm:text-[10px] mt-1 select-none font-medium tracking-tight ${
+                                      isMine ? 'text-white/80 dark:text-[#8696a0]' : 'text-muted-foreground/80 dark:text-[#8696a0]'
+                                    }`}>
+                                      <span>
+                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                      {isMine && !isDeleted && (
+                                        <span
+                                          title={(msg.read_by_user_ids && msg.read_by_user_ids.length > 1) ? "Read by group members" : "Delivered"}
+                                          className="inline-flex items-center ml-0.5"
+                                        >
+                                          <CheckCheck
+                                            className={`w-3.5 h-3.5 inline ${
+                                              (msg.read_by_user_ids && msg.read_by_user_ids.length > 1)
+                                                ? 'text-sky-300 dark:text-[#53bdeb]'
+                                                : 'text-white/70 dark:text-[#8696a0]'
+                                            }`}
+                                          />
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Interactive Message Reactions Chips */}
+                                  {msg.reactions && msg.reactions.length > 0 && (
+                                    <div className={`flex flex-wrap items-center gap-1 -mt-2 z-10 ${
+                                      isMine ? 'justify-end pr-1' : 'justify-start pl-1'
+                                    }`}>
+                                      {Array.from(new Set(msg.reactions.map((r) => r.emoji))).map((emoji) => {
+                                        const count = msg.reactions!.filter((r) => r.emoji === emoji).length;
+                                        const reactedByMe = msg.reactions!.some((r) => r.emoji === emoji && r.user_id === currentUser.id);
+                                        return (
+                                          <button
+                                            key={emoji}
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleToggleReaction(msg.id, emoji, true);
+                                            }}
+                                            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold shadow-2xs border transition-transform active:scale-90 cursor-pointer ${
+                                              reactedByMe
+                                                ? 'bg-primary/15 border-primary/40 text-primary'
+                                                : 'bg-card/95 backdrop-blur-xs border-border text-foreground hover:bg-secondary'
+                                            }`}
+                                            title={msg.reactions!.filter((r) => r.emoji === emoji).map((r) => r.user_name || 'Believer').join(', ')}
+                                          >
+                                            <span>{emoji}</span>
+                                            {count > 1 && <span className="text-[10px]">{count}</span>}
+                                          </button>
+                                        );
+                                      })}
                                     </div>
                                   )}
                                 </div>
                               </div>
-                            </div>
+                            </React.Fragment>
                           );
                         })}
                         <div ref={groupMessagesEndRef} />
@@ -3017,19 +3659,22 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                             </div>
                           )}
 
-                          {/* Quick Emoji Bar */}
-                          <div className="px-4 py-1.5 bg-card border-t border-border flex items-center gap-2 text-xs">
-                            {EMOJI_REACTIONS.map((emoji) => (
-                              <button
-                                key={emoji}
-                                type="button"
-                                onClick={() => setGroupInputText((prev) => prev + emoji)}
-                                className="hover:scale-125 transition-transform text-sm cursor-pointer"
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
+                          {/* Collapsible Quick Emoji Bar */}
+                          {showGroupEmojiPicker && (
+                            <div className="px-3 py-2 bg-secondary/50 border-t border-border flex items-center gap-2 text-xs overflow-x-auto">
+                              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider shrink-0">Reactions:</span>
+                              {EMOJI_REACTIONS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => setGroupInputText((prev) => prev + emoji)}
+                                  className="hover:scale-125 transition-transform text-base p-1 cursor-pointer"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          )}
 
                           {/* Group Message Input Form */}
                           <form
@@ -3037,8 +3682,21 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                               e.preventDefault();
                               handleSendGroupMessage();
                             }}
-                            className="p-3 bg-card border-t border-border flex items-center gap-2"
+                            className="p-2 sm:p-2.5 bg-card border-t border-border flex items-center gap-1.5 sm:gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
                           >
+                            <button
+                              type="button"
+                              onClick={() => setShowGroupEmojiPicker(prev => !prev)}
+                              title="Quick Reactions"
+                              className={`p-2 rounded-full border transition-colors shrink-0 cursor-pointer ${
+                                showGroupEmojiPicker 
+                                  ? 'bg-primary/20 text-primary border-primary/30' 
+                                  : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground border-border'
+                              }`}
+                            >
+                              <Smile className="w-4 h-4" />
+                            </button>
+
                             {/* Quick @ Tag button */}
                             <button
                               type="button"
@@ -3047,7 +3705,7 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                                 setMentionFilter('');
                               }}
                               title="Tag a group member"
-                              className={`p-2 rounded-lg border text-xs transition-colors shrink-0 ${
+                              className={`p-2 rounded-full border text-xs transition-colors shrink-0 cursor-pointer ${
                                 mentionSuggestionsOpen
                                   ? 'bg-primary text-primary-foreground border-primary'
                                   : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground border-border'
@@ -3056,19 +3714,12 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                               <AtSign className="w-4 h-4" />
                             </button>
 
-                            {/* Group attachment picker: image, video, audio and document */}
-                            <input
-                              ref={mediaFileInputRef}
-                              type="file"
-                              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
-                              onChange={handleLocalMediaSelect}
-                              className="hidden"
-                            />
+                            {/* Group attachment button */}
                             <button
                               type="button"
                               onClick={() => mediaFileInputRef.current?.click()}
                               title="Attach image, video, audio or document"
-                              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary border border-border transition-colors shrink-0"
+                              className="p-2 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-primary border border-border transition-colors shrink-0 cursor-pointer"
                             >
                               <Paperclip className="w-4 h-4" />
                             </button>
@@ -3079,14 +3730,15 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                               value={groupInputText}
                               onChange={handleGroupInputChange}
                               placeholder={`Message ${activeGroup.name} (type @ to tag)...`}
-                              className="flex-1 bg-secondary border border-border rounded-lg px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                              className="flex-1 bg-secondary/80 border border-border rounded-full px-4 py-2 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1.5 focus:ring-primary shadow-2xs"
                             />
                             <button
                               type="submit"
                               disabled={!groupInputText.trim()}
-                              className="p-2.5 rounded-lg bg-primary hover:brightness-105 disabled:opacity-40 text-primary-foreground font-semibold transition-all shadow-sm shrink-0 cursor-pointer"
+                              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary hover:brightness-105 disabled:opacity-40 text-primary-foreground font-semibold flex items-center justify-center transition-all shadow-sm shrink-0 cursor-pointer active:scale-95"
+                              title="Send message"
                             >
-                              <Send className="w-4 h-4" />
+                              <Send className="w-4 h-4 ml-0.5" />
                             </button>
                           </form>
                         </>
@@ -3100,12 +3752,34 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                   )}
                 </>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-muted-foreground bg-background">
-                  <Users className="w-12 h-12 text-primary/40 mb-2" />
-                  <h3 className="font-semibold text-foreground text-sm">Gateway Church Groups</h3>
-                  <p className="text-xs text-muted-foreground max-w-xs mt-1">
-                    Join ministry wings, brotherhood cells, ladies grooming, and the Foundation School.
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-background select-none">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-4 shadow-sm">
+                    <Users className="w-8 h-8" />
+                  </div>
+                  <h3 className="font-bold text-foreground text-base">Gateway Fellowship Groups</h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mt-1.5 leading-relaxed">
+                    Select a fellowship group from the sidebar to engage with brethren, share prayer decrees, and view ministry announcements.
                   </p>
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      onClick={() => setShowCreateGroupModal(true)}
+                      className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:brightness-105 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Create New Fellowship</span>
+                    </button>
+                    <button
+                      onClick={() => setShowJoinByCodeModal(true)}
+                      className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold border border-border transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Key className="w-3.5 h-3.5 text-primary" />
+                      <span>Join via Invite Code</span>
+                    </button>
+                  </div>
+                  <div className="mt-8 pt-6 border-t border-border flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <Lock className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Official ministry groups are supervised by church elders</span>
+                  </div>
                 </div>
               )
             )}
@@ -3305,15 +3979,40 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-foreground mb-1">Avatar Image URL</label>
+                  <label className="block font-bold text-foreground mb-1">Group Avatar</label>
                   <input
-                    type="url"
-                    value={newGroupAvatar}
-                    onChange={(e) => setNewGroupAvatar(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full bg-background border border-border rounded-lg p-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground"
+                    ref={groupAvatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleGroupAvatarSelect}
+                    className="hidden"
                   />
-                  <LocalImagePicker value={newGroupAvatar} onChange={setNewGroupAvatar} className="mt-1.5" />
+                  {newGroupAvatar ? (
+                    <div className="flex items-center gap-2 p-2 rounded-lg border border-border bg-secondary/40">
+                      <img src={newGroupAvatar} alt="Group avatar" className="w-10 h-10 rounded-lg object-cover border border-border shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs text-foreground font-semibold block truncate">Photo selected</span>
+                        <span className="text-[10px] text-muted-foreground block">Ready to upload</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setNewGroupAvatar('')}
+                        className="p-1 rounded-lg hover:bg-destructive/10 text-destructive transition-colors shrink-0"
+                        title="Remove photo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => groupAvatarInputRef.current?.click()}
+                      className="w-full border-2 border-dashed border-border hover:border-primary/60 rounded-xl p-2.5 text-center cursor-pointer bg-secondary/20 hover:bg-secondary/40 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Camera className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-semibold text-foreground">Upload from device</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -3566,409 +4265,45 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
       {/* ========================================================================= */}
       {/* MODAL: GROUP INFO & DETAILS */}
       {/* ========================================================================= */}
-      {showGroupInfoModal && activeGroup && (() => {
-        const isUserGroupAdmin = isDeveloper || (activeGroup.admin_ids || [activeGroup.created_by]).includes(currentUser.id) || isSuperAdminOrDev;
-        const isGroupPinned = activeGroup.pinned_by_users?.includes(currentUser.id);
-
-        return (
-          <div 
-            className="fixed inset-0 z-60 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3"
-            onClick={() => {
-              setShowGroupInfoModal(false);
-              setIsEditingGroupDetails(false);
-            }}
-          >
-            <div 
-              className="bg-card border border-border rounded-[24px] max-w-md w-full p-0 overflow-hidden shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150 max-h-[88vh] flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between border-b border-border pb-2">
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-primary" />
-                  <h3 className="font-bold text-sm text-foreground">
-                    Group info
-                  </h3>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {isUserGroupAdmin && !isEditingGroupDetails && (
-                    <button
-                      onClick={() => {
-                        setEditGroupName(activeGroup.name);
-                        setEditGroupDesc(activeGroup.description);
-                        setIsEditingGroupDetails(true);
-                      }}
-                      className="p-1 px-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <Edit3 className="w-3 h-3 text-primary" />
-                      <span>Edit</span>
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setShowGroupInfoModal(false);
-                      setIsEditingGroupDetails(false);
-                    }}
-                    className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Group Header Info / Edit Form */}
-              {isEditingGroupDetails ? (
-                <div className="p-2.5 rounded-xl bg-secondary/30 border border-border space-y-2 text-xs">
-                  <div>
-                    <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-0.5">Group Name</label>
-                    <input
-                      type="text"
-                      value={editGroupName}
-                      onChange={(e) => setEditGroupName(e.target.value)}
-                      className="w-full bg-background border border-border rounded-lg p-2 text-xs text-foreground focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-0.5">Description</label>
-                    <textarea
-                      rows={2}
-                      value={editGroupDesc}
-                      onChange={(e) => setEditGroupDesc(e.target.value)}
-                      className="w-full bg-background border border-border rounded-lg p-2 text-xs text-foreground focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-1.5">
-                    <button
-                      onClick={() => setIsEditingGroupDetails(false)}
-                      className="px-2.5 py-1 rounded-lg bg-secondary text-foreground hover:bg-secondary/80 text-xs font-semibold cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => {
-                        StorageService.updateGroupInfo(activeGroup.id, {
-                          name: editGroupName,
-                          description: editGroupDesc
-                        });
-                        refreshGroupsData();
-                        setIsEditingGroupDetails(false);
-                      }}
-                      className="px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-bold shadow cursor-pointer"
-                    >
-                      Save
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center space-y-1 py-0.5">
-                  <div className="w-12 h-12 rounded-xl border border-border overflow-hidden bg-secondary mx-auto flex items-center justify-center text-base font-bold text-primary shadow-sm">
-                    {activeGroup.avatar_url ? (
-                      <img src={activeGroup.avatar_url} alt={activeGroup.name} className="w-full h-full object-cover" />
-                    ) : (
-                      activeGroup.name.slice(0, 2).toUpperCase()
-                    )}
-                  </div>
-                  <h4 className="font-bold text-sm text-foreground">{activeGroup.name}</h4>
-                  <p className="text-[11px] text-muted-foreground max-w-xs mx-auto line-clamp-2 leading-tight">{activeGroup.description}</p>
-                </div>
-              )}
-
-              {/* Group Meta Info */}
-              <div className="p-2.5 rounded-xl bg-secondary/40 border border-border grid grid-cols-2 gap-2 text-[11px]">
-                <div>
-                  <span className="block text-[10px] uppercase text-muted-foreground">Leader</span>
-                  <span className="font-semibold text-foreground truncate block">{activeGroup.creator_name}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase text-muted-foreground">Category</span>
-                  <span className="font-semibold text-primary truncate block">{activeGroup.category || 'General'}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase text-muted-foreground">Invite Code</span>
-                  <span className="font-mono font-semibold text-foreground truncate block">{activeGroup.invite_code}</span>
-                </div>
-                {activeGroup.is_paid && (
-                  <div>
-                    <span className="block text-[10px] uppercase text-muted-foreground">Membership</span>
-                    <span className="font-semibold text-amber-600 dark:text-amber-400 truncate block">${activeGroup.price_usd || 150}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Admin Permissions Controls (WhatsApp Style) */}
-              {isUserGroupAdmin && (
-                <div className="p-2.5 rounded-xl bg-secondary/40 border border-border space-y-2 text-xs">
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-primary uppercase tracking-wider">
-                    <Shield className="w-3 h-3" />
-                    <span>Admin Controls</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-foreground font-medium">Only Admins Post Messages</span>
-                    <button
-                      onClick={() => {
-                        StorageService.updateGroupSettings(activeGroup.id, {
-                          only_admins_can_send_messages: !activeGroup.only_admins_can_send_messages
-                        });
-                        refreshGroupsData();
-                      }}
-                      className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                        activeGroup.only_admins_can_send_messages ? 'bg-primary' : 'bg-muted'
-                      }`}
-                    >
-                      <span className={`block w-3.5 h-3.5 rounded-full bg-background shadow transition-transform ${
-                        activeGroup.only_admins_can_send_messages ? 'translate-x-4' : 'translate-x-0.5'
-                      }`} />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border">
-                    <span className="text-foreground font-medium">Only Admins Add Members</span>
-                    <button
-                      onClick={() => {
-                        StorageService.updateGroupSettings(activeGroup.id, {
-                          only_admins_can_add_members: !activeGroup.only_admins_can_add_members
-                        });
-                        refreshGroupsData();
-                      }}
-                      className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                        activeGroup.only_admins_can_add_members ? 'bg-primary' : 'bg-muted'
-                      }`}
-                    >
-                      <span className={`block w-3.5 h-3.5 rounded-full bg-background shadow transition-transform ${
-                        activeGroup.only_admins_can_add_members ? 'translate-x-4' : 'translate-x-0.5'
-                      }`} />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border">
-                    <div className="truncate pr-2">
-                      <span className="text-foreground font-medium block">Reset Invite Link</span>
-                      <span className="text-[9px] text-muted-foreground">Previous links will immediately be revoked</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const res = StorageService.resetGroupInviteCode(activeGroup.id);
-                        if (res.success) {
-                          refreshGroupsData();
-                          alert(`Invite link reset! New code: ${res.newCode}. Previous links can no longer be used.`);
-                        }
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold shrink-0 cursor-pointer"
-                    >
-                      Reset Link
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Developer Group Controls */}
-              {isDeveloper && (
-                <div className="p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-red-400 flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      Developer Group Controls
-                    </span>
-                    <span className="text-[9px] text-red-300 font-mono px-1.5 py-0.5 rounded bg-red-900/50">Root</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm(`DEVELOPER OVERRIDE: Are you sure you want to permanently DISSOLVE "${activeGroup.name}"? This action deletes the group completely and purges its messages.`)) {
-                        StorageService.deleteChatGroup(activeGroup.id);
-                        setShowGroupInfoModal(false);
-                        setActiveGroupId(undefined);
-                        refreshGroupsData();
-                        alert(`Group "${activeGroup.name}" has been dissolved.`);
-                      }
-                    }}
-                    className="w-full py-2 px-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Dissolve Group</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Members List with Admin Badges & Promotion */}
-              <div className="flex-1 overflow-y-auto space-y-1 min-h-[100px] max-h-[180px]">
-                <div className="flex items-center justify-between px-1">
-                  <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    Members ({activeGroup.member_ids.length})
-                  </h5>
-                  <div className="flex items-center gap-2">
-                    {(isUserGroupMember || isDeveloper) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowGroupInfoModal(false);
-                          setShowAddMemberModal(true);
-                        }}
-                        className="text-[10px] text-emerald-500 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <UserPlus className="w-3 h-3" />
-                        <span>Add Member</span>
-                      </button>
-                    )}
-                    <span className="text-[10px] text-primary font-semibold">
-                      {(activeGroup.admin_ids || [activeGroup.created_by]).length} Admin(s)
-                    </span>
-                  </div>
-                </div>
-                <div className="divide-y divide-border">
-                  {activeGroup.member_ids.map(mid => {
-                    const mUser = StorageService.getAllUsers().find(u => u.id === mid);
-                    const isMemberAdmin = (activeGroup.admin_ids || [activeGroup.created_by]).includes(mid) || mUser?.role === 'super_admin';
-                    const isCreator = mid === activeGroup.created_by;
-
-                    return (
-                      <div key={mid} className="py-1.5 px-1 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-6 h-6 rounded-full bg-secondary border border-border flex items-center justify-center text-[9px] text-primary font-bold shrink-0">
-                            {mUser?.full_name?.slice(0, 2).toUpperCase() || 'MB'}
-                          </div>
-                          <div className="truncate">
-                            <span className="font-semibold text-foreground truncate block text-[11px]">
-                              {mUser?.full_name || 'Member'}
-                              {mid === currentUser.id && ' (You)'}
-                            </span>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              {isMemberAdmin && (
-                                <span className="text-[8.5px] px-1 py-0.2 rounded bg-primary/15 text-primary border border-primary/25 font-bold">
-                                  {isCreator ? 'Creator' : 'Admin'}
-                                </span>
-                              )}
-                              {mUser?.role && mUser.role !== 'member' && (
-                                <span className="text-[8.5px] px-1 py-0.2 rounded bg-secondary text-muted-foreground capitalize">
-                                  {mUser.role.replace('_', ' ')}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1 shrink-0">
-                          {/* Direct Message (Inbox) button - ICON ONLY */}
-                          {mid !== currentUser.id && mUser && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowGroupInfoModal(false);
-                                setActiveTab('direct');
-                                setActiveUserId(mUser.id);
-                              }}
-                              className="p-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors cursor-pointer"
-                              title={`Direct Message ${mUser.full_name}`}
-                            >
-                              <MessageSquare className="w-3 h-3" />
-                            </button>
-                          )}
-
-                          {/* Admin Actions: Promote / Dismiss / Remove */}
-                          {(isDeveloper || (isUserGroupAdmin && mid !== currentUser.id && !isCreator)) && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  StorageService.togglePromoteGroupAdmin(activeGroup.id, mid);
-                                  refreshGroupsData();
-                                }}
-                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-colors cursor-pointer ${
-                                  isMemberAdmin
-                                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
-                                    : 'bg-primary/10 text-primary border-primary/25 hover:bg-primary/20'
-                                }`}
-                                title={isMemberAdmin ? 'Dismiss as Admin' : 'Promote to Admin'}
-                              >
-                                {isMemberAdmin ? 'Dismiss' : 'Promote'}
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (confirm(`Remove ${mUser?.full_name || 'this member'} from ${activeGroup.name}?`)) {
-                                    StorageService.removeMemberFromGroup(activeGroup.id, mid, currentUser.id);
-                                    refreshGroupsData();
-                                  }
-                                }}
-                                className="p-0.5 px-1.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-[9px] font-bold flex items-center gap-0.5 transition-colors cursor-pointer"
-                                title={`Remove member`}
-                              >
-                                <UserMinus className="w-2.5 h-2.5" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Bottom Actions */}
-              <div className="pt-2 border-t border-border space-y-1.5">
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      StorageService.togglePinChatGroup(activeGroup.id, currentUser.id);
-                      refreshGroupsData();
-                    }}
-                    className={`py-1.5 px-2 rounded-lg border text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm transition-colors cursor-pointer ${
-                      isGroupPinned
-                        ? 'bg-primary/15 border-primary text-primary'
-                        : 'bg-secondary border-border text-foreground hover:bg-secondary/80'
-                    }`}
-                  >
-                    <Pin className={`w-3 h-3 ${isGroupPinned ? 'fill-primary' : ''}`} />
-                    <span>{isGroupPinned ? 'Unpin' : 'Pin'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleCopyLink(activeGroup.invite_code)}
-                    className="py-1.5 px-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[11px] flex items-center justify-center gap-1 shadow-sm cursor-pointer"
-                  >
-                    <Copy className="w-3 h-3" />
-                    <span>Invite</span>
-                  </button>
-
-                  {/* Functional Clear Chat Button so a user can clear chats from their end */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowGroupInfoModal(false);
-                      setClearChatConfirmModal({
-                        isOpen: true,
-                        isGroup: true,
-                        title: activeGroup.name
-                      });
-                    }}
-                    className="py-1.5 px-2 rounded-lg bg-secondary hover:bg-secondary/80 border border-border text-foreground text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm transition-colors cursor-pointer"
-                    title="Clear chat history from your device"
-                  >
-                    <Trash2 className="w-3 h-3 text-destructive" />
-                    <span>Clear</span>
-                  </button>
-                </div>
-
-                {/* WhatsApp-Style Exit Group Button */}
-                {isUserGroupMember && (
-                  <button
-                    type="button"
-                    onClick={() => setShowExitGroupConfirm(true)}
-                    className="w-full py-1.5 rounded-lg bg-destructive/10 hover:bg-destructive/20 border border-destructive/25 text-destructive text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Exit Group</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* ========================================================================= */}
+      {/* MODAL: GROUP INFO & DETAILS (PREMIUM INSTAGRAM-INSPIRED REDESIGN) */}
+      {/* ========================================================================= */}
+      {showGroupInfoModal && activeGroup && (
+        <GroupInfoModal
+          isOpen={showGroupInfoModal}
+          onClose={() => {
+            setShowGroupInfoModal(false);
+            setIsEditingGroupDetails(false);
+          }}
+          group={activeGroup}
+          currentUser={currentUser}
+          groupMessages={groupMessages}
+          onUpdateGroup={() => {
+            refreshGroupsData();
+          }}
+          onExitGroup={() => {
+            setShowExitGroupConfirm(true);
+          }}
+          onClearChat={() => {
+            setClearChatConfirmModal({
+              isOpen: true,
+              isGroup: true,
+              title: activeGroup.name
+            });
+          }}
+          onOpenAddMember={() => {
+            setShowAddMemberModal(true);
+          }}
+          onCopyInviteLink={(code) => {
+            handleCopyLink(code);
+          }}
+          onDirectMessageUser={(user) => {
+            setShowGroupInfoModal(false);
+            setActiveTab('direct');
+            setActiveUserId(user.id);
+          }}
+        />
+      )}
 
       {/* WhatsApp-Style Exit Group Confirmation Modal */}
       {showExitGroupConfirm && activeGroup && (
@@ -4170,22 +4505,22 @@ export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
 
       {/* Joining Group WhatsApp Animation Overlay */}
       {joiningGroup && (
-        <div className="fixed inset-0 z-70 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-[#001F3F] border border-[#D4AF37]/60 rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-70 bg-background/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-xl animate-in zoom-in-95 duration-200">
             <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border-4 border-[#D4AF37]/20 border-t-[#D4AF37] animate-spin" />
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D4AF37] to-amber-700 text-[#001F3F] flex items-center justify-center font-black text-xl shadow-lg">
+              <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+              <div className="w-14 h-14 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl shadow-xs">
                 {joiningGroup.name.slice(0, 1).toUpperCase()}
               </div>
             </div>
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-[#D4AF37]">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-primary">
                 Joining Official Fellowship
               </span>
-              <h3 className="font-serif-church font-bold text-lg text-white">
+              <h3 className="font-serif-church font-bold text-lg text-foreground">
                 {joiningGroup.name}
               </h3>
-              <p className="text-xs text-white/60">
+              <p className="text-xs text-muted-foreground">
                 Verifying covenant invite & connecting to members...
               </p>
             </div>

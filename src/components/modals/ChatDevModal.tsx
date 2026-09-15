@@ -97,29 +97,37 @@ export const ChatDevModal: React.FC<ChatDevModalProps> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#001122]/80 backdrop-blur-sm flex items-end sm:items-center justify-end sm:justify-center p-3 sm:p-4">
-      <div className="bg-[#001F3F] border border-purple-500/40 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl animate-in slide-in-from-bottom-5 duration-200 text-white flex flex-col h-[520px] max-h-[85vh]">
+    <div 
+      className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-end sm:items-center justify-end sm:justify-center p-3 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-card border border-border rounded-2xl max-w-md w-full overflow-hidden shadow-xl animate-in slide-in-from-bottom-5 duration-200 text-foreground flex flex-col h-[520px] max-h-[85vh]"
+      >
         
         {/* Header */}
-        <div className="bg-[#00172e] p-4 border-b border-purple-500/20 flex items-center justify-between shrink-0">
+        <div className="bg-secondary/40 p-4 border-b border-border flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-10 h-10 rounded-2xl bg-purple-600 flex items-center justify-center text-white font-black shadow">
+              <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-xs">
                 <Code2 className="w-5 h-5" />
               </div>
-              <span className="w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#001F3F] absolute -bottom-0.5 -right-0.5" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-card absolute -bottom-0.5 -right-0.5" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-sm text-white">
+                <h3 className="font-bold text-sm text-foreground">
                   Developer Support
                 </h3>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono border border-purple-500/30">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-primary font-mono border border-border">
                   mrjuice017
                 </span>
               </div>
-              <p className="text-[11px] text-emerald-400 flex items-center gap-1">
-                <span>Online</span> • <span>Innovative Technology</span>
+              <p className="text-[11px] text-emerald-500 flex items-center gap-1">
+                <span>Online</span> • <span className="text-muted-foreground">Innovative Technology</span>
               </p>
             </div>
           </div>
@@ -128,14 +136,14 @@ export const ChatDevModal: React.FC<ChatDevModalProps> = ({ isOpen, onClose }) =
             <button
               onClick={handleWhatsAppDev}
               title="Open WhatsApp"
-              className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 transition-colors"
+              className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors"
             >
               <Phone className="w-4 h-4" />
             </button>
             <button
               id="btn-close-chat-dev"
               onClick={onClose}
-              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="p-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -143,11 +151,11 @@ export const ChatDevModal: React.FC<ChatDevModalProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Quick Contact Banner */}
-        <div className="bg-purple-950/40 px-4 py-2 border-b border-purple-500/20 flex items-center justify-between text-[11px] text-purple-200 shrink-0">
-          <span>Direct Dev Line: <strong className="font-mono text-white">+263780699988</strong></span>
+        <div className="bg-secondary/30 px-4 py-2 border-b border-border flex items-center justify-between text-[11px] text-muted-foreground shrink-0">
+          <span>Direct Dev Line: <strong className="font-mono text-foreground">+263780699988</strong></span>
           <button
             onClick={handleWhatsAppDev}
-            className="text-emerald-400 hover:underline font-bold flex items-center gap-0.5"
+            className="text-emerald-500 hover:underline font-semibold flex items-center gap-0.5"
           >
             <span>WhatsApp</span>
             <ExternalLink className="w-3 h-3" />
@@ -157,12 +165,12 @@ export const ChatDevModal: React.FC<ChatDevModalProps> = ({ isOpen, onClose }) =
         {/* Chat Messages */}
         <div className="flex-1 p-4 overflow-y-auto space-y-3">
           {messages.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 text-white/50 space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 text-muted-foreground space-y-2">
+              <div className="w-12 h-12 rounded-xl bg-secondary border border-border flex items-center justify-center text-primary">
                 <Code2 className="w-6 h-6" />
               </div>
-              <p className="text-xs font-semibold text-white/80">Direct Channel to Lead Developer</p>
-              <p className="text-[11px] text-white/50 max-w-xs">
+              <p className="text-xs font-semibold text-foreground">Direct Channel to Lead Developer</p>
+              <p className="text-[11px] text-muted-foreground max-w-xs">
                 Type your inquiry below to connect directly with @mr_juice7 regarding bug reports, feature requests, or technical support.
               </p>
             </div>
@@ -173,15 +181,15 @@ export const ChatDevModal: React.FC<ChatDevModalProps> = ({ isOpen, onClose }) =
               className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
             >
               <div
-                className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-xs shadow-sm ${
+                className={`max-w-[82%] rounded-xl px-3.5 py-2.5 text-xs shadow-xs ${
                   m.sender === 'user'
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-tr-none'
-                    : 'bg-[#00172e] text-white border border-purple-500/30 rounded-tl-none'
+                    ? 'bg-primary text-primary-foreground rounded-tr-none'
+                    : 'bg-secondary text-foreground border border-border rounded-tl-none'
                 }`}
               >
                 {m.text}
               </div>
-              <span className="text-[10px] text-white/40 mt-1 px-1 font-mono">
+              <span className="text-[10px] text-muted-foreground mt-1 px-1 font-mono">
                 {m.time}
               </span>
             </div>
@@ -189,18 +197,18 @@ export const ChatDevModal: React.FC<ChatDevModalProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Input Bar */}
-        <form onSubmit={handleSend} className="p-3 bg-[#00172e] border-t border-purple-500/20 flex items-center gap-2 shrink-0">
+        <form onSubmit={handleSend} className="p-3 bg-secondary/40 border-t border-border flex items-center gap-2 shrink-0">
           <input
             type="text"
             placeholder="Type your message to developer..."
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            className="flex-1 bg-[#001F3F] border border-purple-500/30 rounded-xl px-3.5 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:border-purple-400"
+            className="flex-1 bg-secondary/50 border border-border rounded-lg px-3.5 py-2 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
           />
           <button
             type="submit"
             disabled={!inputText.trim()}
-            className="p-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white transition-all shadow"
+            className="p-2.5 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-40 text-primary-foreground transition-all shadow-xs"
           >
             <Send className="w-4 h-4" />
           </button>

@@ -96,7 +96,7 @@ const MatrixRainCanvas: React.FC = () => {
 
       for (let i = 0; i < drops.length; i++) {
         const text = characters.charAt(Math.floor(Math.random() * characters.length));
-        ctx.fillStyle = i % 4 === 0 ? '#c084fc' : i % 2 === 0 ? '#34d399' : '#10b981';
+        ctx.fillStyle = i % 4 === 0 ? 'rgba(192, 132, 252, 0.9)' : i % 2 === 0 ? 'rgba(52, 211, 153, 0.9)' : 'rgba(16, 185, 129, 0.9)';
         ctx.fillText(text, i * fontSize, drops[i] * fontSize);
 
         if (drops[i] * fontSize > height && Math.random() > 0.97) {
@@ -734,7 +734,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
       <header className={cn(
         "relative z-20 backdrop-blur-md px-3 sm:px-4 py-3 sm:py-3.5 flex items-center justify-between shadow-lg shrink-0 border-b",
         consoleTheme === 'jarvis'
-          ? "bg-[#02131e]/90 border-cyan-500/30 text-cyan-100"
+          ? "bg-cyan-950/80 border-cyan-500/30 text-cyan-100"
           : "bg-slate-900/90 border-purple-500/30 text-slate-100"
       )}>
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
@@ -985,7 +985,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
       <div className={cn(
         "border-b px-3 sm:px-4 py-2 flex items-center justify-between text-[11px] sm:text-xs shrink-0",
         consoleTheme === 'jarvis'
-          ? "bg-[#021827]/80 border-cyan-500/30 text-cyan-200"
+          ? "bg-cyan-950/80 border-cyan-500/30 text-cyan-200"
           : "bg-purple-950/40 border-purple-500/30 text-purple-200"
       )}>
         <div className="flex items-center gap-2 truncate">
@@ -1014,7 +1014,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
       <div className={cn(
         "hidden md:flex border-b px-4 py-2 items-center gap-2 text-xs font-bold overflow-x-auto shrink-0",
         consoleTheme === 'jarvis'
-          ? "bg-[#02131e]/90 border-cyan-500/30"
+          ? "bg-cyan-950/90 border-cyan-500/30"
           : "bg-slate-950 border-slate-800"
       )}>
         {[
@@ -1039,7 +1039,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                     ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
                     : 'bg-purple-600 text-white font-bold shadow')
                 : (consoleTheme === 'jarvis'
-                    ? 'bg-[#021827]/60 text-cyan-400/60 hover:text-cyan-200 border border-cyan-900/40 hover:border-cyan-500/30'
+                    ? 'bg-cyan-950/60 text-cyan-400/60 hover:text-cyan-200 border border-cyan-900/40 hover:border-cyan-500/30'
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800')
             )}
           >
@@ -1053,7 +1053,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
       <div className={cn(
         "flex md:hidden flex-col border-b shrink-0",
         consoleTheme === 'jarvis'
-          ? "bg-[#02131e] border-cyan-500/30"
+          ? "bg-cyan-950 border-cyan-500/30"
           : "bg-slate-950 border-slate-800"
       )}>
         {/* Module Selector Dropdown */}
@@ -1071,7 +1071,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
               className={cn(
                 "w-full rounded-xl px-3 py-1.5 text-xs font-bold appearance-none pr-8 focus:outline-none font-mono",
                 consoleTheme === 'jarvis'
-                  ? "bg-[#021827] border border-cyan-500/40 text-cyan-300 focus:border-cyan-300"
+                  ? "bg-cyan-950 border border-cyan-500/40 text-cyan-300 focus:border-cyan-300"
                   : "bg-slate-900 border border-purple-500/30 text-purple-300 focus:border-purple-400"
               )}
             >
@@ -1126,7 +1126,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                         ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)]'
                         : 'bg-purple-600 text-white shadow-sm')
                     : (consoleTheme === 'jarvis'
-                        ? 'bg-[#021827]/80 text-cyan-400/60 border border-cyan-900/40 hover:text-cyan-200'
+                        ? 'bg-cyan-950/80 text-cyan-400/60 border border-cyan-900/40 hover:text-cyan-200'
                         : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white')
                 )}
               >
@@ -1310,7 +1310,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
               </div>
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
                 <span className="text-[11px] text-slate-400 block">Cities Represented</span>
-                <span className="text-lg font-bold text-[#D4AF37]">
+                <span className="text-lg font-bold text-amber-400">
                   {new Set(streamAttendees.map(a => a.city)).size} Hubs
                 </span>
               </div>
@@ -1456,8 +1456,8 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                             </td>
 
                             <td className="p-3">
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-[#D4AF37] border border-white/10 inline-flex items-center gap-1">
-                                <MapPin className="w-2.5 h-2.5 text-[#D4AF37]" />
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-amber-400 border border-white/10 inline-flex items-center gap-1">
+                                <MapPin className="w-2.5 h-2.5 text-amber-400" />
                                 <span>{record.city}</span>
                               </span>
                             </td>
@@ -1664,9 +1664,9 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                 </div>
                 <button
                   onClick={handleCopySql}
-                  className="px-3 py-1.5 bg-[#D4AF37] hover:bg-[#c29e2e] text-[#001F3F] text-xs font-bold rounded-xl shadow flex items-center gap-1.5 transition-colors"
+                  className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl shadow flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-900" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedSql ? <Check className="w-3.5 h-3.5 text-primary-foreground" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedSql ? 'Copied Full SQL!' : 'Copy schema.sql Script'}</span>
                 </button>
               </div>
@@ -1732,7 +1732,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
             <div className={cn(
               "rounded-2xl p-5 border shadow-xl relative overflow-hidden",
               consoleTheme === 'jarvis'
-                ? "bg-[#021827]/90 border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.15)]"
+                ? "bg-cyan-950/90 border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.15)]"
                 : "bg-slate-900 border-purple-500/40"
             )}>
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -1741,7 +1741,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                     "w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shrink-0 shadow-lg",
                     consoleTheme === 'jarvis'
                       ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
-                      : "bg-[#D4AF37] text-[#001F3F]"
+                      : "bg-primary text-primary-foreground"
                   )}>
                     MJ
                   </div>
@@ -1932,7 +1932,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                               <div className="flex items-center gap-2.5">
                                 <div className={cn(
                                   "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0",
-                                  isDev ? "bg-[#D4AF37] text-[#001F3F]" : "bg-slate-800 text-slate-300 border border-slate-700"
+                                  isDev ? "bg-primary text-primary-foreground" : "bg-slate-800 text-slate-300 border border-slate-700"
                                 )}>
                                   {user.avatar_url ? (
                                     <img src={user.avatar_url} alt="" className="w-8 h-8 rounded-lg object-cover" />
@@ -2071,7 +2071,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                 <div className="flex items-center gap-2">
                   <span>Total Records: <strong className="text-white">{usersList.length}</strong></span>
                   <span>•</span>
-                  <span>Cities: <strong className="text-[#D4AF37]">{new Set(usersList.map(u => u.city_location || 'Harare')).size}</strong></span>
+                  <span>Cities: <strong className="text-amber-400">{new Set(usersList.map(u => u.city_location || 'Harare')).size}</strong></span>
                 </div>
                 <button
                   type="button"
@@ -2139,7 +2139,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                           <td className="p-3 text-slate-300 font-bold">{u.phone}</td>
                           <td className="p-3">
                             <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                              u.role === 'super_admin' ? 'bg-[#D4AF37] text-[#001F3F]' :
+                              u.role === 'super_admin' ? 'bg-primary text-primary-foreground' :
                               u.role === 'developer' ? 'bg-purple-600 text-white' :
                               u.role === 'moderator' ? 'bg-blue-600 text-white' :
                               'bg-slate-700 text-slate-200'
@@ -2908,7 +2908,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-sm text-white">{req.user_name}</span>
-                            <span className="text-xs font-mono text-[#D4AF37]">({req.phone})</span>
+                            <span className="text-xs font-mono text-amber-400">({req.phone})</span>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
                               req.status === 'pending' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
                               'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
@@ -3041,7 +3041,7 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Registered Phone:</span>
-                  <span className="text-[#D4AF37] font-mono font-bold">{selectedPasswordRequest.phone}</span>
+                  <span className="text-amber-400 font-mono font-bold">{selectedPasswordRequest.phone}</span>
                 </div>
               </div>
 

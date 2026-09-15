@@ -103,25 +103,25 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#001122]/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-[#001F3F] border border-[#D4AF37]/60 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 my-4 text-white">
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-card border border-border rounded-xl max-w-lg w-full overflow-hidden shadow-xl animate-in zoom-in-95 duration-150 my-4 text-foreground">
         
         {/* Header */}
-        <div className="bg-[#001122] p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
+        <div className="bg-secondary/40 p-4 sm:p-5 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#D4AF37] text-[#001F3F] flex items-center justify-center font-black shadow-lg">
-              <CreditCard className="w-5 h-5 text-[#001F3F]" />
+            <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-xs">
+              <CreditCard className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base sm:text-lg text-white">
+                <h3 className="font-bold text-base sm:text-lg text-foreground">
                   Paynow Zimbabwe Integration
                 </h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-500/20 text-green-400 border border-green-500/30">
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                   EcoCash / OneMoney / InnBucks
                 </span>
               </div>
-              <p className="text-xs text-[#D4AF37]/80 mt-0.5">
+              <p className="text-xs text-primary font-medium mt-0.5">
                 Step 2: Connect your official Paynow ID & Auth Key for live donations
               </p>
             </div>
@@ -129,7 +129,7 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -139,9 +139,9 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
         <form onSubmit={handleSave} className="p-4 sm:p-6 space-y-4 text-xs">
           
           {/* Instructions Box */}
-          <div className="p-3.5 rounded-xl bg-[#001122]/80 border border-[#D4AF37]/30 space-y-2">
+          <div className="p-3.5 rounded-lg bg-secondary/40 border border-border space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-[#D4AF37] flex items-center gap-1.5">
+              <span className="font-semibold text-primary flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4" />
                 Where to get your Paynow credentials:
               </span>
@@ -149,13 +149,13 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
                 href="https://www.paynow.co.zw"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] text-[#D4AF37] hover:underline flex items-center gap-1 font-semibold"
+                className="text-[11px] text-primary hover:underline flex items-center gap-1 font-semibold"
               >
                 <span>paynow.co.zw</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
-            <p className="text-white/70 text-[11px] leading-relaxed">
+            <p className="text-muted-foreground text-[11px] leading-relaxed">
               1. Log in to your merchant account at <strong>Paynow.co.zw</strong>.<br />
               2. Go to <strong>Manage &gt; Advanced Integrations</strong>.<br />
               3. Create or select your integration to view your <strong>Integration ID</strong> and generate your <strong>Integration Key (Auth Key)</strong>.
@@ -165,8 +165,8 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
           {/* Form Fields */}
           <div className="space-y-3">
             <div>
-              <label className="block font-semibold text-white/90 mb-1">
-                Paynow Integration ID <span className="text-red-400">*</span>
+              <label className="block font-semibold text-foreground/90 mb-1">
+                Paynow Integration ID <span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <input
@@ -175,15 +175,15 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
                   value={integrationId}
                   onChange={(e) => setIntegrationId(e.target.value)}
                   placeholder="e.g. 18342"
-                  className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#D4AF37] font-mono text-sm"
+                  className="w-full bg-secondary/50 border border-border rounded-lg p-2.5 text-foreground focus:outline-none focus:border-primary font-mono text-sm"
                 />
               </div>
-              <p className="text-[10px] text-white/40 mt-1">Usually a 4 to 6 digit integer provided by Paynow.</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Usually a 4 to 6 digit integer provided by Paynow.</p>
             </div>
 
             <div>
-              <label className="block font-semibold text-white/90 mb-1">
-                Paynow Integration Key (Auth Key) <span className="text-red-400">*</span>
+              <label className="block font-semibold text-foreground/90 mb-1">
+                Paynow Integration Key (Auth Key) <span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <input
@@ -192,22 +192,22 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
                   value={integrationKey}
                   onChange={(e) => setIntegrationKey(e.target.value)}
                   placeholder="e.g. 2a74c8b9-8472-4d2a-a92c-87d2194891b0"
-                  className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 pr-10 text-white focus:outline-none focus:border-[#D4AF37] font-mono text-xs"
+                  className="w-full bg-secondary/50 border border-border rounded-lg p-2.5 pr-10 text-foreground focus:outline-none focus:border-primary font-mono text-xs"
                 />
                 <button
                   type="button"
                   onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-[10px] text-white/40 mt-1">The secret UUID/hash used to sign transactions with SHA-512.</p>
+              <p className="text-[10px] text-muted-foreground mt-1">The secret UUID/hash used to sign transactions with SHA-512.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold text-white/90 mb-1">
+                <label className="block font-semibold text-foreground/90 mb-1">
                   Merchant Notification Email
                 </label>
                 <input
@@ -215,18 +215,18 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
                   value={merchantEmail}
                   onChange={(e) => setMerchantEmail(e.target.value)}
                   placeholder="gatewaychurchzim@gmail.com"
-                  className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary/50 border border-border rounded-lg p-2.5 text-foreground focus:outline-none focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-white/90 mb-1">
+                <label className="block font-semibold text-foreground/90 mb-1">
                   Gateway Mode
                 </label>
                 <select
                   value={isLive ? 'live' : 'test'}
                   onChange={(e) => setIsLive(e.target.value === 'live')}
-                  className="w-full bg-[#001122] border border-white/20 rounded-xl p-2.5 text-white focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary/50 border border-border rounded-lg p-2.5 text-foreground focus:outline-none focus:border-primary"
                 >
                   <option value="live">Live Production (Real Money)</option>
                   <option value="test">Paynow Sandbox (Testing)</option>
@@ -237,14 +237,14 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
 
           {/* Test connection results */}
           {testResult && (
-            <div className={`p-3 rounded-xl border ${
-              testResult.success ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' : 'bg-red-950/40 border-red-500/40 text-red-300'
+            <div className={`p-3 rounded-lg border ${
+              testResult.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-destructive/10 border-destructive/20 text-destructive'
             }`}>
               <div className="flex items-start gap-2">
                 {testResult.success ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                 ) : (
-                  <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                  <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
                 )}
                 <div className="space-y-1">
                   <p className="font-semibold text-xs">{testResult.message}</p>
@@ -264,25 +264,25 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
               type="button"
               onClick={handleTestHash}
               disabled={isTesting}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#001122] border border-white/20 hover:border-[#D4AF37] text-white hover:text-[#D4AF37] font-semibold transition-all flex items-center justify-center gap-1.5"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-secondary/70 border border-border hover:border-primary text-foreground hover:text-primary font-semibold transition-all flex items-center justify-center gap-1.5"
             >
-              {isTesting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5 text-[#D4AF37]" />}
+              {isTesting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5 text-primary" />}
               <span>Test Hash Calculation</span>
             </button>
 
             <button
               type="submit"
               disabled={saveSuccess}
-              className="w-full sm:flex-1 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#b89428] text-[#001F3F] font-bold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-1.5"
+              className="w-full sm:flex-1 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold uppercase tracking-wider transition-all shadow-xs flex items-center justify-center gap-1.5"
             >
               {saveSuccess ? (
                 <>
-                  <CheckCircle2 className="w-4 h-4 text-[#001F3F]" />
+                  <CheckCircle2 className="w-4 h-4" />
                   <span>Saved Successfully!</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 text-[#001F3F]" />
+                  <Sparkles className="w-4 h-4" />
                   <span>Save Paynow Credentials</span>
                 </>
               )}
@@ -290,7 +290,7 @@ export const PaynowConfigModal: React.FC<PaynowConfigModalProps> = ({
           </div>
 
           <div className="text-center pt-1">
-            <p className="text-[10px] text-white/40">
+            <p className="text-[10px] text-muted-foreground">
               Payments are routed via Paynow's encrypted 256-bit gateway adhering to RBZ (Reserve Bank of Zimbabwe) compliance.
             </p>
           </div>

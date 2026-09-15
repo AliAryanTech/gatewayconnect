@@ -173,43 +173,43 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#001122] text-white flex flex-col items-center justify-center p-3 sm:p-6 bg-[radial-gradient(ellipse_at_top,_#001F3F_0%,_#001122_80%)]">
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-3 sm:p-6">
       
       {/* Background Subtle Accent */}
       <div className="w-full max-w-lg space-y-5">
         
         {/* Ministry Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#D4AF37] to-[#8C7322] shadow-xl shadow-[#D4AF37]/20 border border-[#D4AF37]/50 mb-1">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground shadow-sm border border-border mb-1">
             <img 
               src="/assets/apostle_silhouette.svg" 
               alt="Apostle Joe Daniels Silhouette" 
               className="w-12 h-12 object-contain"
             />
           </div>
-          <h1 className="font-serif-church font-bold text-2xl sm:text-3xl text-[#D4AF37] tracking-tight">
+          <h1 className="font-serif-church font-bold text-2xl sm:text-3xl text-primary tracking-tight">
             GATEWAY CHURCH
           </h1>
-          <p className="text-xs text-white/70 uppercase tracking-widest font-semibold">
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
             Apostle Joe Daniels • Zimbabwe & Diaspora
           </p>
-          <p className="text-[11px] text-white/50 italic max-w-sm mx-auto">
+          <p className="text-[11px] text-muted-foreground italic max-w-sm mx-auto">
             "For where two or three gather in my name, there am I with them." — Matthew 18:20
           </p>
         </div>
 
         {/* Auth Card */}
-        <div className="bg-[#001F3F]/90 border border-[#D4AF37]/40 rounded-3xl p-5 sm:p-7 shadow-2xl backdrop-blur-sm space-y-5">
+        <div className="bg-card border border-border rounded-2xl p-5 sm:p-7 shadow-xl space-y-5">
           
           {/* Tabs: Login vs Register */}
-          <div className="flex bg-[#001122] rounded-xl p-1 border border-white/10 text-xs font-bold">
+          <div className="flex bg-secondary/50 rounded-xl p-1 border border-border text-xs font-semibold">
             <button
               type="button"
               onClick={() => { setMode('login'); setErrorMessage(null); }}
               className={`flex-1 py-2 rounded-lg transition-all ${
                 mode === 'login' 
-                  ? 'bg-[#D4AF37] text-[#001F3F] shadow-md' 
-                  : 'text-white/60 hover:text-white'
+                  ? 'bg-primary text-primary-foreground shadow-xs' 
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Sign In
@@ -219,8 +219,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               onClick={() => { setMode('signup'); setErrorMessage(null); }}
               className={`flex-1 py-2 rounded-lg transition-all ${
                 mode === 'signup' 
-                  ? 'bg-[#D4AF37] text-[#001F3F] shadow-md' 
-                  : 'text-white/60 hover:text-white'
+                  ? 'bg-primary text-primary-foreground shadow-xs' 
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Create Account
@@ -233,9 +233,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 event.preventDefault();
                 if (instantJoinName.trim()) onInstantJoin(instantJoinName);
               }}
-              className="p-3 rounded-xl border border-[#D4AF37]/40 bg-[#001122]/80 space-y-2"
+              className="p-3 rounded-xl border border-primary/30 bg-secondary/30 space-y-2"
             >
-              <label className="block text-xs font-semibold text-white/80">Name or handle</label>
+              <label className="block text-xs font-semibold text-foreground">Name or handle</label>
               <div className="flex gap-2">
                 <input
                   autoFocus
@@ -243,9 +243,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   value={instantJoinName}
                   onChange={(event) => setInstantJoinName(event.target.value)}
                   placeholder="e.g. @tendai or Tendai Moyo"
-                  className="min-w-0 flex-1 bg-[#001F3F] border border-white/20 rounded-xl px-3 py-2.5 text-white placeholder:text-white/40 focus:outline-none focus:border-[#D4AF37] text-sm"
+                  className="min-w-0 flex-1 bg-secondary border border-border rounded-xl px-3 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary text-sm"
                 />
-                <button type="submit" className="px-4 py-2.5 bg-[#D4AF37] text-[#001F3F] rounded-xl font-bold text-xs whitespace-nowrap">
+                <button type="submit" className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl font-semibold text-xs whitespace-nowrap shadow-xs hover:bg-primary/90 transition-colors">
                   Join Live
                 </button>
               </div>
@@ -254,7 +254,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <button
               type="button"
               onClick={() => setShowInstantJoin(true)}
-              className="w-full py-2.5 rounded-xl border border-[#D4AF37]/60 text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-all text-xs font-bold flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-xl border border-primary/40 text-primary hover:bg-primary/10 transition-all text-xs font-semibold flex items-center justify-center gap-2"
             >
               <Users className="w-4 h-4" />
               <span>Instant Join the Live Community</span>
@@ -262,16 +262,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           )}
 
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs space-y-2 animate-in fade-in duration-200">
+            <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs space-y-2 animate-in fade-in duration-200">
               <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 shrink-0 text-red-400" />
+                <Info className="w-4 h-4 shrink-0 text-destructive" />
                 <span>{errorMessage}</span>
               </div>
               {(errorMessage.toLowerCase().includes('suspended') || errorMessage.toLowerCase().includes('banned')) && (
                 <button
                   type="button"
                   onClick={handleOpenAppealModal}
-                  className="w-full py-2 px-3 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold flex items-center justify-center gap-1.5 transition-all text-xs"
+                  className="w-full py-2 px-3 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-semibold flex items-center justify-center gap-1.5 transition-all text-xs"
                 >
                   <Inbox className="w-3.5 h-3.5" />
                   <span>Submit Unban Appeal to Ministry Desk</span>
@@ -284,67 +284,67 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           {mode === 'login' ? (
             <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-white/80 mb-1">
+                <label className="block font-semibold text-foreground mb-1">
                   Mobile Phone Number or Username
                 </label>
                 <div className="flex gap-2">
                   <div className="relative w-32 shrink-0">
-                    <Globe className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+                    <Globe className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                     <select
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
-                      className="w-full bg-[#001122] border border-white/20 rounded-xl pl-8 pr-2 py-2.5 text-white focus:outline-none focus:border-[#D4AF37] text-xs font-semibold appearance-none cursor-pointer"
+                      className="w-full bg-secondary border border-border rounded-xl pl-8 pr-2 py-2.5 text-foreground focus:outline-hidden focus:border-primary text-xs font-semibold appearance-none cursor-pointer"
                     >
                       {COUNTRY_CODES.map((c) => (
-                        <option key={`${c.name}_${c.dialCode}`} value={c.dialCode} className="bg-[#001F3F] text-white">
+                        <option key={`${c.name}_${c.dialCode}`} value={c.dialCode} className="bg-card text-foreground">
                           {c.flag} {c.dialCode}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div className="relative flex-1">
-                    <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                    <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type="text"
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="e.g. 0771234567 or @handle"
-                      className="w-full bg-[#001122] border border-white/20 rounded-xl pl-9 pr-3 py-2.5 text-white placeholder:text-white/40 focus:outline-none focus:border-[#D4AF37] text-sm"
+                      className="w-full bg-secondary border border-border rounded-xl pl-9 pr-3 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary text-sm"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-white/80 mb-1">
+                <label className="block font-semibold text-foreground mb-1">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter account password"
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl pl-9 pr-10 py-2.5 text-white placeholder:text-white/40 focus:outline-none focus:border-[#D4AF37] text-sm"
+                    className="w-full bg-secondary border border-border rounded-xl pl-9 pr-10 py-2.5 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary text-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] pt-1.5 px-0.5">
-                  <span className="text-white/40">Protected by Gateway Protocol</span>
+                  <span className="text-muted-foreground">Protected by Gateway Protocol</span>
                   <button
                     type="button"
                     onClick={handleOpenResetModal}
-                    className="text-[#D4AF37] hover:underline font-semibold"
+                    className="text-primary hover:underline font-semibold"
                   >
                     Forgot password? Request reset
                   </button>
@@ -353,7 +353,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3 bg-gradient-to-r from-[#D4AF37] to-[#C59B27] text-[#001F3F] font-bold text-sm uppercase tracking-wider rounded-xl shadow-lg hover:brightness-105 transition-all flex items-center justify-center gap-2 mt-2"
+                className="w-full py-3 bg-primary text-primary-foreground font-semibold text-sm uppercase tracking-wider rounded-xl shadow-xs hover:bg-primary/90 transition-all flex items-center justify-center gap-2 mt-2"
               >
                 <span>Sign In to Gateway Connect</span>
                 <ArrowRight className="w-4 h-4" />
@@ -362,134 +362,134 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           ) : (
             <form onSubmit={handleSignupSubmit} className="space-y-3 text-xs">
               <div>
-                <label className="block font-semibold text-white/80 mb-1">
+                <label className="block font-semibold text-foreground mb-1">
                   Full Name
                 </label>
                 <div className="relative">
-                  <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                  <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="text"
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. Brother Tendai Moyo"
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl pl-9 pr-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:border-[#D4AF37]"
+                    className="w-full bg-secondary border border-border rounded-xl pl-9 pr-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-white/80 mb-1">
+                <label className="block font-semibold text-foreground mb-1">
                   Mobile Phone Number
                 </label>
                 <div className="flex gap-2">
                   <div className="relative w-32 shrink-0">
-                    <Globe className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+                    <Globe className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                     <select
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
-                      className="w-full bg-[#001122] border border-white/20 rounded-xl pl-8 pr-2 py-2 text-white focus:outline-none focus:border-[#D4AF37] text-xs font-semibold appearance-none cursor-pointer"
+                      className="w-full bg-secondary border border-border rounded-xl pl-8 pr-2 py-2 text-foreground focus:outline-hidden focus:border-primary text-xs font-semibold appearance-none cursor-pointer"
                     >
                       {COUNTRY_CODES.map((c) => (
-                        <option key={`${c.name}_${c.dialCode}`} value={c.dialCode} className="bg-[#001F3F] text-white">
+                        <option key={`${c.name}_${c.dialCode}`} value={c.dialCode} className="bg-card text-foreground">
                           {c.flag} {c.dialCode}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div className="relative flex-1">
-                    <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                    <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type="tel"
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="e.g. 0771234567"
-                      className="w-full bg-[#001122] border border-white/20 rounded-xl pl-9 pr-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:border-[#D4AF37]"
+                      className="w-full bg-secondary border border-border rounded-xl pl-9 pr-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                     />
                   </div>
                 </div>
-                <p className="text-[10px] text-white/50 mt-0.5">
+                <p className="text-[10px] text-muted-foreground mt-0.5">
                   1 mobile number per account strictly enforced.
                 </p>
               </div>
 
               <div>
-                <label className="block font-semibold text-white/80 mb-1">
+                <label className="block font-semibold text-foreground mb-1">
                   Location / City Congregation Hub
                 </label>
                 <div className="relative">
-                  <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#D4AF37]" />
+                  <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-primary" />
                   <select
                     value={cityLocation}
                     onChange={(e) => setCityLocation(e.target.value as SupportedCity)}
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl pl-9 pr-3 py-2 text-white focus:outline-none focus:border-[#D4AF37] appearance-none cursor-pointer text-xs"
+                    className="w-full bg-secondary border border-border rounded-xl pl-9 pr-3 py-2 text-foreground focus:outline-hidden focus:border-primary appearance-none cursor-pointer text-xs"
                   >
                     {SUPPORTED_CITIES.map((city) => (
-                      <option key={city} value={city} className="bg-[#001F3F] text-white">
+                      <option key={city} value={city} className="bg-card text-foreground">
                         {city}
                       </option>
                     ))}
                   </select>
                 </div>
-                <p className="text-[10px] text-white/50 mt-0.5">
+                <p className="text-[10px] text-muted-foreground mt-0.5">
                   Connects you to local believers & clusters into official Congregations.
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-semibold text-white/80 mb-1">
+                  <label className="block font-semibold text-foreground mb-1">
                     Date of Birth
                   </label>
                   <div className="relative">
-                    <Calendar className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#D4AF37]" />
+                    <Calendar className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-primary" />
                     <input
                       type="date"
                       required
                       value={dateOfBirth}
                       onChange={(e) => setDateOfBirth(e.target.value)}
-                      className="w-full bg-[#001122] border border-white/20 rounded-xl pl-9 pr-2 py-2 text-white focus:outline-none focus:border-[#D4AF37] text-xs [color-scheme:dark]"
+                      className="w-full bg-secondary border border-border rounded-xl pl-9 pr-2 py-2 text-foreground focus:outline-hidden focus:border-primary text-xs"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-white/80 mb-1">
+                  <label className="block font-semibold text-foreground mb-1">
                     Sex / Gender
                   </label>
                   <div className="relative">
-                    <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#D4AF37]" />
+                    <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-primary" />
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value as 'male' | 'female')}
-                      className="w-full bg-[#001122] border border-white/20 rounded-xl pl-9 pr-3 py-2 text-white focus:outline-none focus:border-[#D4AF37] appearance-none cursor-pointer text-xs"
+                      className="w-full bg-secondary border border-border rounded-xl pl-9 pr-3 py-2 text-foreground focus:outline-hidden focus:border-primary appearance-none cursor-pointer text-xs"
                     >
-                      <option value="male" className="bg-[#001F3F] text-white">Male (Brother)</option>
-                      <option value="female" className="bg-[#001F3F] text-white">Female (Sister)</option>
+                      <option value="male" className="bg-card text-foreground">Male (Brother)</option>
+                      <option value="female" className="bg-card text-foreground">Female (Sister)</option>
                     </select>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-white/80 mb-1">
+                <label className="block font-semibold text-foreground mb-1">
                   Choose Password
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                  <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 6 characters"
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl pl-9 pr-10 py-2 text-white placeholder:text-white/40 focus:outline-none focus:border-[#D4AF37]"
+                    className="w-full bg-secondary border border-border rounded-xl pl-9 pr-10 py-2 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -497,7 +497,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </div>
 
               <div>
-                <label className="block font-semibold text-white/80 mb-1">
+                <label className="block font-semibold text-foreground mb-1">
                   Referral Code (Optional)
                 </label>
                 <input
@@ -505,13 +505,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   value={referralCode}
                   onChange={(e) => setReferralCode(e.target.value)}
                   placeholder="Enter referral (optional)"
-                  className="w-full bg-[#001122] border border-white/20 rounded-xl px-3 py-2 text-white placeholder:text-white/40 focus:outline-none focus:border-[#D4AF37]"
+                  className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 bg-[#D4AF37] text-[#001F3F] font-bold text-sm uppercase tracking-wider rounded-xl shadow-lg hover:brightness-105 transition-all mt-1"
+                className="w-full py-3 bg-primary text-primary-foreground font-semibold text-sm uppercase tracking-wider rounded-xl shadow-xs hover:bg-primary/90 transition-all mt-1"
               >
                 Create Covenant Account
               </button>
@@ -519,14 +519,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           )}
 
           {/* Guest Access Option */}
-          <div className="pt-2 border-t border-white/10 flex items-center justify-center">
+          <div className="pt-2 border-t border-border flex items-center justify-center">
             <button
               type="button"
               onClick={onContinueAsGuest}
-              className="text-xs text-white/60 hover:text-[#D4AF37] transition-colors font-medium flex items-center gap-1.5 cursor-pointer"
+              className="text-xs text-muted-foreground hover:text-primary transition-colors font-medium flex items-center gap-1.5 cursor-pointer"
             >
               <span>Want to explore first?</span>
-              <span className="underline font-bold text-white/90">Continue as Guest Believer</span>
+              <span className="underline font-semibold text-foreground">Continue as Guest Believer</span>
             </button>
           </div>
         </div>
@@ -535,33 +535,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
       {/* MODAL: UNBAN APPEAL DESK */}
       {showAppealModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-[#001F3F] border border-amber-500/50 rounded-2xl p-5 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl p-5 w-full max-w-md space-y-4 shadow-xl animate-in fade-in text-foreground">
+            <div className="flex items-center justify-between border-b border-border pb-2.5">
               <div className="flex items-center gap-2">
-                <Inbox className="w-5 h-5 text-amber-400" />
-                <h3 className="font-bold text-sm text-white">Unban Appeal Desk</h3>
+                <Inbox className="w-5 h-5 text-primary" />
+                <h3 className="font-bold text-sm text-foreground">Unban Appeal Desk</h3>
               </div>
-              <button onClick={() => setShowAppealModal(false)} className="text-white/60 hover:text-white">
+              <button onClick={() => setShowAppealModal(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-white/70">
+            <p className="text-xs text-muted-foreground">
               Submit your formal appeal directly to the Ministry Administrators. Provide your details and reasons for reinstatement.
             </p>
 
             {appealSuccessMsg ? (
-              <div className="p-4 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs space-y-3">
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-500 text-xs space-y-3">
                 <div className="flex items-center gap-2 font-bold">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                   <span>Appeal Submitted Successfully</span>
                 </div>
-                <p className="text-[11px] text-white/80">{appealSuccessMsg}</p>
+                <p className="text-[11px] text-muted-foreground">{appealSuccessMsg}</p>
                 <button
                   type="button"
                   onClick={() => setShowAppealModal(false)}
-                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all"
+                  className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
                 >
                   Close Window
                 </button>
@@ -569,38 +569,38 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             ) : (
               <form onSubmit={handleSubmitAppeal} className="space-y-3 text-xs">
                 <div>
-                  <label className="block font-semibold text-white/80 mb-1">Your Full Name</label>
+                  <label className="block font-semibold text-foreground mb-1">Your Full Name</label>
                   <input
                     type="text"
                     required
                     value={appealName}
                     onChange={e => setAppealName(e.target.value)}
                     placeholder="e.g. Brother Tendai Moyo"
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl px-3 py-2 text-white placeholder:text-white/40 focus:border-amber-400 outline-none"
+                    className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-primary outline-hidden"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-white/80 mb-1">Account Phone Number</label>
+                  <label className="block font-semibold text-foreground mb-1">Account Phone Number</label>
                   <input
                     type="tel"
                     required
                     value={appealPhone}
                     onChange={e => setAppealPhone(e.target.value)}
                     placeholder="e.g. 0772123456"
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl px-3 py-2 text-white placeholder:text-white/40 focus:border-amber-400 outline-none"
+                    className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-primary outline-hidden"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-white/80 mb-1">Appeal Statement / Explanation</label>
+                  <label className="block font-semibold text-foreground mb-1">Appeal Statement / Explanation</label>
                   <textarea
                     rows={4}
                     required
                     value={appealReason}
                     onChange={e => setAppealReason(e.target.value)}
                     placeholder="Please explain the situation or apologize for any misunderstanding. This statement will be reviewed by the Lead Administrator."
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl p-3 text-white placeholder:text-white/40 focus:border-amber-400 outline-none"
+                    className="w-full bg-secondary border border-border rounded-xl p-3 text-foreground placeholder:text-muted-foreground focus:border-primary outline-hidden"
                   />
                 </div>
 
@@ -608,13 +608,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowAppealModal(false)}
-                    className="px-4 py-2 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20"
+                    className="px-4 py-2 rounded-xl bg-secondary text-muted-foreground hover:text-foreground font-semibold transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-[#001F3F] font-bold shadow-lg flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs flex items-center gap-1.5 transition-all"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Send Appeal to Admin</span>
@@ -628,33 +628,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
       {/* MODAL: PASSWORD RESET REQUEST */}
       {showResetModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-[#001F3F] border border-blue-500/50 rounded-2xl p-5 w-full max-w-md space-y-4 shadow-2xl animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl p-5 w-full max-w-md space-y-4 shadow-xl animate-in fade-in text-foreground">
+            <div className="flex items-center justify-between border-b border-border pb-2.5">
               <div className="flex items-center gap-2">
-                <Key className="w-5 h-5 text-blue-400" />
-                <h3 className="font-bold text-sm text-white">Password Recovery Request</h3>
+                <Key className="w-5 h-5 text-primary" />
+                <h3 className="font-bold text-sm text-foreground">Password Recovery Request</h3>
               </div>
-              <button onClick={() => setShowResetModal(false)} className="text-white/60 hover:text-white">
+              <button onClick={() => setShowResetModal(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-white/70">
+            <p className="text-xs text-muted-foreground">
               Forgot your password? Send a recovery request directly to the Lead Developer and Church Admin desk.
             </p>
 
             {resetSuccessMsg ? (
-              <div className="p-4 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs space-y-3">
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-500 text-xs space-y-3">
                 <div className="flex items-center gap-2 font-bold">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                   <span>Request Logged</span>
                 </div>
-                <p className="text-[11px] text-white/80">{resetSuccessMsg}</p>
+                <p className="text-[11px] text-muted-foreground">{resetSuccessMsg}</p>
                 <button
                   type="button"
                   onClick={() => setShowResetModal(false)}
-                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all"
+                  className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
                 >
                   Close Window
                 </button>
@@ -662,25 +662,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             ) : (
               <form onSubmit={handleSubmitPasswordReset} className="space-y-3 text-xs">
                 <div>
-                  <label className="block font-semibold text-white/80 mb-1">Your Registered Phone Number</label>
+                  <label className="block font-semibold text-foreground mb-1">Your Registered Phone Number</label>
                   <input
                     type="tel"
                     required
                     value={resetPhone}
                     onChange={e => setResetPhone(e.target.value)}
                     placeholder="e.g. 0772123456"
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl px-3 py-2 text-white placeholder:text-white/40 focus:border-blue-400 outline-none"
+                    className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-primary outline-hidden"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-white/80 mb-1">Additional Note (Optional)</label>
+                  <label className="block font-semibold text-foreground mb-1">Additional Note (Optional)</label>
                   <input
                     type="text"
                     value={resetNote}
                     onChange={e => setResetNote(e.target.value)}
                     placeholder="e.g. Please reset my password, I forgot it yesterday"
-                    className="w-full bg-[#001122] border border-white/20 rounded-xl px-3 py-2 text-white placeholder:text-white/40 focus:border-blue-400 outline-none"
+                    className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-foreground placeholder:text-muted-foreground focus:border-primary outline-hidden"
                   />
                 </div>
 
@@ -688,13 +688,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowResetModal(false)}
-                    className="px-4 py-2 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20"
+                    className="px-4 py-2 rounded-xl bg-secondary text-muted-foreground hover:text-foreground font-semibold transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs flex items-center gap-1.5 transition-all"
                   >
                     <Key className="w-3.5 h-3.5" />
                     <span>Submit Reset Request</span>

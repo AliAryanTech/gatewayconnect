@@ -160,65 +160,65 @@ export const PremiumSubscriptionModal: React.FC<PremiumSubscriptionModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#001122]/85 backdrop-blur-md flex items-center justify-center p-3 overflow-y-auto">
-      <div className="bg-[#001F3F] border-2 border-[#D4AF37] rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 my-auto relative animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto">
+      <div className="bg-card border border-primary/40 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-xl space-y-4 my-auto relative animate-in fade-in zoom-in-95 duration-200 text-foreground">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all"
+          className="absolute top-4 right-4 p-2 rounded-full bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-all"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Modal Header */}
         <div className="text-center space-y-1.5 pt-1">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-300 to-yellow-200 text-slate-950 shadow-lg shadow-amber-500/30">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary text-primary-foreground shadow-xs">
             <Crown className="w-6 h-6" />
           </div>
 
           <div className="flex items-center justify-center gap-1.5 pt-1">
-            <h3 className="font-serif-church font-bold text-xl sm:text-2xl text-white">
+            <h3 className="font-serif-church font-bold text-xl sm:text-2xl text-foreground">
               Gateway Premium Partner
             </h3>
             <VerifiedBadge type="blue" size="md" />
           </div>
 
-          <p className="text-xs text-white/70 max-w-sm mx-auto leading-relaxed">
-            Unlock all full-length apostolic masterclasses by Apostle Joe Daniels, receive the official <strong className="text-sky-300">Blue Verified Badge</strong>, and partner with the ministry.
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+            Unlock all full-length apostolic masterclasses by Apostle Joe Daniels, receive the official <strong className="text-primary">Blue Verified Badge</strong>, and partner with the ministry.
           </p>
         </div>
 
         {/* Success Alert */}
         {successMessage && (
-          <div className="p-3 bg-emerald-500/20 border border-emerald-400 rounded-2xl text-center space-y-1 animate-pulse">
-            <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto" />
-            <p className="text-xs font-bold text-emerald-200">{successMessage}</p>
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center space-y-1 animate-pulse">
+            <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
+            <p className="text-xs font-bold text-emerald-500">{successMessage}</p>
           </div>
         )}
 
         {/* If opening from a specific locked sermon: Quick 1-Sermon Unlock Option */}
         {targetSermon && (
-          <div className="bg-[#001122]/90 border border-amber-500/50 rounded-2xl p-3.5 space-y-2.5">
+          <div className="bg-secondary/40 border border-primary/30 rounded-xl p-3.5 space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/30">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
                 Single Sermon Pass
               </span>
-              <span className="text-sm font-black text-[#D4AF37]">
+              <span className="text-sm font-bold text-primary">
                 ${targetSermon.unlock_price_usd || 5} USD
               </span>
             </div>
 
             <div>
-              <h4 className="text-xs font-bold text-white line-clamp-1">{targetSermon.title}</h4>
-              <p className="text-[11px] text-white/60">Unlock full audio & video access for just this message</p>
+              <h4 className="text-xs font-bold text-foreground line-clamp-1">{targetSermon.title}</h4>
+              <p className="text-[11px] text-muted-foreground">Unlock full audio & video access for just this message</p>
             </div>
 
             <button
               id="btn-unlock-single-sermon"
               onClick={handleUnlockSingleSermon}
               disabled={isProcessing}
-              className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
+              className="w-full py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98]"
             >
               <Unlock className="w-4 h-4" />
               <span>{isProcessing ? 'Processing...' : `Unlock This Sermon for $${targetSermon.unlock_price_usd || 5}`}</span>
@@ -229,7 +229,7 @@ export const PremiumSubscriptionModal: React.FC<PremiumSubscriptionModalProps> =
         {/* Subscription Plans Selection */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-white/80">Choose Subscription Duration</span>
+            <span className="text-xs font-bold text-foreground">Choose Subscription Duration</span>
             {isAdmin && (
               <button
                 type="button"
@@ -241,7 +241,7 @@ export const PremiumSubscriptionModal: React.FC<PremiumSubscriptionModalProps> =
                   }
                   setIsEditingPrices(!isEditingPrices);
                 }}
-                className="text-[11px] text-[#D4AF37] hover:underline flex items-center gap-1 font-bold"
+                className="text-[11px] text-primary hover:underline flex items-center gap-1 font-semibold"
               >
                 <Edit2 className="w-3 h-3" />
                 <span>{isEditingPrices ? 'Cancel Edit' : 'Edit Plan Prices'}</span>
@@ -251,41 +251,41 @@ export const PremiumSubscriptionModal: React.FC<PremiumSubscriptionModalProps> =
 
           {/* Admin Price Editor Mode */}
           {isEditingPrices && isAdmin && (
-            <div className="p-3 bg-[#001122] border border-[#D4AF37]/50 rounded-2xl space-y-2 text-xs">
-              <p className="font-bold text-[#D4AF37]">Admin Price Configuration (USD)</p>
+            <div className="p-3 bg-secondary/40 border border-primary/30 rounded-xl space-y-2 text-xs">
+              <p className="font-bold text-primary">Admin Price Configuration (USD)</p>
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-[10px] text-white/60 block mb-0.5">3 Months</label>
+                  <label className="text-[10px] text-muted-foreground block mb-0.5">3 Months</label>
                   <input
                     type="number"
                     value={editPrice3m}
                     onChange={(e) => setEditPrice3m(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs text-white"
+                    className="w-full bg-secondary border border-border rounded-lg p-1.5 text-xs text-foreground"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-white/60 block mb-0.5">6 Months</label>
+                  <label className="text-[10px] text-muted-foreground block mb-0.5">6 Months</label>
                   <input
                     type="number"
                     value={editPrice6m}
                     onChange={(e) => setEditPrice6m(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs text-white"
+                    className="w-full bg-secondary border border-border rounded-lg p-1.5 text-xs text-foreground"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-white/60 block mb-0.5">1 Year</label>
+                  <label className="text-[10px] text-muted-foreground block mb-0.5">1 Year</label>
                   <input
                     type="number"
                     value={editPrice1y}
                     onChange={(e) => setEditPrice1y(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs text-white"
+                    className="w-full bg-secondary border border-border rounded-lg p-1.5 text-xs text-foreground"
                   />
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleSaveAdminPrices}
-                className="w-full py-1.5 bg-[#D4AF37] text-slate-950 rounded-lg font-bold text-xs flex items-center justify-center gap-1"
+                className="w-full py-1.5 bg-primary text-primary-foreground rounded-lg font-semibold text-xs flex items-center justify-center gap-1 shadow-xs"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>Save New Pricing</span>
@@ -302,32 +302,32 @@ export const PremiumSubscriptionModal: React.FC<PremiumSubscriptionModalProps> =
                   type="button"
                   key={plan.id}
                   onClick={() => setSelectedPlanId(plan.id)}
-                  className={`p-3 rounded-2xl text-left border-2 transition-all relative flex flex-col justify-between ${
+                  className={`p-3 rounded-xl text-left border transition-all relative flex flex-col justify-between ${
                     isSelected
-                      ? 'bg-[#001122] border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20 scale-[1.02]'
-                      : 'bg-[#001122]/60 border-white/10 hover:border-white/20'
+                      ? 'bg-secondary/70 border-primary shadow-xs ring-1 ring-primary'
+                      : 'bg-secondary/30 border-border hover:border-primary/40'
                   }`}
                 >
                   {plan.popular && (
-                    <span className="absolute -top-2.5 right-2 px-2 py-0.5 bg-[#D4AF37] text-slate-950 text-[9px] font-black uppercase rounded-full shadow">
+                    <span className="absolute -top-2.5 right-2 px-2 py-0.5 bg-primary text-primary-foreground text-[9px] font-bold uppercase rounded-full shadow-xs">
                       Popular
                     </span>
                   )}
 
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white">{plan.durationMonths} Months</span>
-                      {isSelected && <Check className="w-4 h-4 text-[#D4AF37]" />}
+                      <span className="text-xs font-bold text-foreground">{plan.durationMonths} Months</span>
+                      {isSelected && <Check className="w-4 h-4 text-primary" />}
                     </div>
-                    <div className="text-lg font-black text-[#D4AF37] mt-1">
+                    <div className="text-lg font-bold text-primary mt-1">
                       ${plan.priceUsd}
                     </div>
-                    <div className="text-[10px] text-white/50">
+                    <div className="text-[10px] text-muted-foreground">
                       ≈ {plan.priceZig} ZiG
                     </div>
                   </div>
 
-                  <div className="text-[10px] text-white/70 pt-2 border-t border-white/5 mt-2">
+                  <div className="text-[10px] text-muted-foreground pt-2 border-t border-border mt-2">
                     {plan.savings || `${Math.round(plan.priceUsd / plan.durationMonths)}/mo`}
                   </div>
                 </button>
@@ -337,21 +337,21 @@ export const PremiumSubscriptionModal: React.FC<PremiumSubscriptionModalProps> =
         </div>
 
         {/* Benefits Checklist */}
-        <div className="bg-[#001122]/70 rounded-2xl p-3.5 border border-white/5 space-y-1.5 text-xs text-white/80">
+        <div className="bg-secondary/30 rounded-xl p-3.5 border border-border space-y-1.5 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+            <span className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <Check className="w-2.5 h-2.5 stroke-[3]" />
             </span>
-            <span><strong className="text-sky-300">Blue Verified Badge</strong> next to your name across the platform</span>
+            <span><strong className="text-foreground">Blue Verified Badge</strong> next to your name across the platform</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <span className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <Check className="w-2.5 h-2.5 stroke-[3]" />
             </span>
             <span>Unrestricted access to all Apostle Joe Daniels sermons & series</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <span className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <Check className="w-2.5 h-2.5 stroke-[3]" />
             </span>
             <span>Exclusive study notes & downloadable ministry audio</span>
@@ -360,18 +360,18 @@ export const PremiumSubscriptionModal: React.FC<PremiumSubscriptionModalProps> =
 
         {/* Payment Account Details */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-white/80">
-            <span className="font-semibold">Direct EcoCash Account</span>
-            <span className="font-mono font-bold text-[#D4AF37]">0771445642</span>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="font-medium">Direct EcoCash Account</span>
+            <span className="font-mono font-bold text-primary">0771445642</span>
           </div>
 
           <button
             id="btn-confirm-subscription"
             onClick={handleSubscribe}
             disabled={isProcessing}
-            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#f5d97f] to-[#D4AF37] text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-[#D4AF37]/30 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm uppercase tracking-wider shadow-xs hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
-            <Sparkles className="w-4 h-4 fill-slate-950" />
+            <Sparkles className="w-4 h-4" />
             <span>
               {isProcessing
                 ? 'Activating Subscription...'
