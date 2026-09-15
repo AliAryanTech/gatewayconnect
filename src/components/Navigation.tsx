@@ -50,8 +50,8 @@ export const Navigation: React.FC<NavigationProps> = ({
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-t border-border py-2 px-3 safe-area-bottom shadow-lg transition-colors">
-      <div className="max-w-md mx-auto grid grid-cols-5 gap-1">
+    <nav className="gcz-nav fixed bottom-3 left-3 right-3 z-50 py-2 px-2 safe-area-bottom transition-colors">
+      <div className="gcz-nav-inner max-w-xl mx-auto grid grid-cols-5 gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
