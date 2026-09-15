@@ -120,7 +120,9 @@ const KEYS = {
   NOTIFICATION_SETTINGS: 'gcz_notification_settings_v1',
   RECEIPTS_ARCHIVE: 'gcz_receipts_archive_v1',
   THEME: 'gcz_theme_v1',
-  DISSOLVED_GROUPS: 'gcz_dissolved_groups_v1'
+  DISSOLVED_GROUPS: 'gcz_dissolved_groups_v1',
+  OVERRIDE_PLAYING_VIDEO: 'gcz_override_playing_video_v1',
+  SAVED_POSTS: 'gcz_saved_posts_v1'
 };
 
 // In-memory fallback dictionary for when third-party cookies or localStorage are restricted/blocked
@@ -204,6 +206,11 @@ export function playNotificationChime(): void {
 }
 
 export class StorageService {
+  // Sound effects
+  static playNotificationChime(): void {
+    playNotificationChime();
+  }
+
   // Permanent Custom User Avatars store
   static getPermanentCustomAvatars(): Record<string, string> {
     return getLocal<Record<string, string>>('gcz_permanent_custom_avatars', {});
@@ -522,6 +529,10 @@ export class StorageService {
     }
   }
 
+  static developerSetUserRole(userId: string, newRole: UserRole): void {
+    this.updateUserRole(userId, newRole);
+  }
+
   static updateUserProfile(updates: Partial<User>): User | null {
     const curr = this.getCurrentUser();
     if (!curr) return null;
@@ -777,6 +788,46 @@ export class StorageService {
     } catch {
       // Ignore background network error
     }
+  }
+
+  // Instagram Saved / Bookmarked Posts
+  static getSavedPostIds(userId?: string): string[] {
+    const uid = userId || this.getCurrentUser()?.id || 'guest';
+    const allSaved = getLocal<Record<string, string[]>>(KEYS.SAVED_POSTS, {});
+    return allSaved[uid] || [];
+  }
+
+  static isPostSaved(postId: string, userId?: string): boolean {
+    const savedIds = this.getSavedPostIds(userId);
+    return savedIds.includes(postId);
+  }
+
+  static toggleSavedPost(postId: string, userId?: string): boolean {
+    const uid = userId || this.getCurrentUser()?.id || 'guest';
+    const allSaved = getLocal<Record<string, string[]>>(KEYS.SAVED_POSTS, {});
+    const userList = allSaved[uid] || [];
+    const exists = userList.includes(postId);
+    let updatedList: string[];
+    if (exists) {
+      updatedList = userList.filter(id => id !== postId);
+    } else {
+      updatedList = [postId, ...userList];
+    }
+    allSaved[uid] = updatedList;
+    setLocal(KEYS.SAVED_POSTS, allSaved);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_saved_posts_updated', {
+        detail: { userId: uid, postId, isSaved: !exists }
+      }));
+    }
+    return !exists;
+  }
+
+  static getSavedPosts(userId?: string): Testimony[] {
+    const ids = this.getSavedPostIds(userId);
+    const all = this.getTestimonies();
+    return all.filter(p => ids.includes(p.id));
   }
 
   // Devotionals
@@ -1787,7 +1838,7 @@ export class StorageService {
             detail: {
               postId: target.id,
               postAuthorId: target.user_id,
-              postTitle: target.title || (target.text || '').slice(0, 40) || 'Your post',
+              postTitle: target.title || ((target as any).text || target.content || '').slice(0, 40) || 'Your post',
               comment: newComment
             }
           }));
@@ -2243,8 +2294,8 @@ export class StorageService {
   }
 
   // Developer God Mode: Account Bans & Security
-  static getBannedUsers(): Record<string, { banned_at: string; reason: string; banned_by?: string }> {
-    return getLocal<Record<string, { banned_at: string; reason: string; banned_by?: string }>>(KEYS.BANNED_USERS, {});
+  static getBannedUsers(): Record<string, { banned_at: string; reason: string; banned_by?: string; phone?: string }> {
+    return getLocal<Record<string, { banned_at: string; reason: string; banned_by?: string; phone?: string }>>(KEYS.BANNED_USERS, {});
   }
 
   static isUserBanned(userIdOrPhone: string): { isBanned: boolean; reason?: string; banned_at?: string } {
@@ -2917,8 +2968,16 @@ export class StorageService {
       this.setLiveStreamUrl(status.streamUrl);
       SupabaseSyncService.syncStreamUrl(status.streamUrl).catch(() => {});
     }
+    SupabaseSyncService.syncLiveSermonStatus(status).catch(() => {});
+    if (status.isLive) {
+      // Clear manual client video override so the live broadcast instantly takes over top player
+      this.setOverridePlayingVideo(null);
+    }
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('gcz_live_status_updated', { detail: status }));
+      if (status.isLive) {
+        window.dispatchEvent(new CustomEvent('gcz_live_broadcast_started', { detail: status }));
+      }
     }
   }
 
@@ -3244,6 +3303,25 @@ export class StorageService {
   // =========================================================================
   static getLiveStreamUrl(): string {
     return getLocal<string>(KEYS.LIVE_STREAM_URL, 'https://youtu.be/-CibsaxijIk?si=w71mOHPl8igh5XIP');
+  }
+
+  static getOverridePlayingVideo(): { id: string; title: string; youtube_id: string } | null {
+    return getLocal<{ id: string; title: string; youtube_id: string } | null>(KEYS.OVERRIDE_PLAYING_VIDEO, null);
+  }
+
+  static setOverridePlayingVideo(video: { id: string; title: string; youtube_id: string } | null): void {
+    if (video) {
+      setLocal(KEYS.OVERRIDE_PLAYING_VIDEO, video);
+    } else {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.removeItem(KEYS.OVERRIDE_PLAYING_VIDEO);
+        } catch {}
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gcz_override_video_updated', { detail: video }));
+    }
   }
 
   static setLiveStreamUrl(url: string): void {
@@ -4418,7 +4496,24 @@ export class StorageService {
       }
       window.dispatchEvent(new CustomEvent('gcz_new_notification', { detail: payload }));
       window.dispatchEvent(new CustomEvent('gcz_notifications_updated'));
-    } else if (type === 'user_created') {
+    } else if (type === 'stream_status' || type === 'live_status_updated') {
+      const status = payload as { isLive: boolean; title: string; sermonId: string; viewerCount: number; streamUrl?: string };
+      if (status && typeof status.isLive === 'boolean') {
+        setLocal(KEYS.LIVE_SERMON, status);
+        if (status.streamUrl) {
+          setLocal(KEYS.LIVE_STREAM_URL, status.streamUrl);
+        }
+        window.dispatchEvent(new CustomEvent('gcz_live_status_updated', { detail: status }));
+      }
+    } else if (type === 'override_video' || type === 'override_video_updated') {
+      const video = payload as { id: string; title: string; youtube_id: string } | null;
+      if (video) {
+        setLocal(KEYS.OVERRIDE_PLAYING_VIDEO, video);
+      } else {
+        localStorage.removeItem(KEYS.OVERRIDE_PLAYING_VIDEO);
+      }
+      window.dispatchEvent(new CustomEvent('gcz_override_video_updated', { detail: video }));
+    } else if (type === 'user_created' || type === 'user_updated') {
       const newUser = payload as User;
       if (newUser && newUser.id) {
         const users = this.getAllUsers();

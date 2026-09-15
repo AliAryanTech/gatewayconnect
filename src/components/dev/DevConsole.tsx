@@ -1049,51 +1049,92 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
         ))}
       </div>
 
-      {/* Mobile Tab Dropdown Selector */}
+      {/* Mobile Tab Navigation - Module Selector & Scrollable Category Pills */}
       <div className={cn(
-        "flex md:hidden border-b px-3 py-2 items-center justify-between gap-2 shrink-0",
+        "flex md:hidden flex-col border-b shrink-0",
         consoleTheme === 'jarvis'
           ? "bg-[#02131e] border-cyan-500/30"
           : "bg-slate-950 border-slate-800"
       )}>
-        <span className={cn(
-          "text-[11px] font-bold uppercase tracking-wider font-mono",
-          consoleTheme === 'jarvis' ? "text-cyan-400" : "text-slate-400"
-        )}>
-          Module:
-        </span>
-        <div className="relative flex-1">
-          <select
-            value={activeTab}
-            onChange={(e) => setActiveTab(e.target.value as any)}
-            className={cn(
-              "w-full rounded-xl px-3 py-1.5 text-xs font-bold appearance-none pr-8 focus:outline-none font-mono",
-              consoleTheme === 'jarvis'
-                ? "bg-[#021827] border border-cyan-500/40 text-cyan-300 focus:border-cyan-300"
-                : "bg-slate-900 border border-purple-500/30 text-purple-300 focus:border-purple-400"
-            )}
-          >
-            {[
-              { id: 'telemetry', label: 'Telemetry & Health' },
-              { id: 'accounts', label: 'Ecosystem Accounts & Sync' },
-              { id: 'streamers', label: `Stream Attendees (${activeStreamers.length} Live / ${streamAttendees.length} Total)` },
-              { id: 'bans', label: 'Account Bans & Suspension' },
-              { id: 'appeals', label: `Unban Appeals (${unbanAppeals.filter(a => a.status === 'pending').length})` },
-              { id: 'passwords', label: `Password Recovery (${passwordRequests.filter(p => p.status === 'pending').length})` },
-              { id: 'godmode', label: 'Godmode Account Control' },
-              { id: 'schema', label: 'Supabase Postgres Schema' },
-              { id: 'logs', label: 'Live System Logs' },
-              { id: 'endpoints', label: 'API Endpoints & Routes' },
-            ].map(tab => (
-              <option key={tab.id} value={tab.id} className="bg-slate-900 text-white">
-                {tab.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className={cn(
-            "w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none",
-            consoleTheme === 'jarvis' ? "text-cyan-400" : "text-purple-400"
-          )} />
+        {/* Module Selector Dropdown */}
+        <div className="flex px-3 py-2 items-center justify-between gap-2 border-b border-white/5">
+          <span className={cn(
+            "text-[11px] font-bold uppercase tracking-wider font-mono",
+            consoleTheme === 'jarvis' ? "text-cyan-400" : "text-slate-400"
+          )}>
+            Module:
+          </span>
+          <div className="relative flex-1">
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as any)}
+              className={cn(
+                "w-full rounded-xl px-3 py-1.5 text-xs font-bold appearance-none pr-8 focus:outline-none font-mono",
+                consoleTheme === 'jarvis'
+                  ? "bg-[#021827] border border-cyan-500/40 text-cyan-300 focus:border-cyan-300"
+                  : "bg-slate-900 border border-purple-500/30 text-purple-300 focus:border-purple-400"
+              )}
+            >
+              {[
+                { id: 'telemetry', label: 'Telemetry & Health' },
+                { id: 'accounts', label: 'Ecosystem Accounts & Sync' },
+                { id: 'streamers', label: `Stream Attendees (${activeStreamers.length} Live / ${streamAttendees.length} Total)` },
+                { id: 'bans', label: 'Account Bans & Suspension' },
+                { id: 'appeals', label: `Unban Appeals (${unbanAppeals.filter(a => a.status === 'pending').length})` },
+                { id: 'passwords', label: `Password Recovery (${passwordRequests.filter(p => p.status === 'pending').length})` },
+                { id: 'godmode', label: 'Godmode Account Control' },
+                { id: 'schema', label: 'Supabase Postgres Schema' },
+                { id: 'logs', label: 'Live System Logs' },
+                { id: 'endpoints', label: 'API Endpoints & Routes' },
+              ].map(tab => (
+                <option key={tab.id} value={tab.id} className="bg-slate-900 text-white">
+                  {tab.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className={cn(
+              "w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none",
+              consoleTheme === 'jarvis' ? "text-cyan-400" : "text-purple-400"
+            )} />
+          </div>
+        </div>
+
+        {/* Mobile Swipeable Tab Pills */}
+        <div className="flex items-center gap-1.5 px-2 py-1.5 overflow-x-auto scrollbar-none">
+          {[
+            { id: 'telemetry', label: 'Telemetry', icon: Activity },
+            { id: 'accounts', label: 'Accounts', icon: Users },
+            { id: 'streamers', label: `Live (${activeStreamers.length})`, icon: Radio },
+            { id: 'bans', label: 'Bans', icon: ShieldOff },
+            { id: 'appeals', label: `Appeals (${unbanAppeals.filter(a => a.status === 'pending').length})`, icon: Eye },
+            { id: 'passwords', label: `Reset (${passwordRequests.filter(p => p.status === 'pending').length})`, icon: KeyRound },
+            { id: 'godmode', label: 'Godmode', icon: ShieldAlert },
+            { id: 'schema', label: 'Schema', icon: Database },
+            { id: 'logs', label: 'Logs', icon: Terminal },
+            { id: 'endpoints', label: 'API', icon: Layers },
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold flex items-center gap-1 shrink-0 transition-all",
+                  isActive
+                    ? (consoleTheme === 'jarvis'
+                        ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)]'
+                        : 'bg-purple-600 text-white shadow-sm')
+                    : (consoleTheme === 'jarvis'
+                        ? 'bg-[#021827]/80 text-cyan-400/60 border border-cyan-900/40 hover:text-cyan-200'
+                        : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white')
+                )}
+              >
+                <Icon className="w-3 h-3" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1104,48 +1145,48 @@ export const DevConsole: React.FC<DevConsoleProps> = ({ onClose, onOpenFlutterEx
         {activeTab === 'telemetry' && (
           <div className="space-y-4">
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-3.5 space-y-1">
-                <span className="text-xs text-slate-400">Supabase Project Ref</span>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs font-mono font-bold text-emerald-400 truncate">csinlqdcqdgcssdanvsr</span>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+              <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-2.5 sm:p-3.5 space-y-1">
+                <span className="text-[10px] sm:text-xs text-slate-400 block truncate">Supabase Project Ref</span>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="text-[11px] sm:text-xs font-mono font-bold text-emerald-400 truncate">csinlqdcqdgcssdanvsr</span>
                 </div>
-                <p className="text-[10px] text-slate-500">PostgreSQL 15.x Live</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500 truncate">PostgreSQL 15.x Live</p>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-1">
-                <span className="text-xs text-slate-400">Supabase REST & Auth</span>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  <span className="text-sm font-bold text-white">{supabaseConfig.isLiveConnected ? 'CONFIGURED' : 'NOT CONFIGURED'}</span>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-2.5 sm:p-3.5 space-y-1">
+                <span className="text-[10px] sm:text-xs text-slate-400 block truncate">REST & Auth</span>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                  <span className="text-xs sm:text-sm font-bold text-white truncate">{supabaseConfig.isLiveConnected ? 'CONFIGURED' : 'OFFLINE'}</span>
                 </div>
-                <p className="text-[10px] text-slate-500">Latency: {measuredLatency === null ? 'Not measured' : `${measuredLatency}ms`}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500 truncate">Latency: {measuredLatency === null ? 'N/A' : `${measuredLatency}ms`}</p>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-1">
-                <span className="text-xs text-slate-400">Paynow Zimbabwe</span>
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${paynowConfig.isConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
-                  <span className="text-sm font-bold text-white">
-                    {paynowConfig.isConfigured ? `ACTIVE (${paynowConfig.integrationId})` : 'SETUP REQUIRED'}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-2.5 sm:p-3.5 space-y-1">
+                <span className="text-[10px] sm:text-xs text-slate-400 block truncate">Paynow Zimbabwe</span>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${paynowConfig.isConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+                  <span className="text-xs sm:text-sm font-bold text-white truncate">
+                    {paynowConfig.isConfigured ? `ACTIVE` : 'SETUP'}
                   </span>
                 </div>
                 <button
                   onClick={() => setShowPaynowModal(true)}
-                  className="text-[10px] text-purple-400 hover:underline font-bold"
+                  className="text-[9px] sm:text-[10px] text-purple-400 hover:underline font-bold truncate block"
                 >
-                  Configure ID & Auth Key →
+                  Configure ID →
                 </button>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-1">
-                <span className="text-xs text-slate-400">Low-Data Cache</span>
-                <div className="flex items-center gap-2">
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="text-sm font-bold text-amber-400">24kbps OPUS</span>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-2.5 sm:p-3.5 space-y-1">
+                <span className="text-[10px] sm:text-xs text-slate-400 block truncate">Low-Data Cache</span>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
+                  <span className="text-xs sm:text-sm font-bold text-amber-400 truncate">24kbps OPUS</span>
                 </div>
-                <p className="text-[10px] text-slate-500">Browser cache status: available</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500 truncate">Browser cache status: OK</p>
               </div>
             </div>
 

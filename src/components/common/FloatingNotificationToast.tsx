@@ -18,7 +18,7 @@ import { cn } from '../../lib/utils';
 
 interface FloatingNotificationToastProps {
   currentUser?: User | null;
-  onOpenLiveSermon: () => void;
+  onOpenLiveSermon?: () => void;
   onOpenDirectChat: (recipientId: string) => void;
   onOpenGroupChat: (groupId: string) => void;
   onNavigateTab: (tab: 'home' | 'bible' | 'community' | 'store' | 'me', subTab?: string) => void;
@@ -111,7 +111,11 @@ export const FloatingNotificationToast: React.FC<FloatingNotificationToastProps>
 
     // 1. Live stream
     if (currentNotif.target_type === 'live' || currentNotif.type === 'broadcast' || currentNotif.title.toLowerCase().includes('live')) {
-      onOpenLiveSermon();
+      if (onOpenLiveSermon) {
+        onOpenLiveSermon();
+      } else {
+        onNavigateTab('home');
+      }
       return;
     }
 

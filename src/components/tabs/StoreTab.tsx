@@ -375,7 +375,7 @@ export const StoreTab: React.FC<StoreTabProps> = ({ products, onDonationSuccess 
   };
 
   return (
-    <div className="space-y-4 pb-24 max-w-4xl mx-auto px-3 sm:px-4 pt-2">
+    <div className="space-y-4 pb-20 max-w-4xl mx-auto px-0 sm:px-2 pt-1 w-full max-w-full">
       
       {/* 1. Header Toolbar with Sub-tabs and Currency Switcher */}
       <div className="bg-card border border-border rounded-xl p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">

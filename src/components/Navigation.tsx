@@ -50,7 +50,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   ];
 
   return (
-    <nav className="gcz-nav fixed bottom-3 left-3 right-3 z-50 py-2 px-2 safe-area-bottom transition-colors">
+    <nav className="gcz-nav fixed bottom-0 left-0 right-0 sm:bottom-3 sm:left-3 sm:right-3 z-50 py-1.5 px-1.5 sm:py-2 sm:px-2 safe-area-bottom transition-colors">
       <div className="gcz-nav-inner max-w-xl mx-auto grid grid-cols-5 gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;

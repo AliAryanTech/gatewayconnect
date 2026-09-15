@@ -373,7 +373,7 @@ export const BibleTab: React.FC<BibleTabProps> = ({ initialReference, lowDataMod
   const displayBookName = (name: string) => name;
 
   return (
-    <div className="space-y-4 pb-24 max-w-4xl mx-auto px-2 sm:px-4 pt-1">
+    <div className="space-y-4 pb-20 max-w-4xl mx-auto px-0 sm:px-2 pt-1 w-full max-w-full">
       
       {/* 1. Main Top Navigation Bar */}
       <div className="bg-card/95 backdrop-blur-md border border-border rounded-xl p-2.5 sm:p-3 shadow-sm sticky top-14 z-30 space-y-2">

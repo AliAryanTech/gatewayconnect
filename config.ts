@@ -40,7 +40,7 @@ export const CONFIG = {
   // ---------------------------------------------------------------------------
   // Live WebSocket Gateway URL (Optional external hub)
   // ---------------------------------------------------------------------------
-  LIVE_WS_URL: getEnv('VITE_LIVE_WS_URL', ''),
+  LIVE_WS_URL: getEnv('VITE_LIVE_WS_URL', 'wss://gatewayconnect.onrender.com/live'),
 
   // ---------------------------------------------------------------------------
   // Application Host URL

@@ -64,7 +64,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   onNavigateTab,
 }) => {
   const [activeSermon, setActiveSermon] = useState<Sermon>(sermons[0] || {} as Sermon);
-  const [overridePlayingVideo, setOverridePlayingVideo] = useState<{ id: string; title: string; youtube_id: string } | null>(null);
+  const [overridePlayingVideo, setOverridePlayingVideo] = useState<{ id: string; title: string; youtube_id: string } | null>(() => StorageService.getOverridePlayingVideo());
+  const [liveSermonStatus, setLiveSermonStatus] = useState(() => StorageService.getLiveSermonStatus());
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [isAudioOnly, setIsAudioOnly] = useState<boolean>(lowDataMode);
   const [offlineIds, setOfflineIds] = useState<string[]>(StorageService.getOfflineSermonsList());
@@ -116,7 +117,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   const [isDonating, setIsDonating] = useState(false);
   const [donationSuccess, setDonationSuccess] = useState(false);
 
-  // Synchronize testimonies and featured sermon URL when updated across the app
+  // Synchronize testimonies, live stream status, top video override, and featured sermon URL when updated across the app
   useEffect(() => {
     const handleSync = () => {
       setLiveTestimonies(StorageService.getTestimonies());
@@ -128,13 +129,53 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         setLiveStreamUrl(StorageService.getLiveStreamUrl());
       }
     };
+    const handleOverrideChange = (e: any) => {
+      if (e?.detail) {
+        setOverridePlayingVideo(e.detail);
+      } else {
+        setOverridePlayingVideo(null);
+      }
+    };
+    const handleLiveStatusChange = (e: any) => {
+      const updated = e?.detail || StorageService.getLiveSermonStatus();
+      setLiveSermonStatus(updated);
+      if (updated?.isLive) {
+        setOverridePlayingVideo(null); // Instantly swap to live broadcast
+      }
+      if (updated?.streamUrl) {
+        setLiveStreamUrl(updated.streamUrl);
+      }
+    };
+
     window.addEventListener('gcz_testimony_updated', handleSync);
     window.addEventListener('gcz_stream_url_updated', handleUrlChange);
+    window.addEventListener('gcz_override_video_updated', handleOverrideChange);
+    window.addEventListener('gcz_live_status_updated', handleLiveStatusChange);
+    window.addEventListener('gcz_live_broadcast_started', handleLiveStatusChange);
+
     return () => {
       window.removeEventListener('gcz_testimony_updated', handleSync);
       window.removeEventListener('gcz_stream_url_updated', handleUrlChange);
+      window.removeEventListener('gcz_override_video_updated', handleOverrideChange);
+      window.removeEventListener('gcz_live_status_updated', handleLiveStatusChange);
+      window.removeEventListener('gcz_live_broadcast_started', handleLiveStatusChange);
     };
   }, []);
+
+  // Real-time viewer attendance tracking when watching live broadcast on HomeTab
+  useEffect(() => {
+    if (liveSermonStatus.isLive && currentUser && currentUser.role !== 'guest' && !currentUser.id.startsWith('usr_guest')) {
+      const streamTitle = liveSermonStatus.title || 'Sanctuary Live Broadcast';
+      StorageService.recordStreamer(currentUser, streamTitle);
+      const interval = setInterval(() => {
+        StorageService.recordStreamer(currentUser, streamTitle);
+      }, 25000);
+      return () => {
+        clearInterval(interval);
+        StorageService.leaveLiveStream(currentUser.id);
+      };
+    }
+  }, [liveSermonStatus.isLive, currentUser?.id, liveSermonStatus.title]);
 
   const handleProcessInStreamSeed = (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,20 +328,28 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   const uniqueSeries = ['All', ...Array.from(new Set(sermons.map(s => s.series).filter(Boolean)))];
   const latestApostlePost = (liveTestimonies || []).find(t => (t?.user_name || '').toLowerCase().includes('daniels')) || liveTestimonies?.[0];
 
-  const liveStreamStatus = { isLive: false, title: '', streamUrl: '' };
+  const liveStreamStatus = liveSermonStatus;
 
-  const liveFeedTitle = overridePlayingVideo ? overridePlayingVideo.title : (activeSermon?.title || 'Featured Sermon');
+  const liveFeedTitle = overridePlayingVideo 
+    ? overridePlayingVideo.title 
+    : (liveSermonStatus.isLive && liveSermonStatus.title
+        ? liveSermonStatus.title 
+        : (activeSermon?.title || 'Featured Sermon'));
 
   const recordedTarget = (activeSermon && activeSermon.youtube_id) || '-CibsaxijIk';
-  const liveTarget = recordedTarget;
-  const currentStreamTarget = (overridePlayingVideo && overridePlayingVideo.youtube_id) || recordedTarget;
+  const liveTarget = (liveSermonStatus.isLive && (liveSermonStatus.streamUrl || liveStreamUrl)) 
+    ? (liveSermonStatus.streamUrl || liveStreamUrl) 
+    : (liveStreamUrl || recordedTarget);
+  const currentStreamTarget = overridePlayingVideo 
+    ? overridePlayingVideo.youtube_id 
+    : (liveSermonStatus.isLive ? liveTarget : (liveStreamUrl || recordedTarget));
 
   const streamEmbedInfo = StorageService.getStreamEmbedInfo(currentStreamTarget);
   const activeVideoId = streamEmbedInfo.videoId || StorageService.extractYoutubeId(currentStreamTarget) || '-CibsaxijIk';
   const isFacebook = streamEmbedInfo.isFacebook;
 
   return (
-    <div className="space-y-6 pb-24 max-w-4xl mx-auto px-2 sm:px-4 pt-1">
+    <div className="space-y-4 sm:space-y-6 pb-20 max-w-4xl mx-auto px-0 sm:px-2 pt-1 w-full max-w-full">
       
       {/* 1. Researched Church Sanctuary Location */}
       <div className="bg-card/85 backdrop-blur-md border border-border rounded-xl px-3.5 py-2.5 overflow-hidden shadow-xs flex items-center gap-3">
@@ -346,7 +395,10 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             </div>
             <button
               id="btn-return-live-stream"
-              onClick={() => setOverridePlayingVideo(null)}
+              onClick={() => {
+                setOverridePlayingVideo(null);
+                StorageService.setOverridePlayingVideo(null);
+              }}
               className="ml-2 px-2.5 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-foreground border border-border text-[11px] font-semibold shrink-0 transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
             >
               <Radio className="w-3 h-3 text-red-500 animate-pulse" />
@@ -687,19 +739,13 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           <div className="absolute top-4 left-4 flex items-center gap-2 pointer-events-none z-10">
             {liveStreamStatus.isLive ? (
               <>
-                {streamEmbedInfo.isFacebook ? (
-                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#1877F2] text-white text-xs font-bold animate-pulse shadow-lg">
-                    <Radio className="w-3.5 h-3.5" />
-                    FEATURED VIDEO
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-red-600 text-white text-xs font-bold animate-pulse shadow-lg">
-                    <Radio className="w-3.5 h-3.5" />
-                    FEATURED VIDEO
-                  </span>
-                )}
-                <span className="px-2.5 py-1 rounded-md bg-background/85 backdrop-blur-md text-foreground text-xs font-medium border border-border shadow-xs flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-red-600 text-white text-xs font-black animate-pulse shadow-lg tracking-wide">
+                  <Radio className="w-3.5 h-3.5" />
+                  🔴 LIVE BROADCAST
+                </span>
+                <span className="px-2.5 py-1 rounded-md bg-black/80 backdrop-blur-md text-white text-xs font-bold border border-white/20 shadow-xs flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>{StorageService.getStreamViewers().length || 1} Believers Watching</span>
                 </span>
               </>
             ) : (
@@ -712,6 +758,17 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
           {/* Player Mode Switcher & Expand */}
           <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+            {liveStreamStatus.isLive && (
+              <button
+                id="btn-stream-modal-open-hero"
+                onClick={() => window.dispatchEvent(new CustomEvent('gcz_open_live_stream'))}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-black shadow-lg transition-all active:scale-95 cursor-pointer border border-white/20"
+                title="Join Interactive Sanctuary Stream with Chat & Prayer Decrees"
+              >
+                <Radio className="w-3.5 h-3.5" />
+                <span>Join Interactive Stream</span>
+              </button>
+            )}
             <button
               id="btn-stream-audio-mode"
               onClick={() => setIsAudioOnly(!isAudioOnly)}

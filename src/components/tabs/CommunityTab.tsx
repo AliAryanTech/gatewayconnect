@@ -42,6 +42,7 @@ import confetti from 'canvas-confetti';
 import { CommunityGroup, PrayerRequest, ChurchEvent, Testimony, User, CommunityStory } from '../../types';
 import { StorageService, arePhoneNumbersEqual } from '../../services/storageService';
 import { SupabaseSyncService } from '../../services/supabaseSyncService';
+import { liveSyncService, OnlineMember } from '../../services/liveSyncService';
 import { ImagePickerModal } from '../modals/ImagePickerModal';
 import { VerifiedBadge } from '../common/VerifiedBadge';
 import { InstagramProfileModal } from '../modals/InstagramProfileModal';
@@ -94,6 +95,26 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
   const [showMemberDirectory, setShowMemberDirectory] = useState(false);
 
   const [allRegisteredUsers, setAllRegisteredUsers] = useState<User[]>(() => StorageService.getAllUsers());
+  const [onlinePresenceList, setOnlinePresenceList] = useState<OnlineMember[]>(() => 
+    typeof liveSyncService !== 'undefined' ? liveSyncService.getOnlineMembers() : []
+  );
+
+  const effectiveOnlineMembers = React.useMemo(() => {
+    const list = [...onlinePresenceList];
+    if (currentUser?.id && !list.some(m => m.id === currentUser.id)) {
+      list.unshift({
+        id: currentUser.id,
+        full_name: currentUser.full_name,
+        handle: currentUser.handle,
+        avatar_url: currentUser.avatar_url,
+        role: currentUser.role,
+        city: currentUser.location || (currentUser as any).city_location || 'Harare',
+        badge_type: currentUser.badge_type,
+        online_at: new Date().toISOString()
+      });
+    }
+    return list;
+  }, [onlinePresenceList, currentUser]);
 
   // Real-time synchronization for community posts, prayers, groups, and members
   useEffect(() => {
@@ -108,6 +129,11 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
     };
     const handleUsersUpdated = () => {
       setAllRegisteredUsers(StorageService.getAllUsers());
+    };
+    const handlePresenceUpdated = (e: any) => {
+      if (Array.isArray(e.detail)) {
+        setOnlinePresenceList(e.detail);
+      }
     };
     const handleLiveSync = () => {
       setTestimonyList(StorageService.getTestimonies());
@@ -124,6 +150,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
     window.addEventListener('gcz_user_profile_updated', handleUsersUpdated);
     window.addEventListener('gcz_live_state_updated', handleLiveSync);
     window.addEventListener('gcz_live_event_received', handleLiveSync);
+    window.addEventListener('gcz_live_presence_updated', handlePresenceUpdated);
 
     // Cross-device social sync
     const unsubscribe = SupabaseSyncService.subscribeToSocialMessaging({
@@ -156,6 +183,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
       window.removeEventListener('gcz_user_profile_updated', handleUsersUpdated);
       window.removeEventListener('gcz_live_state_updated', handleLiveSync);
       window.removeEventListener('gcz_live_event_received', handleLiveSync);
+      window.removeEventListener('gcz_live_presence_updated', handlePresenceUpdated);
       unsubscribe();
     };
   }, [currentUser?.id]);
@@ -361,12 +389,8 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
 
   const handleCreateStory = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStoryImageUrl) {
-      alert('Please upload or provide an image for your story.');
-      return;
-    }
     const currUser = StorageService.getCurrentUser() || currentUser;
-    const finalStoryImg = newStoryImageUrl;
+    const finalStoryImg = newStoryImageUrl || '/assets/apostle_joe_daniels_preach.jpg';
     
     StorageService.addStory({
       user_id: currUser.id,
@@ -692,7 +716,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
   );
 
   return (
-    <div className="space-y-4 pb-24 max-w-3xl mx-auto px-3 sm:px-4 pt-2">
+    <div className="space-y-4 pb-20 max-w-3xl mx-auto px-0 sm:px-2 pt-1 w-full max-w-full">
       
       {/* 1. Header Banner & Sub-Tabs Switcher */}
       <div className="bg-card border border-border rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -894,6 +918,83 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
       </div>
       {activeSubTab === 'feed' && (
         <div className="space-y-4">
+          
+          {/* Global Online Presence Indicator (Supabase Presence Real-Time) */}
+          <div className="bg-card border border-border rounded-xl p-3 sm:p-3.5 shadow-sm space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </div>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-xs font-bold text-foreground tracking-tight truncate">
+                    Global Online Presence
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-semibold shrink-0">
+                    {effectiveOnlineMembers.length} Active in Fellowship
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 text-[10px] text-muted-foreground font-medium">
+                <span className="hidden sm:inline">Supabase Presence</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span className="text-emerald-500 font-semibold">Real-Time</span>
+              </div>
+            </div>
+
+            {/* Active Believers Carousel */}
+            <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-none pt-0.5">
+              {effectiveOnlineMembers.map((member) => {
+                const isSelf = member.id === currentUser?.id;
+                const memberUser = allRegisteredUsers.find(u => u.id === member.id);
+                const badge = (member.badge_type || memberUser?.verified_badge || memberUser?.badge_type || (member.role === 'developer' || member.role === 'super_admin' ? 'gold' : 'none')) as 'gold' | 'silver' | 'blue' | 'none';
+                const avatar = member.avatar_url || memberUser?.avatar_url || '/assets/apostle_joe_daniels_main.jpg';
+                const displayName = member.full_name || memberUser?.full_name || 'Believer';
+                const firstName = displayName.split(' ')[0];
+
+                return (
+                  <div
+                    key={`presence-${member.id}`}
+                    onClick={() => {
+                      if (isSelf) {
+                        setProfileModalUserId(currentUser.id);
+                        setShowProfileModal(true);
+                      } else {
+                        setProfileModalUserId(member.id);
+                        setShowProfileModal(true);
+                      }
+                    }}
+                    className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group select-none"
+                    title={`${displayName} • Active in ${member.city || 'Fellowship'}`}
+                  >
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-full p-[1.5px] bg-secondary border-2 border-emerald-500/90 group-hover:border-emerald-400 group-hover:scale-105 transition-all shadow-xs">
+                        <img
+                          src={avatar}
+                          alt={displayName}
+                          className="w-full h-full rounded-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/assets/apostle_joe_daniels_main.jpg';
+                          }}
+                        />
+                      </div>
+                      {/* Active green beacon badge */}
+                      <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-card ring-1 ring-emerald-400/50 flex items-center justify-center">
+                        <span className="w-1 h-1 rounded-full bg-white"></span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-0.5 max-w-[66px]">
+                      <span className="text-[10px] font-medium text-foreground truncate">
+                        {isSelf ? 'You' : firstName}
+                      </span>
+                      {badge !== 'none' && <VerifiedBadge type={badge} size="xs" />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
           
           {/* Stories Tray */}
           <div className="bg-card border border-border rounded-xl p-3 shadow-sm">

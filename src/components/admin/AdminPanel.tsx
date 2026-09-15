@@ -154,6 +154,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
       setCongregationUnits(StorageService.getCongregationUnits());
       setStreamViewers(StorageService.getStreamViewers());
       setStreamAttendees(StorageService.getStreamAttendanceHistory());
+      setLiveSermonStatus(StorageService.getLiveSermonStatus());
+      setAdminStreamUrl(StorageService.getLiveStreamUrl());
     };
 
     window.addEventListener('gcz_user_profile_updated', refreshAdminData);
@@ -168,6 +170,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
     window.addEventListener('gcz_stream_attendance_updated', refreshAdminData);
     window.addEventListener('gcz_stream_viewer_joined', refreshAdminData);
     window.addEventListener('gcz_stream_viewer_left', refreshAdminData);
+    window.addEventListener('gcz_live_status_updated', refreshAdminData);
+    window.addEventListener('gcz_stream_url_updated', refreshAdminData);
+    window.addEventListener('gcz_override_video_updated', refreshAdminData);
 
     return () => {
       window.removeEventListener('gcz_user_profile_updated', refreshAdminData);
@@ -182,6 +187,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
       window.removeEventListener('gcz_stream_attendance_updated', refreshAdminData);
       window.removeEventListener('gcz_stream_viewer_joined', refreshAdminData);
       window.removeEventListener('gcz_stream_viewer_left', refreshAdminData);
+      window.removeEventListener('gcz_live_status_updated', refreshAdminData);
+      window.removeEventListener('gcz_stream_url_updated', refreshAdminData);
+      window.removeEventListener('gcz_override_video_updated', refreshAdminData);
     };
   }, []);
 
@@ -504,21 +512,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
       <AdminCyberBackground enabled={showCyberBackground} />
 
       {/* 1. TOP ERP-STYLE HEADER */}
-      <header className="relative z-20 bg-[#001F3F]/90 backdrop-blur-md border-b border-emerald-500/20 px-4 py-3 flex items-center justify-between shrink-0 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#D4AF37] text-[#001F3F] flex items-center justify-center font-black shadow-md">
-            <ShieldCheck className="w-5 h-5" />
+      <header className="relative z-20 bg-[#001F3F]/90 backdrop-blur-md border-b border-emerald-500/20 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between shrink-0 shadow-lg">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#D4AF37] text-[#001F3F] flex items-center justify-center font-black shadow-md shrink-0">
+            <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-bold text-sm sm:text-base text-[#D4AF37] tracking-wide">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 truncate">
+              <h1 className="font-bold text-xs sm:text-base text-[#D4AF37] tracking-wide truncate">
                 Gateway Admin Center
               </h1>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] font-semibold border border-[#D4AF37]/30">
+              <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] font-semibold border border-[#D4AF37]/30 shrink-0">
                 Operations Console
               </span>
             </div>
-            <p className="text-[11px] text-white/60">
+            <p className="text-[10px] sm:text-[11px] text-white/60 truncate hidden sm:block">
               Ministry Operations, Stream Ingest, Inventory & Member Management
             </p>
           </div>
@@ -631,35 +639,71 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
       {/* 2. BODY WITH SIDEBAR NAVIGATION + MAIN CONTENT */}
       <div className="relative z-10 flex-1 flex flex-col md:flex-row overflow-hidden">
         
-        {/* SIDEBAR NAVIGATION (Desktop) & MOBILE DROPDOWN SELECTOR */}
-        {/* Mobile View: Quick Dropdown selector */}
-        <div className="md:hidden bg-[#00172e] border-b border-white/10 p-2.5 flex items-center justify-between gap-2 shrink-0">
-          <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Module:</span>
-          <div className="relative flex-1">
-            <select
-              value={activeSection}
-              onChange={(e) => setActiveSection(e.target.value as AdminSection)}
-              className="w-full bg-[#001F3F] border border-[#D4AF37]/40 rounded-xl px-3 py-1.5 text-xs text-[#D4AF37] font-bold appearance-none pr-8 focus:outline-none focus:border-[#D4AF37]"
-            >
-              {[
-                { id: 'overview', label: '📊 Dashboard KPI' },
-                { id: 'congregations', label: `⛪ Congregations & Streaming (${congregationUnits.filter(c => c.is_congregation).length} Hubs)` },
-                { id: 'stream_attendees', label: `📡 Streamers & Attendees (${streamAttendees.length} Logged)` },
-                { id: 'content_moderation', label: `🛡️ Community Post Moderation (${testimonies.length} Posts)` },
-                { id: 'broadcast', label: '🔴 Sermon & Live Stream' },
-                { id: 'inventory', label: '📦 Store & Inventory' },
-                { id: 'push', label: '🔔 Push Broadcasts' },
-                { id: 'members', label: '👥 Members & Roles' },
-                { id: 'prayers', label: '🙏 Altar Petitions' },
-                { id: 'finances', label: '💰 Tithes & Seed Fund' },
-                { id: 'vibes', label: '🎵 Joe Vibes Submissions' },
-              ].map(opt => (
-                <option key={opt.id} value={opt.id} className="bg-[#001F3F] text-white">
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-4 h-4 text-[#D4AF37] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        {/* SIDEBAR NAVIGATION (Desktop) & MOBILE CONTROLS */}
+        {/* Mobile View: Quick Dropdown selector & Scrollable Module Pills */}
+        <div className="md:hidden bg-[#00172e] border-b border-white/10 shrink-0">
+          <div className="p-2.5 flex items-center justify-between gap-2 border-b border-white/5">
+            <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider font-mono">Module:</span>
+            <div className="relative flex-1">
+              <select
+                value={activeSection}
+                onChange={(e) => setActiveSection(e.target.value as AdminSection)}
+                className="w-full bg-[#001F3F] border border-[#D4AF37]/40 rounded-xl px-3 py-1.5 text-xs text-[#D4AF37] font-bold appearance-none pr-8 focus:outline-none focus:border-[#D4AF37]"
+              >
+                {[
+                  { id: 'overview', label: '📊 Dashboard KPI' },
+                  { id: 'congregations', label: `⛪ Congregations & Streaming (${congregationUnits.filter(c => c.is_congregation).length} Hubs)` },
+                  { id: 'stream_attendees', label: `📡 Streamers & Attendees (${streamAttendees.length} Logged)` },
+                  { id: 'content_moderation', label: `🛡️ Community Post Moderation (${testimonies.length} Posts)` },
+                  { id: 'broadcast', label: '🔴 Sermon & Live Stream' },
+                  { id: 'inventory', label: '📦 Store & Inventory' },
+                  { id: 'push', label: '🔔 Push Broadcasts' },
+                  { id: 'members', label: '👥 Members & Roles' },
+                  { id: 'prayers', label: '🙏 Altar Petitions' },
+                  { id: 'finances', label: '💰 Tithes & Seed Fund' },
+                  { id: 'vibes', label: '🎵 Joe Vibes Submissions' },
+                ].map(opt => (
+                  <option key={opt.id} value={opt.id} className="bg-[#001F3F] text-white">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-[#D4AF37] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Mobile Scrollable Module Pills */}
+          <div className="flex items-center gap-1.5 px-2 py-1.5 overflow-x-auto scrollbar-none bg-[#001122]">
+            {[
+              { id: 'overview', label: 'Overview', icon: Activity },
+              { id: 'congregations', label: 'Hubs', icon: Tv },
+              { id: 'stream_attendees', label: 'Streamers', icon: Users },
+              { id: 'content_moderation', label: 'Moderation', icon: Trash2 },
+              { id: 'broadcast', label: 'Live Pulpit', icon: Radio },
+              { id: 'inventory', label: 'Store', icon: Package },
+              { id: 'push', label: 'Push', icon: Bell },
+              { id: 'members', label: 'Members', icon: Users },
+              { id: 'prayers', label: 'Prayers', icon: Heart },
+              { id: 'finances', label: 'Finances', icon: DollarSign },
+              { id: 'vibes', label: 'Vibes', icon: Music },
+            ].map(pill => {
+              const Icon = pill.icon;
+              const isActive = activeSection === pill.id;
+              return (
+                <button
+                  key={pill.id}
+                  onClick={() => setActiveSection(pill.id as AdminSection)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all ${
+                    isActive
+                      ? 'bg-[#D4AF37] text-[#001F3F] shadow-sm'
+                      : 'bg-white/5 text-white/60 hover:text-white border border-white/10'
+                  }`}
+                >
+                  <Icon className="w-3 h-3" />
+                  <span>{pill.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -754,26 +798,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                 </div>
 
                 {/* 4 Feature Shortcut Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
                   {/* Feature 1: Congregations & Streaming */}
                   <div 
                     onClick={() => setActiveSection('congregations')}
-                    className="p-3 rounded-xl bg-[#001122]/90 border border-[#D4AF37]/30 hover:border-[#D4AF37]/60 cursor-pointer transition-all hover:scale-[1.02] group"
+                    className="p-2.5 sm:p-3 rounded-xl bg-[#001122]/90 border border-[#D4AF37]/30 hover:border-[#D4AF37]/60 cursor-pointer transition-all hover:scale-[1.02] group"
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[11px] font-bold text-[#D4AF37] flex items-center gap-1.5">
-                        <Tv className="w-3.5 h-3.5" />
-                        <span>Congregation Hubs</span>
+                    <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-[#D4AF37] flex items-center gap-1 sm:gap-1.5">
+                        <Tv className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                        <span className="truncate">Hubs</span>
                       </span>
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#D4AF37]/20 text-[#D4AF37]">
-                        {congregationUnits.filter(c => c.is_congregation).length} Formed
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold px-1 sm:px-1.5 py-0.5 rounded bg-[#D4AF37]/20 text-[#D4AF37] shrink-0">
+                        {congregationUnits.filter(c => c.is_congregation).length}
                       </span>
                     </div>
-                    <p className="text-[10px] text-white/60 line-clamp-2 mb-2">
-                      Groups active streamers by cities. 10+ active streamers form an official Congregation.
+                    <p className="text-[9px] sm:text-[10px] text-white/60 line-clamp-2 mb-1.5 sm:mb-2">
+                      Groups active streamers by cities.
                     </p>
-                    <span className="text-[11px] font-bold text-[#D4AF37] group-hover:underline flex items-center gap-1">
-                      <span>View Live Hubs</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-[#D4AF37] group-hover:underline flex items-center gap-1">
+                      <span>View Hubs</span>
                       <ChevronRight className="w-3 h-3" />
                     </span>
                   </div>
@@ -781,22 +825,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                   {/* Feature 2: Streamers & Attendees Registry */}
                   <div 
                     onClick={() => setActiveSection('stream_attendees')}
-                    className="p-3 rounded-xl bg-[#001122]/90 border border-blue-500/30 hover:border-blue-500/60 cursor-pointer transition-all hover:scale-[1.02] group"
+                    className="p-2.5 sm:p-3 rounded-xl bg-[#001122]/90 border border-blue-500/30 hover:border-blue-500/60 cursor-pointer transition-all hover:scale-[1.02] group"
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[11px] font-bold text-blue-300 flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>Streamers Registry</span>
+                    <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-blue-300 flex items-center gap-1 sm:gap-1.5">
+                        <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                        <span className="truncate">Streamers</span>
                       </span>
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">
-                        {streamAttendees.length} Logged
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold px-1 sm:px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 shrink-0">
+                        {streamAttendees.length}
                       </span>
                     </div>
-                    <p className="text-[10px] text-white/60 line-clamp-2 mb-2">
-                      See who streamed, city location, contact details & export to database.
+                    <p className="text-[9px] sm:text-[10px] text-white/60 line-clamp-2 mb-1.5 sm:mb-2">
+                      Streamer records, city, contact info.
                     </p>
-                    <span className="text-[11px] font-bold text-[#D4AF37] group-hover:underline flex items-center gap-1">
-                      <span>Attendee Records</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-[#D4AF37] group-hover:underline flex items-center gap-1">
+                      <span>Records</span>
                       <ChevronRight className="w-3 h-3" />
                     </span>
                   </div>
@@ -804,22 +848,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                   {/* Feature 3: Community Content Moderation */}
                   <div 
                     onClick={() => setActiveSection('content_moderation')}
-                    className="p-3 rounded-xl bg-[#001122]/90 border border-emerald-500/30 hover:border-emerald-500/60 cursor-pointer transition-all hover:scale-[1.02] group"
+                    className="p-2.5 sm:p-3 rounded-xl bg-[#001122]/90 border border-emerald-500/30 hover:border-emerald-500/60 cursor-pointer transition-all hover:scale-[1.02] group"
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[11px] font-bold text-emerald-300 flex items-center gap-1.5">
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Post Moderation</span>
+                    <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-emerald-300 flex items-center gap-1 sm:gap-1.5">
+                        <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                        <span className="truncate">Moderation</span>
                       </span>
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                        {testimonies.length} Posts
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold px-1 sm:px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 shrink-0">
+                        {testimonies.length}
                       </span>
                     </div>
-                    <p className="text-[10px] text-white/60 line-clamp-2 mb-2">
-                      Moderate believers feed: delete abusive or non-edifying testimonies with 1 click.
+                    <p className="text-[9px] sm:text-[10px] text-white/60 line-clamp-2 mb-1.5 sm:mb-2">
+                      Moderate believers feed & delete posts.
                     </p>
-                    <span className="text-[11px] font-bold text-[#D4AF37] group-hover:underline flex items-center gap-1">
-                      <span>Moderate Feed</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-[#D4AF37] group-hover:underline flex items-center gap-1">
+                      <span>Feed</span>
                       <ChevronRight className="w-3 h-3" />
                     </span>
                   </div>
@@ -827,22 +871,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                   {/* Feature 4: Broadcast & Pulpit Sync */}
                   <div 
                     onClick={() => setActiveSection('broadcast')}
-                    className="p-3 rounded-xl bg-[#001122]/90 border border-purple-500/30 hover:border-purple-500/60 cursor-pointer transition-all hover:scale-[1.02] group"
+                    className="p-2.5 sm:p-3 rounded-xl bg-[#001122]/90 border border-purple-500/30 hover:border-purple-500/60 cursor-pointer transition-all hover:scale-[1.02] group"
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[11px] font-bold text-purple-300 flex items-center gap-1.5">
-                        <Radio className="w-3.5 h-3.5" />
-                        <span>Sermon Broadcast</span>
+                    <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-purple-300 flex items-center gap-1 sm:gap-1.5">
+                        <Radio className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                        <span className="truncate">Broadcast</span>
                       </span>
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">
-                        {liveSermonStatus.isLive ? 'Active' : 'Offline'}
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold px-1 sm:px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 shrink-0">
+                        {liveSermonStatus.isLive ? 'Live' : 'Off'}
                       </span>
                     </div>
-                    <p className="text-[10px] text-white/60 line-clamp-2 mb-2">
-                      Start apostolic video stream and live-sync scriptures across member devices.
+                    <p className="text-[9px] sm:text-[10px] text-white/60 line-clamp-2 mb-1.5 sm:mb-2">
+                      Video stream & live scripture sync.
                     </p>
-                    <span className="text-[11px] font-bold text-[#D4AF37] group-hover:underline flex items-center gap-1">
-                      <span>Launch Pulpit</span>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-[#D4AF37] group-hover:underline flex items-center gap-1">
+                      <span>Pulpit</span>
                       <ChevronRight className="w-3 h-3" />
                     </span>
                   </div>
@@ -1167,13 +1211,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                       <div
                         key={s.id}
                         onClick={() => {
-                          setSermonYoutubeInput(`https://www.youtube.com/watch?v=${s.youtube_id}`);
+                          const targetUrl = `https://www.youtube.com/watch?v=${s.youtube_id}`;
+                          setSermonYoutubeInput(targetUrl);
                           setSermonTitle(s.title);
                           setSermonSeries(s.series || 'Apostolic Impartation');
                           setSermonScripture(s.scriptures?.[0] || 'Isaiah 60:1');
                           setSermonThumbnail(s.thumbnail_url);
                           if (s.description) setSermonDesc(s.description);
-                          StorageService.setLiveStreamUrl(`https://www.youtube.com/watch?v=${s.youtube_id}`);
+                          StorageService.setLiveStreamUrl(targetUrl);
+                          StorageService.setOverridePlayingVideo({
+                            id: s.id,
+                            title: s.title,
+                            youtube_id: s.youtube_id
+                          });
                           onRefreshAppState();
                           confetti({ particleCount: 20, spread: 60 });
                         }}
@@ -1207,6 +1257,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const targetUrl = `https://www.youtube.com/watch?v=${s.youtube_id}`;
+                              setSermonYoutubeInput(targetUrl);
+                              StorageService.setLiveStreamUrl(targetUrl);
+                              StorageService.setOverridePlayingVideo({
+                                id: s.id,
+                                title: s.title,
+                                youtube_id: s.youtube_id
+                              });
+                              onRefreshAppState();
+                              confetti({ particleCount: 20, spread: 60 });
+                            }}
                             className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all ${
                               isCurrentTop
                                 ? 'bg-[#D4AF37] text-[#001F3F]'
@@ -1243,17 +1306,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
+                        const willBeLive = !liveSermonStatus.isLive;
                         const newStatus = {
-                          isLive: !liveSermonStatus.isLive,
-                          title: 'Church & Politics (Controversial Issues) • Apostle Joe Daniels Live',
-                          sermonId: 'sermon_church_politics',
-                          viewerCount: 0,
-                          streamUrl: adminStreamUrl.trim()
+                          isLive: willBeLive,
+                          title: sermonTitle || 'Church & Politics (Controversial Issues) • Apostle Joe Daniels Live',
+                          sermonId: willBeLive ? `sermon_${Date.now()}` : 'sermon_church_politics',
+                          viewerCount: StorageService.getStreamViewers().length,
+                          streamUrl: adminStreamUrl.trim() || StorageService.getLiveStreamUrl()
                         };
                         StorageService.setLiveSermonStatus(newStatus);
                         setLiveSermonStatus(newStatus);
+                        if (willBeLive) {
+                          StorageService.setOverridePlayingVideo(null);
+                        }
                         setCongregationUnits(StorageService.getCongregationUnits());
                         setStreamViewers(StorageService.getStreamViewers());
+                        setStreamAttendees(StorageService.getStreamAttendanceHistory());
                         confetti({ particleCount: 25, spread: 50 });
                         onRefreshAppState();
                       }}
@@ -1314,14 +1382,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                       <button
                         onClick={() => {
                           const cleanUrl = adminStreamUrl.trim();
+                          StorageService.setLiveStreamUrl(cleanUrl);
                           const newStatus = {
                             ...liveSermonStatus,
                             streamUrl: cleanUrl
                           };
-                          StorageService.setLiveStreamUrl(cleanUrl);
                           StorageService.setLiveSermonStatus(newStatus);
                           setLiveSermonStatus(newStatus);
+                          StorageService.setOverridePlayingVideo({
+                            id: `stream_${Date.now()}`,
+                            title: newStatus.title || 'Sanctuary Live Stream',
+                            youtube_id: cleanUrl
+                          });
                           confetti({ particleCount: 20, spread: 40 });
+                          onRefreshAppState();
                         }}
                         className="px-3 py-1.5 bg-[#D4AF37] hover:bg-[#C59B27] text-[#001F3F] text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm"
                       >
@@ -1571,6 +1645,85 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                   </div>
                 )}
               </div>
+
+              {/* Streaming Attendance & History Logs Table (Real-time Synced) */}
+              <div className="bg-[#001F3F] border border-white/10 rounded-2xl p-4 shadow-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-[#D4AF37]" />
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-white">
+                      Sanctuary Stream Attendance & Believers Log ({streamAttendees.length})
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-white/50">
+                      Real-time attendance record per congregation hub
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection('stream_attendees')}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-[#D4AF37] text-xs font-semibold border border-white/10 transition-colors"
+                    >
+                      Open Full Database →
+                    </button>
+                  </div>
+                </div>
+
+                {streamAttendees.length === 0 ? (
+                  <div className="p-6 bg-[#001122]/60 rounded-xl text-center text-xs text-white/50">
+                    No attendance logs recorded yet. When members watch the live sermon for 10+ seconds, their attendance is permanently cataloged here.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-white/10 text-white/50 text-[10px] uppercase">
+                          <th className="pb-2">Believer</th>
+                          <th className="pb-2">Phone / Contact</th>
+                          <th className="pb-2">City Hub</th>
+                          <th className="pb-2">Session Timestamp</th>
+                          <th className="pb-2 text-right">WhatsApp</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {streamAttendees.slice(0, 10).map((att) => {
+                          const cleanPhone = att.user_phone.replace(/\D/g, '');
+                          const waPhone = cleanPhone.startsWith('0') ? `263${cleanPhone.slice(1)}` : cleanPhone;
+                          return (
+                            <tr key={att.id} className="hover:bg-white/5 transition-colors">
+                              <td className="py-2.5 font-bold text-white flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                                <span>{att.user_name}</span>
+                              </td>
+                              <td className="py-2.5 font-mono text-white/70">
+                                {att.user_phone}
+                              </td>
+                              <td className="py-2.5">
+                                <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] text-[#D4AF37]">
+                                  {att.city}
+                                </span>
+                              </td>
+                              <td className="py-2.5 text-white/50 text-[11px]">
+                                {new Date(att.joined_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                              </td>
+                              <td className="py-2.5 text-right">
+                                <a
+                                  href={`https://wa.me/${waPhone}?text=Grace%20and%20Peace%20${encodeURIComponent(att.user_name)}%2C%20thank%20you%20for%20joining%20the%20Gateway%20Church%20service!`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 font-bold text-[10px] border border-emerald-500/30 transition-all inline-flex items-center gap-1"
+                                >
+                                  <span>Message</span>
+                                </a>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1782,6 +1935,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                   </div>
                   <button
                     type="button"
+                    onClick={async () => {
+                      const count = await StorageService.syncAllEcosystemAccountsWithRemote();
+                      setUsers(StorageService.getAllUsers());
+                      setModerationMessage(`⚡ Successfully synchronized ${count} accounts with Supabase!`);
+                      setTimeout(() => setModerationMessage(null), 3500);
+                    }}
+                    className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer shrink-0"
+                    title="Sync All Accounts with Supabase & WebSocket Hub"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Sync Cloud</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleDownloadMembersExcel}
                     className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-[#D4AF37] hover:bg-amber-400 text-[#001F3F] text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer shrink-0"
                     title="Download Members as Excel CSV"
@@ -1894,6 +2061,68 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
                                     })}
 
                                     <div className="border-t border-white/10 my-1" />
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const res = StorageService.developerPenetrateAccount(u.phone);
+                                        if (res.success && res.user) {
+                                          setActiveMemberMenuId(null);
+                                          setModerationMessage(`Logged in as ${res.user.full_name} (${res.user.role})`);
+                                          setTimeout(() => {
+                                            window.location.reload();
+                                          }, 500);
+                                        } else {
+                                          alert(res.error || 'Failed to switch account');
+                                        }
+                                      }}
+                                      className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-bold text-amber-300 hover:bg-amber-400/20 flex items-center gap-1.5"
+                                    >
+                                      <KeyRound className="w-3.5 h-3.5 text-amber-300" />
+                                      <span>Login as User (Penetrate)</span>
+                                    </button>
+
+                                    <div className="px-2 py-0.5 text-[9px] font-mono text-purple-300">
+                                      Change Access Role:
+                                    </div>
+                                    {['member', 'moderator', 'super_admin', 'developer'].map((r) => (
+                                      <button
+                                        key={r}
+                                        type="button"
+                                        onClick={() => {
+                                          StorageService.developerSetUserRole(u.id, r as any);
+                                          setUsers(StorageService.getAllUsers());
+                                          setActiveMemberMenuId(null);
+                                          setModerationMessage(`Updated ${u.full_name} role to ${r}`);
+                                          setTimeout(() => setModerationMessage(null), 2500);
+                                        }}
+                                        className={`w-full text-left px-2 py-1 rounded-lg text-xs font-semibold flex items-center justify-between ${
+                                          u.role === r ? 'bg-purple-500/30 text-purple-300' : 'text-white/80 hover:bg-white/10'
+                                        }`}
+                                      >
+                                        <span className="capitalize">{r.replace('_', ' ')}</span>
+                                        {u.role === r && <Check className="w-3 h-3 text-purple-300" />}
+                                      </button>
+                                    ))}
+
+                                    <div className="border-t border-white/10 my-1" />
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (window.confirm(`Are you sure you want to permanently delete member account ${u.full_name} (${u.phone})?`)) {
+                                          StorageService.developerDeleteAccount(u.phone);
+                                          setUsers(StorageService.getAllUsers());
+                                          setActiveMemberMenuId(null);
+                                          setModerationMessage(`Removed account for ${u.full_name}`);
+                                          setTimeout(() => setModerationMessage(null), 2500);
+                                        }
+                                      }}
+                                      className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-500/20 flex items-center gap-1.5"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                                      <span>Delete Account</span>
+                                    </button>
 
                                     <button
                                       type="button"

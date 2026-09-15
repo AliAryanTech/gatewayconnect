@@ -705,6 +705,8 @@ export class SupabaseSyncService {
   private static socialSubscribers = new Set<{
     onNewGroupMessage?: (msg: ChatGroupMessage) => void;
     onNewDirectMessage?: (msg: DirectMessage) => void;
+    onDeleteGroupMessage?: (payload: { groupId: string; messageId: string; forEveryone?: boolean }) => void;
+    onDeleteDirectMessage?: (payload: { messageId: string; forEveryone?: boolean }) => void;
     onUserProfileUpdated?: (user: Partial<User>) => void;
     onGroupMemberChanged?: (detail: { groupId: string; userId: string; isJoining: boolean }) => void;
     onFollowUpdated?: (detail: { followerId: string; followingId: string; isFollowing: boolean }) => void;
@@ -734,6 +736,14 @@ export class SupabaseSyncService {
           .on('broadcast', { event: 'new_direct_message' }, ({ payload }: any) => {
             if (!payload) return;
             this.socialSubscribers.forEach(cb => cb.onNewDirectMessage?.(payload));
+          })
+          .on('broadcast', { event: 'delete_group_message' }, ({ payload }: any) => {
+            if (!payload) return;
+            this.socialSubscribers.forEach(cb => cb.onDeleteGroupMessage?.(payload));
+          })
+          .on('broadcast', { event: 'delete_direct_message' }, ({ payload }: any) => {
+            if (!payload) return;
+            this.socialSubscribers.forEach(cb => cb.onDeleteDirectMessage?.(payload));
           })
           .on('broadcast', { event: 'user_profile_updated' }, ({ payload }: any) => {
             if (!payload) return;
@@ -1049,12 +1059,66 @@ export class SupabaseSyncService {
   }
 
   /**
+   * Syncs group message deletion instantly over Realtime WebSocket
+   */
+  static async syncDeleteGroupMessage(groupId: string, messageId: string, forEveryone?: boolean): Promise<boolean> {
+    const channel = this.getSocialChannel();
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'delete_group_message',
+        payload: { groupId, messageId, forEveryone }
+      });
+    }
+    const supabase = getSupabase();
+    if (supabase && forEveryone) {
+      Promise.resolve(supabase.from('messages').update({
+        text: 'This message was deleted',
+        media_url: null,
+        media_type: null,
+        deleted_for_everyone: true
+      }).eq('id', messageId)).catch(() => {});
+    }
+    return true;
+  }
+
+  /**
+   * Syncs direct message deletion instantly over Realtime WebSocket
+   */
+  static async syncDeleteDirectMessage(messageId: string, forEveryone?: boolean): Promise<boolean> {
+    const channel = this.getSocialChannel();
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'delete_direct_message',
+        payload: { messageId, forEveryone }
+      });
+    }
+    const supabase = getSupabase();
+    if (supabase && forEveryone) {
+      Promise.resolve(supabase.from('direct_messages').update({
+        message: 'This message was deleted',
+        media_url: null,
+        is_deleted: true
+      }).eq('id', messageId)).catch(() => {});
+      Promise.resolve(supabase.from('messages').update({
+        text: 'This message was deleted',
+        media_url: null,
+        deleted_for_everyone: true
+      }).eq('id', messageId)).catch(() => {});
+    }
+    return true;
+  }
+
+  /**
    * Subscribes to the single persistent Realtime channel 'gcz_social_realtime'
    * Instant broadcast delivery across all devices with zero REST latency
    */
   static subscribeToSocialMessaging(callbacks: {
     onNewGroupMessage?: (msg: ChatGroupMessage) => void;
     onNewDirectMessage?: (msg: DirectMessage) => void;
+    onDeleteGroupMessage?: (payload: { groupId: string; messageId: string; forEveryone?: boolean }) => void;
+    onDeleteDirectMessage?: (payload: { messageId: string; forEveryone?: boolean }) => void;
     onUserProfileUpdated?: (user: Partial<User>) => void;
     onGroupMemberChanged?: (detail: { groupId: string; userId: string; isJoining: boolean }) => void;
     onFollowUpdated?: (detail: { followerId: string; followingId: string; isFollowing: boolean }) => void;
@@ -1342,6 +1406,33 @@ export class SupabaseSyncService {
       await supabase.from('church_settings').upsert({
         key: 'live_stream_url',
         current_stream_url: url,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  static async syncLiveSermonStatus(status: { isLive: boolean; title: string; sermonId: string; viewerCount: number; streamUrl?: string }): Promise<{ success: boolean; error?: string }> {
+    const supabase = getSupabase();
+    const channel = this.getSocialChannel();
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'live_status_updated',
+        payload: status
+      });
+    }
+    if (!supabase) return { success: false, error: 'Supabase client not initialized' };
+    try {
+      await supabase.from('church_settings').upsert({
+        key: 'live_sermon_status',
+        is_live: status.isLive,
+        title: status.title,
+        sermon_id: status.sermonId,
+        stream_url: status.streamUrl,
+        viewer_count: status.viewerCount,
         updated_at: new Date().toISOString()
       }, { onConflict: 'key' });
       return { success: true };

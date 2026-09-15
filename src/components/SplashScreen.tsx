@@ -7,25 +7,28 @@ interface SplashScreenProps {
 
 export default function SplashScreen({ onComplete }: SplashScreenProps) {
   const [progress, setProgress] = useState(0);
-  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    let value = 0;
+    const duration = 2200;
+    const intervalTime = 30;
+    const step = 100 / (duration / intervalTime);
 
     const timer = setInterval(() => {
-      value += Math.floor(Math.random() * 4) + 1;
+      setProgress((previous) => {
+        const next = previous + step;
 
-      if (value >= 100) {
-        value = 100;
-        clearInterval(timer);
-        setLoaded(true);
-      }
+        if (next >= 100) {
+          clearInterval(timer);
+          setTimeout(onComplete, 250);
+          return 100;
+        }
 
-      setProgress(value);
-    }, 60);
+        return next;
+      });
+    }, intervalTime);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [onComplete]);
 
   return (
     <div className="gateway-splash">
@@ -33,19 +36,20 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
       <div className="splash-glow splash-glow-two" />
 
       <div className="splash-content">
-
         <div className="logo-wrapper">
           <div className="logo-ring logo-ring-one" />
           <div className="logo-ring logo-ring-two" />
 
           <img
             src="/logo.png"
-            alt="Gateway Church"
+            alt="Gateway Connect"
             className="gateway-splash-logo"
           />
         </div>
 
-        <h1 className="gateway-title">GATEWAY</h1>
+        <h1 className="gateway-title">
+          GATEWAY
+        </h1>
 
         <div className="gateway-connect">
           <span />
@@ -59,34 +63,22 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           TO A BRIGHTER FUTURE
         </p>
 
-        {!loaded ? (
-          <div className="splash-loading">
-            <div className="loading-text">
-              Connecting...
-            </div>
-
-            <div className="loading-bar">
-              <div
-                className="loading-progress"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-
-            <div className="loading-percent">
-              {progress}%
-            </div>
+        <div className="loading-area">
+          <div className="loading-text">
+            Connecting...
           </div>
-        ) : (
-          <button
-            type="button"
-            className="gateway-start-button"
-            onClick={onComplete}
-          >
-            <span>GET STARTED</span>
-            <span className="start-arrow">→</span>
-          </button>
-        )}
 
+          <div className="loading-track">
+            <div
+              className="loading-bar"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+
+          <div className="loading-percent">
+            {Math.round(progress)}%
+          </div>
+        </div>
       </div>
 
       <div className="splash-bottom">

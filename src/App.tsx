@@ -19,6 +19,8 @@ import { DirectMessagesModal } from './components/modals/DirectMessagesModal';
 import { NotificationsModal } from './components/modals/NotificationsModal';
 import { FloatingNotificationToast } from './components/common/FloatingNotificationToast';
 import { FloatingCommentReply } from './components/common/FloatingCommentReply';
+import FloatingLiveBroadcast from './components/FloatingLiveBroadcast';
+import { LiveSermonModal } from './components/modals/LiveSermonModal';
 import { InstagramProfileModal } from './components/modals/InstagramProfileModal';
 import { StorageService } from './services/storageService';
 import { liveSyncService } from './services/liveSyncService';
@@ -77,6 +79,7 @@ export default function App() {
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   const [showDirectMessagesModal, setShowDirectMessagesModal] = useState<boolean>(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
+  const [showLiveSermonModal, setShowLiveSermonModal] = useState<boolean>(false);
   const [directMessageRecipientId, setDirectMessageRecipientId] = useState<string | undefined>(undefined);
   const [directMessageGroupId, setDirectMessageGroupId] = useState<string | undefined>(undefined);
   const [bibleReference, setBibleReference] = useState<string | undefined>(undefined);
@@ -99,6 +102,16 @@ export default function App() {
   const [authReferralCode, setAuthReferralCode] = useState<string>('');
   const [authError, setAuthError] = useState<string | null>(null);
 
+
+  useEffect(() => {
+    const handleOpenLive = () => {
+      setShowLiveSermonModal(true);
+    };
+    window.addEventListener('gcz_open_live_stream', handleOpenLive);
+    return () => {
+      window.removeEventListener('gcz_open_live_stream', handleOpenLive);
+    };
+  }, []);
 
   // Refresh all state from StorageService
   const refreshAppData = () => {
@@ -377,7 +390,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--gcz-bg-page)] text-[var(--gcz-text-main)] flex flex-col selection:bg-amber-400 selection:text-slate-950 transition-colors duration-200">
+    <div className="gcz-app-shell min-h-screen bg-[var(--gcz-bg-page)] text-[var(--gcz-text-main)] flex flex-col selection:bg-amber-400 selection:text-slate-950 transition-colors duration-200 overflow-x-hidden w-full max-w-full">
       
       {/* 1. Main Header */}
       <Header
@@ -397,7 +410,7 @@ export default function App() {
       />
 
       {/* 2. Main Content Area */}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 py-3">
+      <main className="gcz-main flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 py-2 sm:py-3 pb-24 sm:pb-20 overflow-x-hidden">
         {activeTab === 'home' && (
           <HomeTab
             sermons={sermons}
@@ -490,7 +503,7 @@ export default function App() {
       </main>
 
       {/* 3. Sleek Ministry System Status Bar */}
-      <footer className="h-10 bg-[#001F3F] border-t border-white/5 px-4 sm:px-8 flex items-center justify-between text-[10px] font-bold tracking-widest text-white/50 shrink-0 mb-14 sm:mb-16">
+      <footer className="gcz-statusbar h-10 bg-[#001F3F] border-t border-white/5 px-4 sm:px-8 flex items-center justify-between text-[10px] font-bold tracking-widest text-white/50 shrink-0 mb-14 sm:mb-16">
         <div className="flex items-center gap-4 sm:gap-8">
           <span className="text-[#D4AF37] flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
@@ -570,6 +583,7 @@ export default function App() {
       {/* Floating Notification Toast (Redirects to exact place message comes from) */}
       <FloatingNotificationToast
         currentUser={currentUser}
+        onOpenLiveSermon={() => setActiveTab('home')}
         onOpenDirectChat={(recipientId) => {
           if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
             setAuthMode('login');
@@ -598,6 +612,26 @@ export default function App() {
 
       {/* Floating Comment Reply Float */}
       {currentUser && <FloatingCommentReply currentUser={currentUser} />}
+
+      {/* Floating Live Broadcast notification when church broadcast is live */}
+      <FloatingLiveBroadcast
+        currentUser={currentUser}
+        onWatchLive={() => {
+          setActiveTab('home');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onOpenInteractiveModal={() => {
+          setShowLiveSermonModal(true);
+        }}
+      />
+
+      {/* Interactive Live Sanctuary Sermon Modal */}
+      {showLiveSermonModal && currentUser && (
+        <LiveSermonModal
+          currentUser={currentUser}
+          onClose={() => setShowLiveSermonModal(false)}
+        />
+      )}
 
       {/* Global Instagram Profile Modal */}
       {globalProfileUserId && (

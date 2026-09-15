@@ -142,7 +142,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Action Controls & User Identity */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className="gcz-header-actions flex items-center gap-1 sm:gap-2 shrink-0">
         
         {/* Direct Messages & Groups Button */}
         {!isGuest && onOpenDirectMessages && (
@@ -150,7 +150,7 @@ export const Header: React.FC<HeaderProps> = ({
             id="btn-direct-messages-header"
             onClick={onOpenDirectMessages}
             title="Chats & Groups"
-            className="relative p-2 rounded-lg bg-secondary/50 border border-border hover:bg-secondary text-foreground/80 hover:text-foreground transition-all shadow-sm cursor-pointer"
+            className="relative p-1.5 sm:p-2 rounded-lg bg-secondary/50 border border-border hover:bg-secondary text-foreground/80 hover:text-foreground transition-all shadow-sm cursor-pointer shrink-0"
           >
             <Send className="w-4 h-4 text-primary" />
             {unreadDmsCount > 0 && notifSettings.directMessages && (
@@ -167,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
             id="btn-notifications-header"
             onClick={onOpenNotifications}
             title="Notifications & Live Alerts"
-            className="relative p-2 rounded-lg bg-secondary/50 border border-border hover:bg-secondary text-foreground/80 hover:text-foreground transition-all shadow-sm cursor-pointer animate-in fade-in"
+            className="relative p-1.5 sm:p-2 rounded-lg bg-secondary/50 border border-border hover:bg-secondary text-foreground/80 hover:text-foreground transition-all shadow-sm cursor-pointer animate-in fade-in shrink-0"
           >
             <Bell className="w-4 h-4 text-primary" />
             <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center shadow">
@@ -181,7 +181,7 @@ export const Header: React.FC<HeaderProps> = ({
           id="btn-low-data-toggle"
           onClick={onToggleLowData}
           title={lowDataMode ? "Lite Low-Data Mode Active (Click for HD)" : "HD Stream Active (Click for Lite Mode)"}
-          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border cursor-pointer ${
+          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all border cursor-pointer shrink-0 ${
             lowDataMode
               ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
               : 'bg-secondary/50 text-foreground/80 border-border hover:bg-secondary'
@@ -205,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({
           id="btn-theme-toggle"
           onClick={handleToggleTheme}
           title={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
-          className="flex items-center justify-center p-2 rounded-lg bg-secondary/50 border border-border hover:bg-secondary text-primary transition-all shadow-sm cursor-pointer"
+          className="flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-secondary/50 border border-border hover:bg-secondary text-primary transition-all shadow-sm cursor-pointer shrink-0"
           aria-label="Toggle Dark / Light Theme"
         >
           {theme === 'dark' ? (
@@ -220,7 +220,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="btn-flutter-export"
             onClick={onOpenFlutterExport}
-            className="flex items-center justify-center p-2 rounded-lg bg-secondary/50 border border-border text-foreground hover:bg-secondary text-xs transition-all shadow-sm cursor-pointer"
+            className="hidden md:flex items-center justify-center p-2 rounded-lg bg-secondary/50 border border-border text-foreground hover:bg-secondary text-xs transition-all shadow-sm cursor-pointer shrink-0"
             title="Database Schema & Specs"
           >
             <Database className="w-4 h-4 text-primary" />
@@ -232,7 +232,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="btn-quick-admin"
             onClick={onOpenAdminPanel}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground hover:brightness-105 text-xs font-bold shadow-sm transition-all cursor-pointer"
+            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground hover:brightness-105 text-xs font-bold shadow-sm transition-all cursor-pointer shrink-0"
             title="Apostolic Command Panel"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
@@ -245,7 +245,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="btn-quick-dev"
             onClick={onOpenDevConsole}
-            className="p-2 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-400 transition-all flex items-center justify-center cursor-pointer shadow-sm"
+            className="flex p-1.5 sm:p-2 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-400 transition-all items-center justify-center cursor-pointer shadow-sm shrink-0"
             title="Developer Console"
             aria-label="Developer Console"
           >

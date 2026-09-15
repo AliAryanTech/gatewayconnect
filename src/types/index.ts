@@ -40,6 +40,9 @@ export interface PostComment {
   user_name: string;
   user_handle?: string;
   user_avatar?: string;
+  author_id?: string;
+  author_name?: string;
+  author_avatar?: string;
   text: string;
   created_at: string;
   likes_count?: number;
@@ -475,7 +478,7 @@ export interface AppNotification {
   title: string;
   message: string;
   target_id?: string;
-  target_type?: 'live' | 'dm' | 'group' | 'testimony' | 'prayer' | 'event' | 'store' | 'url';
+  target_type?: 'live' | 'dm' | 'group' | 'testimony' | 'prayer' | 'event' | 'store' | 'url' | 'profile';
   redirect_url?: string;
   link_tab?: string;
   meta_id?: string;

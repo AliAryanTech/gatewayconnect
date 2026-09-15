@@ -25,7 +25,8 @@ export const FloatingCommentReply: React.FC<FloatingCommentReplyProps> = ({ curr
       const detail = e.detail as CommentEventDetail;
       if (!detail || !currentUser) return;
       // Only display to the author of the post (and ignore if author commented on their own post)
-      if (detail.postAuthorId === currentUser.id && detail.comment.author_id !== currentUser.id) {
+      const commenterId = detail.comment.author_id || detail.comment.user_id;
+      if (detail.postAuthorId === currentUser.id && commenterId !== currentUser.id) {
         setActiveItem(detail);
         setIsSent(false);
         setReplyText('');
@@ -88,14 +89,14 @@ export const FloatingCommentReply: React.FC<FloatingCommentReplyProps> = ({ curr
       {/* Incoming Comment Card */}
       <div className="bg-secondary/60 rounded-xl p-2.5 mb-2.5 flex items-start gap-2">
         <img
-          src={activeItem.comment.author_avatar || '/assets/apostle_joe_daniels_main.jpg'}
-          alt={activeItem.comment.author_name}
+          src={activeItem.comment.author_avatar || activeItem.comment.user_avatar || '/assets/apostle_joe_daniels_main.jpg'}
+          alt={activeItem.comment.author_name || activeItem.comment.user_name || 'Believer'}
           className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5"
         />
         <div className="min-w-0 flex-1 text-xs">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-foreground text-[11px]">
-              {activeItem.comment.author_name}
+              {activeItem.comment.author_name || activeItem.comment.user_name || 'Believer'}
             </span>
             <span className="text-[10px] text-muted-foreground">Just now</span>
           </div>
@@ -117,7 +118,7 @@ export const FloatingCommentReply: React.FC<FloatingCommentReplyProps> = ({ curr
             type="text"
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
-            placeholder={`Reply to ${activeItem.comment.author_name.split(' ')[0]}...`}
+            placeholder={`Reply to ${(activeItem.comment.author_name || activeItem.comment.user_name || 'Member').split(' ')[0]}...`}
             className="flex-1 bg-secondary border border-border rounded-full px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
             autoFocus
           />

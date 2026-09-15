@@ -232,7 +232,7 @@ export const MeTab: React.FC<MeTabProps> = ({
   }
 
   return (
-    <div className="space-y-4 pb-24 max-w-2xl mx-auto px-3 sm:px-4 pt-1">
+    <div className="space-y-4 pb-20 max-w-2xl mx-auto px-0 sm:px-2 pt-1 w-full max-w-full">
       
       {/* Instagram-Style Profile Top Card */}
       <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-sm space-y-4">
