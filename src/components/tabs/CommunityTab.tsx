@@ -2302,9 +2302,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                       currentUser.id,
                       activeStoryModal.userId,
                       `Replying to your story: "${storyReplyText.trim()}"`,
-                      undefined,
-                      undefined,
-                      currentUser.full_name
+                      undefined
                     );
                     setStoryReplyText('');
                     alert(`Reply sent to ${activeStoryModal.userName}!`);
@@ -2321,9 +2319,7 @@ export const CommunityTab: React.FC<CommunityTabProps> = ({
                       currentUser.id,
                       activeStoryModal.userId,
                       `Replying to your story: "${storyReplyText.trim()}"`,
-                      undefined,
-                      undefined,
-                      currentUser.full_name
+                      undefined
                     );
                     setStoryReplyText('');
                     alert(`Reply sent to ${activeStoryModal.userName}!`);
