@@ -167,6 +167,7 @@ export default function App() {
 
   useEffect(() => {
     StorageService.syncUsersWithRemote().catch(() => {});
+    StorageService.syncStoriesWithRemote().catch(() => {});
     if (!currentUser) {
       liveSyncService.disconnect();
       return;
