@@ -422,7 +422,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--gcz-bg-page)] text-[var(--gcz-text-main)] flex flex-col selection:bg-amber-400 selection:text-slate-950 transition-colors duration-200">
+    <div className="gcz-app-shell min-h-screen flex flex-col selection:bg-amber-400 selection:text-slate-950 transition-colors duration-200">
       
       {/* 1. Main Header */}
       <Header
@@ -442,7 +442,7 @@ export default function App() {
       />
 
       {/* 2. Main Content Area */}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 py-3">
+      <main className="gcz-main flex-1 w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
         {activeTab === 'home' && (
           <HomeTab
             sermons={sermons}
@@ -538,7 +538,7 @@ export default function App() {
       </main>
 
       {/* 3. Sleek Ministry System Status Bar */}
-      <footer className="h-10 bg-[#001F3F] border-t border-white/5 px-4 sm:px-8 flex items-center justify-between text-[10px] font-bold tracking-widest text-white/50 shrink-0 mb-14 sm:mb-16">
+      <footer className="gcz-statusbar h-10 px-4 sm:px-8 flex items-center justify-between text-[10px] font-bold tracking-widest shrink-0 mb-16 sm:mb-4">
         <div className="flex items-center gap-4 sm:gap-8">
           <span className="text-[#D4AF37] flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
