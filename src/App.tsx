@@ -117,6 +117,10 @@ export default function App() {
       setUnreadDmsCount(threads.reduce((acc, t) => acc + (t.unread_count || 0), 0));
     }
   };
+  
+  const refreshLiveState = () => {
+  refreshAppData();
+};
 
   const handleToggleLowData = () => {
     const updated = !lowDataMode;
