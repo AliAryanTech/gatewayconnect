@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   ShieldCheck, 
@@ -48,6 +48,14 @@ export const ProfileBadgesModal: React.FC<ProfileBadgesModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [followingList, setFollowingList] = useState<string[]>(StorageService.getFollowingList(currentUser.id));
   const [usersList, setUsersList] = useState<User[]>(StorageService.getAllUsers());
+
+  useEffect(() => {
+    const refreshUsersList = () => setUsersList(StorageService.getAllUsers());
+    if (isOpen) refreshUsersList();
+    window.addEventListener('gcz_users_synced', refreshUsersList);
+    return () => window.removeEventListener('gcz_users_synced', refreshUsersList);
+  }, [isOpen]);
+
   const [claimedReward, setClaimedReward] = useState(false);
 
   if (!isOpen) return null;
