@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Camera, Edit3, Check, Copy, LogOut, Shield, Phone, Sparkles } from 'lucide-react';
+import { X, Camera, Edit3, Check, Copy, LogOut, Shield, Phone } from 'lucide-react';
 import { User } from '../../types';
 import { StorageService } from '../../services/storageService';
 import { ImagePickerModal } from './ImagePickerModal';
@@ -54,185 +54,159 @@ export const WhatsAppProfileModal: React.FC<WhatsAppProfileModalProps> = ({
 
   return (
     <>
-      {/* Custom Animations for Full Screen */}
       <style>{`
-        @keyframes bg-fade-in {
-          from { opacity: 0; transform: scale(1.1); }
-          to { opacity: 1; transform: scale(1); }
+        @keyframes modal-enter {
+          from { opacity: 0; transform: scale(0.9) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
         }
-        @keyframes slide-up-smooth {
-          from { opacity: 0; transform: translateY(100px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes border-glow {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
         }
-        @keyframes fade-in-down {
-          from { opacity: 0; transform: translateY(-20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes shimmer {
+        @keyframes text-shine {
           0% { background-position: -200% center; }
           100% { background-position: 200% center; }
         }
-        .anim-bg-fade { animation: bg-fade-in 1s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-        .anim-slide-up { animation: slide-up-smooth 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; opacity: 0; }
-        .anim-fade-down { animation: fade-in-down 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; opacity: 0; }
-        .delay-100 { animation-delay: 0.1s; }
-        .delay-200 { animation-delay: 0.2s; }
-        .delay-300 { animation-delay: 0.3s; }
-        .delay-400 { animation-delay: 0.4s; }
+        .anim-modal { animation: modal-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .anim-border { animation: border-glow 3s ease-in-out infinite; }
         
-        .text-shimmer {
-          background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0.3) 100%);
+        .text-gradient-credit {
+          background: linear-gradient(90deg, #f472b6, #c084fc, #22d3ee, #c084fc, #f472b6);
           background-size: 200% auto;
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-          animation: shimmer 4s linear infinite;
+          animation: text-shine 4s linear infinite;
         }
       `}</style>
 
-      {/* FULL SCREEN CONTAINER */}
-      <div className="fixed inset-0 z-50 bg-black overflow-hidden">
-        
-        {/* 1. Massive Blurred Background Image */}
-        <div className="absolute inset-0 anim-bg-fade">
-          <img 
-            src={currentUser.avatar_url} 
-            className="w-full h-full object-cover scale-110 blur-3xl opacity-40" 
-            alt="" 
-          />
-          {/* Dark Gradient Overlays for readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/90" />
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-        </div>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        {/* Compact Modal Container */}
+        <div 
+          onClick={(e) => e.stopPropagation()} 
+          className="relative w-full max-w-[380px] rounded-[2rem] bg-[#09090b] border border-white/10 shadow-2xl shadow-purple-900/30 overflow-hidden anim-modal"
+        >
+          {/* Glowing Border Effect (Top) */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent anim-border" />
 
-        {/* 2. Top Navigation Bar */}
-        <div className="relative z-10 flex justify-between items-center p-5 anim-fade-down">
-          <button 
-            onClick={onClose} 
-            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/20 transition-all active:scale-95"
-          >
-            <X className="w-5 h-5 text-white" />
-          </button>
-          
-          <p className="text-sm font-semibold text-white/80 tracking-wide">PROFILE</p>
-          
-          <div className="w-10 h-10" /> {/* Spacer for centering */}
-        </div>
+          {/* Header / Avatar Section */}
+          <div className="relative pt-8 pb-6 flex flex-col items-center">
+            {/* Close Button */}
+            <button 
+              onClick={onClose} 
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all active:scale-90"
+            >
+              <X className="w-4 h-4 text-white/70" />
+            </button>
 
-        {/* 3. Main Content Area (Scrollable if needed) */}
-        <div className="relative z-10 h-full flex flex-col items-center justify-between px-6 pb-8 pt-4 overflow-y-auto">
-          
-          {/* Top Section: Avatar & Name */}
-          <div className="flex flex-col items-center w-full anim-slide-up delay-100">
             {/* Avatar */}
-            <div className="relative group mb-6">
-              <div className="w-32 h-32 rounded-full p-[2px] bg-gradient-to-br from-white/40 to-white/5">
+            <div className="relative mb-4">
+              <div className="absolute inset-0 bg-gradient-to-tr from-pink-500 to-cyan-500 rounded-full blur-md opacity-40" />
+              <div className="relative w-24 h-24 rounded-full p-[2px] bg-gradient-to-tr from-pink-500 via-purple-500 to-cyan-500">
                 <img 
                   src={currentUser.avatar_url} 
-                  className="w-full h-full rounded-full object-cover border-4 border-black/50" 
+                  className="w-full h-full rounded-full object-cover border-[3px] border-[#09090b]" 
                   alt="Profile" 
                 />
               </div>
-              {/* Camera Button */}
               <button 
                 onClick={() => setIsPickerOpen(true)}
-                className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center hover:bg-white/30 transition-all active:scale-90 shadow-lg"
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-zinc-800 border-2 border-[#09090b] flex items-center justify-center hover:bg-zinc-700 transition-colors active:scale-90 shadow-lg"
               >
-                <Camera className="w-4 h-4 text-white" />
+                <Camera className="w-3.5 h-3.5 text-white" />
               </button>
             </div>
 
             {/* Name & Role */}
-            <div className="text-center w-full">
+            <div className="text-center px-6 w-full">
               {isEditing ? (
                 <div className="flex gap-2 justify-center items-center">
                   <input 
                     value={name} 
                     onChange={(e) => setName(e.target.value)} 
                     onKeyDown={(e) => e.key === 'Enter' && saveName()}
-                    className="w-64 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-2.5 text-white text-center text-lg outline-none focus:border-white/50 transition-colors" 
+                    className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-white text-sm text-center outline-none focus:border-purple-500 transition-colors" 
                     autoFocus
                   />
                   <button 
                     onClick={saveName} 
-                    className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform active:scale-95"
+                    className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
                   >
-                    <Check className="w-5 h-5" />
+                    <Check className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-3xl font-bold text-white tracking-tight">{currentUser.full_name}</h1>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-bold text-white">{currentUser.full_name}</h1>
                     <button 
                       onClick={() => setIsEditing(true)} 
-                      className="w-7 h-7 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors active:scale-90"
+                      className="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors active:scale-90"
                     >
-                      <Edit3 className="w-3.5 h-3.5 text-white/80" />
+                      <Edit3 className="w-3 h-3 text-white/60" />
                     </button>
                   </div>
-                  <p className="text-xs text-white/50 font-medium tracking-widest uppercase">{currentUser.role}</p>
+                  <p className="text-[10px] text-purple-400 font-semibold tracking-[0.2em] uppercase">{currentUser.role}</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Bottom Section: Info Cards & Actions */}
-          <div className="w-full max-w-md space-y-4 anim-slide-up delay-300">
-            
+          {/* Info Section */}
+          <div className="px-5 space-y-3">
             {/* Member ID */}
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center justify-between hover:bg-white/10 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-purple-400" />
+            <div className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-2xl p-3.5 flex items-center justify-between transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-white/40 font-bold tracking-wider uppercase">Member ID</p>
-                  <p className="text-base font-mono text-white mt-0.5">{currentUser.member_id}</p>
+                  <p className="text-[9px] text-white/30 font-bold tracking-wider uppercase">Member ID</p>
+                  <p className="text-sm font-mono text-white/90 mt-0.5">{currentUser.member_id}</p>
                 </div>
               </div>
               <button 
                 onClick={handleCopyId} 
-                className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 flex items-center justify-center transition-all active:scale-90"
+                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all active:scale-90"
               >
-                {isCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-white/60" />}
+                {isCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-white/40" />}
               </button>
             </div>
 
             {/* Phone */}
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center gap-4 hover:bg-white/10 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                <Phone className="w-5 h-5 text-cyan-400" />
+            <div className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-2xl p-3.5 flex items-center gap-3 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                <Phone className="w-4 h-4 text-cyan-400" />
               </div>
               <div>
-                <p className="text-[10px] text-white/40 font-bold tracking-wider uppercase">Phone Number</p>
-                <p className="text-base text-white mt-0.5">{currentUser.phone}</p>
+                <p className="text-[9px] text-white/30 font-bold tracking-wider uppercase">Phone Number</p>
+                <p className="text-sm text-white/90 mt-0.5">{currentUser.phone}</p>
               </div>
             </div>
 
             {/* Logout Button */}
             <button 
               onClick={onLogout} 
-              className="w-full h-14 rounded-2xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] mt-6"
+              className="w-full h-11 rounded-xl bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/30 text-red-400 text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] mt-2"
             >
-              <LogOut className="w-4 h-4" /> 
+              <LogOut className="w-3.5 h-3.5" /> 
               LOGOUT
             </button>
-
-            {/* ✨ STYLISH WATERMARK: Design by AsifOfc ✨ */}
-            <div className="pt-8 pb-2 flex flex-col items-center gap-1 anim-slide-up delay-400">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-white/20" />
-                <p className="text-[10px] tracking-[0.4em] uppercase text-white/30 font-light">
-                  Designed by 
-                </p>
-                <Sparkles className="w-3 h-3 text-white/20" />
-              </div>
-              <p className="text-xl font-extralight tracking-widest text-shimmer italic">
-                AsifOfc
-              </p>
-            </div>
-
           </div>
+
+          {/* ✨ STYLISH & VISIBLE CREDIT SECTION ✨ */}
+          <div className="mt-6 pt-4 pb-5 border-t border-white/5 flex flex-col items-center gap-1.5">
+            <p className="text-[9px] text-white/20 uppercase tracking-[0.3em] font-medium">
+              Premium UI
+            </p>
+            <p className="text-lg font-black italic tracking-wide text-gradient-credit drop-shadow-[0_0_8px_rgba(192,132,252,0.3)]">
+              Design by AsifOfc
+            </p>
+          </div>
+
         </div>
       </div>
       
