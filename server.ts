@@ -69,6 +69,95 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (requestUrl.pathname === '/api/facebook/resolve') {
+    let targetUrl = requestUrl.searchParams.get('url');
+
+    if (request.method === 'POST') {
+      try {
+        const body = await readJson(request);
+        if (typeof body.url === 'string') targetUrl = body.url;
+      } catch {}
+    }
+
+    if (!targetUrl) {
+      sendJson(response, 400, { success: false, error: 'Missing url parameter' });
+      return;
+    }
+
+    try {
+      targetUrl = targetUrl.trim();
+      const userAgent = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+      const fbResp = await fetch(targetUrl, {
+        headers: {
+          'User-Agent': userAgent,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        },
+        redirect: 'follow'
+      });
+
+      const resolvedUrl = fbResp.url || targetUrl;
+      const html = await fbResp.text();
+
+      const idMatch = resolvedUrl.match(/\/(?:videos|reel)\/(?:[^\/]+\/)?(\d{8,25})/) ||
+                      resolvedUrl.match(/[?&]v=(\d{8,25})/) ||
+                      html.match(/\/(?:videos|reel)\/(?:[^\/]+\/)?(\d{8,25})/) ||
+                      html.match(/"video_id":"(\d{8,25})"/);
+
+      const numericVideoId = idMatch ? idMatch[1] : undefined;
+
+      const titleMatch = html.match(/<meta\s+(?:property|name)=["']og:title["']\s+content=["']([^"']*)["']/i) ||
+                         html.match(/<title>([^<]*)<\/title>/i);
+      let title = titleMatch ? titleMatch[1] : undefined;
+      if (title) {
+        title = title
+          .replace(/&amp;/g, '&')
+          .replace(/&#xb7;/g, '·')
+          .replace(/&quot;/g, '"')
+          .replace(/^\d+(\.\d+)?[KM]?\s+views\s+·\s+\d+\s+reactions\s+\|\s+/i, '')
+          .trim();
+      }
+
+      const descMatch = html.match(/<meta\s+(?:property|name)=["']og:description["']\s+content=["']([^"']*)["']/i);
+      let description = descMatch ? descMatch[1] : undefined;
+      if (description) {
+        description = description.replace(/&amp;/g, '&').replace(/&quot;/g, '"').trim();
+      }
+
+      const imgMatch = html.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']*)["']/i);
+      const thumbnailUrl = imgMatch ? imgMatch[1].replace(/&amp;/g, '&') : undefined;
+
+      const canonicalUrl = numericVideoId
+        ? `https://www.facebook.com/watch/?v=${numericVideoId}`
+        : resolvedUrl;
+      
+      const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(canonicalUrl)}&show_text=0&width=500`;
+
+      sendJson(response, 200, {
+        success: true,
+        originalUrl: targetUrl,
+        resolvedUrl,
+        canonicalUrl,
+        embedUrl,
+        numericVideoId,
+        title: title || 'Apostolic Broadcast with Apostle Joe Daniels',
+        description: description || 'Gateway Church Zimbabwe Live Altar',
+        thumbnailUrl,
+        author: 'Apostle Joe Daniels'
+      });
+      return;
+    } catch (err: any) {
+      sendJson(response, 200, {
+        success: false,
+        originalUrl: targetUrl,
+        resolvedUrl: targetUrl,
+        canonicalUrl: targetUrl,
+        embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(targetUrl)}&show_text=0&width=500`,
+        error: err.message
+      });
+      return;
+    }
+  }
+
   // ... your Paynow routes unchanged ...
 
   if (requestUrl.pathname === '/' || requestUrl.pathname === '/health') {
