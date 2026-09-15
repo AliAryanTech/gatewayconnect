@@ -9,8 +9,6 @@ export type RealtimeHandlers = {
   liveStreams?: (payload: unknown) => void;
   reactions?: (payload: unknown) => void;
   users?: (payload: unknown) => void;
-  profilePictures?: (payload: unknown) => void;
-  communityStories?: (payload: unknown) => void;
   onPresenceSync?: (activeMembers: Array<{ id: string; full_name: string; handle?: string }>) => void;
   onBroadcastEvent?: (event: { type: string; payload: unknown }) => void;
 };
@@ -90,7 +88,9 @@ export function subscribeToRealtime(
     }
   );
 
-  // 8a. New / Updated User Accounts (fixes new signups & profile photo changes not appearing)
+  // 7b. New / updated member accounts — keeps every device's local member
+  // list current so new signups show up in Search, Community, New Chat and
+  // Find & Follow without requiring a re-login.
   channel.on(
     'postgres_changes',
     { event: '*', schema: 'public', table: 'users' },
@@ -99,33 +99,14 @@ export function subscribeToRealtime(
     }
   );
 
-  // 8b. Profile Picture Changes
-  channel.on(
-    'postgres_changes',
-    { event: '*', schema: 'public', table: 'profile_pictures' },
-    (payload) => {
-      handlers.profilePictures?.(payload);
-    }
-  );
-
-  // 8c. Community Stories (24h status posts) — previously never subscribed to,
-  // so a story only ever appeared on the poster's own device.
-  channel.on(
-    'postgres_changes',
-    { event: 'INSERT', schema: 'public', table: 'community_stories' },
-    (payload) => {
-      handlers.communityStories?.(payload);
-    }
-  );
-
-  // 9. Ephemeral Broadcast Events (Amen reactions, live chat bursts, pulpit scriptures)
+  // 8. Ephemeral Broadcast Events (Amen reactions, live chat bursts, pulpit scriptures)
   channel.on('broadcast', { event: 'live_event' }, (envelope: any) => {
     if (envelope?.payload) {
       handlers.onBroadcastEvent?.(envelope.payload);
     }
   });
 
-  // 10. Member Presence Tracking
+  // 9. Member Presence Tracking
   channel.on('presence', { event: 'sync' }, () => {
     const presenceState = channel.presenceState();
     const members: Array<{ id: string; full_name: string; handle?: string }> = [];
