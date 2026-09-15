@@ -449,7 +449,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
   };
 
   const handleApproveUnbanAppeal = (appealId: string, phone: string) => {
-    StorageService.approveUnbanAppeal(appealId);
+    StorageService.resolveUnbanAppeal(appealId, 'approved');
     setBannedUsersMap(StorageService.getBannedUsers());
     setUnbanAppeals(StorageService.getUnbanAppeals());
     setUsers(StorageService.getAllUsers());
