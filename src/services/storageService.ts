@@ -3821,6 +3821,31 @@ export class StorageService {
     return msgs.filter(m => !m.deleted_for_users || !m.deleted_for_users.includes(userId));
   }
 
+  /**
+   * Total number of unread fellowship-group messages across every group the
+   * user belongs to. A message counts as unread when it wasn't sent by the
+   * user themselves and their id is missing from read_by_user_ids.
+   */
+  static getTotalUnreadGroupMessagesCount(userId: string): number {
+    if (!userId) return 0;
+    const groups = this.getChatGroups().filter(
+      g => g.member_ids?.includes(userId) && !this.hasUserExitedGroup(g.id, userId)
+    );
+
+    let total = 0;
+    for (const group of groups) {
+      const msgs = this.getChatGroupMessagesForUser(group.id, userId);
+      for (const msg of msgs) {
+        if (msg.is_system) continue;
+        if (msg.sender_id === userId) continue;
+        if (!msg.read_by_user_ids || !msg.read_by_user_ids.includes(userId)) {
+          total += 1;
+        }
+      }
+    }
+    return total;
+  }
+
   static deleteChatGroupMessage(groupId: string, messageId: string, userId: string, forEveryone: boolean): boolean {
     const allMsgs = getLocal<Record<string, ChatGroupMessage[]>>(KEYS.CHAT_GROUP_MESSAGES, INITIAL_CHAT_GROUP_MESSAGES);
     const groupMsgs = allMsgs[groupId];
@@ -4242,20 +4267,6 @@ export class StorageService {
     if (data.name) grp.name = data.name.trim();
     if (data.description !== undefined) grp.description = data.description.trim();
     if (data.avatar_url !== undefined) grp.avatar_url = data.avatar_url.trim();
-    setLocal(KEYS.CHAT_GROUPS, groups);
-    return true;
-  }
-
-  static updateGroupSettings(groupId: string, settings: { only_admins_can_send_messages?: boolean; only_admins_can_add_members?: boolean }): boolean {
-    const groups = this.getChatGroups();
-    const grp = groups.find(g => g.id === groupId);
-    if (!grp) return false;
-    if (settings.only_admins_can_send_messages !== undefined) {
-      grp.only_admins_can_send_messages = settings.only_admins_can_send_messages;
-    }
-    if (settings.only_admins_can_add_members !== undefined) {
-      grp.only_admins_can_add_members = settings.only_admins_can_add_members;
-    }
     setLocal(KEYS.CHAT_GROUPS, groups);
     return true;
   }
