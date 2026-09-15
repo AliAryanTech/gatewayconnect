@@ -498,7 +498,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose, onRefreshAppSta
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#001122] flex flex-col text-white font-sans overflow-hidden isolate">
+    <div className="gcz-admin fixed inset-0 z-50 flex flex-col font-sans overflow-hidden isolate">
       
       {/* 0. CYBER-FUTURISTIC BACKGROUND (Matrix Streams strictly BEHIND everything in the background) */}
       <AdminCyberBackground enabled={showCyberBackground} />
