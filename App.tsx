@@ -19,7 +19,7 @@ import { NotificationsModal } from './components/modals/NotificationsModal';
 import { FloatingNotificationToast } from './components/common/FloatingNotificationToast';
 import { FloatingCommentReply } from './components/common/FloatingCommentReply';
 import { InstagramProfileModal } from './components/modals/InstagramProfileModal';
-import { StorageService } from './services/storageService';
+import { StorageService, arePhoneNumbersEqual } from './services/storageService';
 import { liveSyncService } from './services/liveSyncService';
 import { 
   TabType, 
@@ -79,11 +79,14 @@ export default function App() {
   const [directMessageGroupId, setDirectMessageGroupId] = useState<string | undefined>(undefined);
   const [bibleReference, setBibleReference] = useState<string | undefined>(undefined);
   const [globalProfileUserId, setGlobalProfileUserId] = useState<string | null>(null);
+  const [returnToProfileUserId, setReturnToProfileUserId] = useState<string | null>(null);
   const [unreadDmsCount, setUnreadDmsCount] = useState<number>(() => {
     const user = StorageService.getCurrentUser();
     if (!user) return 0;
     const threads = StorageService.getAllDirectMessageThreads(user.id);
-    return threads.reduce((acc, t) => acc + (t.unread_count || 0), 0);
+    const dmCount = threads.reduce((acc, t) => acc + (t.unread_count || 0), 0);
+    const grpCount = StorageService.getTotalUnreadGroupMessagesCount(user.id);
+    return dmCount + grpCount;
   });
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
@@ -112,7 +115,9 @@ export default function App() {
     setCurrentUser(user);
     if (user) {
       const threads = StorageService.getAllDirectMessageThreads(user.id);
-      setUnreadDmsCount(threads.reduce((acc, t) => acc + (t.unread_count || 0), 0));
+      const dmCount = threads.reduce((acc, t) => acc + (t.unread_count || 0), 0);
+      const grpCount = StorageService.getTotalUnreadGroupMessagesCount(user.id);
+      setUnreadDmsCount(dmCount + grpCount);
     }
   };
 
@@ -182,15 +187,35 @@ export default function App() {
         setGlobalProfileUserId(e.detail.userId);
       }
     };
-    window.addEventListener('gcz_banned_users_updated', refreshLiveState);
-    window.addEventListener('gcz_current_user_banned', refreshLiveState);
+    window.addEventListener('gcz_banned_users_updated', refreshAppData);
+    window.addEventListener('gcz_current_user_banned', refreshAppData);
     window.addEventListener('gcz_open_user_profile', handleOpenProfile);
+    window.addEventListener('gcz_direct_messages_updated', refreshAppData);
+    window.addEventListener('gcz_dms_updated', refreshAppData);
+    window.addEventListener('gcz_new_notification', refreshAppData);
+    window.addEventListener('gcz_notifications_updated', refreshAppData);
+    window.addEventListener('gcz_live_state_updated', refreshAppData);
+    window.addEventListener('gcz_user_registered', refreshAppData);
+    window.addEventListener('gcz_users_synced', refreshAppData);
+    window.addEventListener('gcz_user_profile_updated', refreshAppData);
+    window.addEventListener('gcz_groups_updated', refreshAppData);
+    window.addEventListener('gcz_group_messages_updated', refreshAppData);
     return () => {
       unbind();
       liveSyncService.disconnect();
-      window.removeEventListener('gcz_banned_users_updated', refreshLiveState);
-      window.removeEventListener('gcz_current_user_banned', refreshLiveState);
+      window.removeEventListener('gcz_banned_users_updated', refreshAppData);
+      window.removeEventListener('gcz_current_user_banned', refreshAppData);
       window.removeEventListener('gcz_open_user_profile', handleOpenProfile);
+      window.removeEventListener('gcz_direct_messages_updated', refreshAppData);
+      window.removeEventListener('gcz_dms_updated', refreshAppData);
+      window.removeEventListener('gcz_new_notification', refreshAppData);
+      window.removeEventListener('gcz_notifications_updated', refreshAppData);
+      window.removeEventListener('gcz_live_state_updated', refreshAppData);
+      window.removeEventListener('gcz_user_registered', refreshAppData);
+      window.removeEventListener('gcz_users_synced', refreshAppData);
+      window.removeEventListener('gcz_user_profile_updated', refreshAppData);
+      window.removeEventListener('gcz_groups_updated', refreshAppData);
+      window.removeEventListener('gcz_group_messages_updated', refreshAppData);
     };
   }, [currentUser?.id]);
   useEffect(() => {
@@ -241,10 +266,36 @@ export default function App() {
           refreshAppData();
         },
         users: (payload) => {
-          console.log('Realtime user account change:', payload);
-          StorageService.syncUsersWithRemote()
-            .catch(() => {})
-            .finally(() => refreshAppData());
+          // New account registered or existing profile changed elsewhere (e.g. photo).
+          // Must re-pull from Supabase, not just re-read local storage, or new
+          // users/updated photos never appear in community, chats, or search.
+          console.log('Realtime user profile change:', payload);
+          StorageService.syncUsersWithRemote().catch(() => {});
+        },
+        profilePictures: (payload) => {
+          console.log('Realtime profile picture change:', payload);
+          StorageService.syncUsersWithRemote().catch(() => {});
+        },
+        communityStories: (payload) => {
+          // A story was posted from another device — merge it in directly so
+          // it shows up immediately without needing a manual page refresh.
+          console.log('Realtime story posted:', payload);
+          const row = (payload as any)?.new;
+          if (row) {
+            StorageService.receiveRemoteStory({
+              id: row.id,
+              user_id: row.user_id,
+              user_name: row.user_name || 'Church Member',
+              user_handle: row.user_handle || '',
+              user_avatar: row.avatar_url || '',
+              avatar_url: row.avatar_url || null,
+              badge_type: row.badge_type || 'none',
+              image_url: row.image_url || '',
+              caption: row.caption || '',
+              scripture: row.scripture || null,
+              created_at: row.created_at
+            });
+          }
         },
         onBroadcastEvent: (event) => {
           console.log('Realtime live broadcast event:', event);
@@ -352,10 +403,15 @@ export default function App() {
 
   // Check if current user is banned - blocks entire app and renders dedicated Banned Screen
   const bannedMap = StorageService.getBannedUsers();
-  const isUserBanned = currentUser?.is_banned || Boolean(
+  const isPrivileged = currentUser?.role === 'developer' || 
+    currentUser?.role === 'super_admin' || 
+    currentUser?.id === 'usr_developer' || 
+    currentUser?.id === 'usr_apostle_joe' || 
+    (currentUser?.phone && arePhoneNumbersEqual(currentUser.phone, '0780699988'));
+  const isUserBanned = !isPrivileged && (currentUser?.is_banned || Boolean(
     (currentUser?.id && bannedMap[currentUser.id]) ||
     (currentUser?.phone && bannedMap[currentUser.phone])
-  );
+  ));
   if (isUserBanned) {
     return (
       <BannedScreen
@@ -366,7 +422,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--gcz-bg-page)] text-[var(--gcz-text-main)] flex flex-col selection:bg-amber-400 selection:text-slate-950 transition-colors duration-200">
+    <div className="gcz-app-shell min-h-screen flex flex-col selection:bg-amber-400 selection:text-slate-950 transition-colors duration-200">
       
       {/* 1. Main Header */}
       <Header
@@ -386,7 +442,7 @@ export default function App() {
       />
 
       {/* 2. Main Content Area */}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 py-3">
+      <main className="gcz-main flex-1 w-full max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
         {activeTab === 'home' && (
           <HomeTab
             sermons={sermons}
@@ -433,7 +489,10 @@ export default function App() {
               setDirectMessageRecipientId(undefined);
               setShowDirectMessagesModal(true);
             }}
-            onOpenDirectChat={(recipientId) => {
+            onOpenDirectChat={(recipientId, returnProfileId) => {
+              if (returnProfileId) {
+                setReturnToProfileUserId(returnProfileId);
+              }
               if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
                 setAuthMode('login');
                 setShowAuthModal(true);
@@ -479,7 +538,7 @@ export default function App() {
       </main>
 
       {/* 3. Sleek Ministry System Status Bar */}
-      <footer className="h-10 bg-[#001F3F] border-t border-white/5 px-4 sm:px-8 flex items-center justify-between text-[10px] font-bold tracking-widest text-white/50 shrink-0 mb-14 sm:mb-16">
+      <footer className="gcz-statusbar h-10 px-4 sm:px-8 flex items-center justify-between text-[10px] font-bold tracking-widest shrink-0 mb-16 sm:mb-4">
         <div className="flex items-center gap-4 sm:gap-8">
           <span className="text-[#D4AF37] flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
@@ -521,7 +580,11 @@ export default function App() {
             setShowDevConsole(false);
             setShowFlutterExport(true);
           }}
-          onSwitchUser={(user) => setCurrentUser(user)}
+          onSwitchUser={(user) => {
+            StorageService.setCurrentUser(user);
+            setCurrentUser(user);
+            refreshAppData();
+          }}
         />
       )}
 
@@ -552,6 +615,10 @@ export default function App() {
             setDirectMessageRecipientId(undefined);
             setDirectMessageGroupId(undefined);
             refreshAppData();
+            if (returnToProfileUserId) {
+              setGlobalProfileUserId(returnToProfileUserId);
+              setReturnToProfileUserId(null);
+            }
           }}
         />
       )}
@@ -593,8 +660,12 @@ export default function App() {
         <InstagramProfileModal
           userId={globalProfileUserId}
           isOpen={Boolean(globalProfileUserId)}
-          onClose={() => setGlobalProfileUserId(null)}
+          onClose={() => {
+            setGlobalProfileUserId(null);
+            setReturnToProfileUserId(null);
+          }}
           onOpenDirectChat={(recipientId) => {
+            setReturnToProfileUserId(globalProfileUserId);
             setGlobalProfileUserId(null);
             if (!currentUser || currentUser.role === 'guest' || currentUser.id.startsWith('usr_guest')) {
               setAuthMode('login');
