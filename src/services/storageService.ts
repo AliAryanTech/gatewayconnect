@@ -166,43 +166,6 @@ function setLocal<T>(key: string, data: T): void {
   }
 }
 
-/**
- * WhatsApp-style subtle 2-tone chime using Web Audio API (sine wave 880Hz -> 1174Hz)
- */
-export function playNotificationChime(): void {
-  try {
-    if (typeof window === 'undefined') return;
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const now = ctx.currentTime;
-
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(880, now);
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(1174.66, now + 0.08);
-
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(0.18, now + 0.02);
-    gainNode.gain.exponentialRampToValueAtTime(0.005, now + 0.28);
-
-    osc1.connect(gainNode);
-    osc2.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    osc1.start(now);
-    osc1.stop(now + 0.08);
-    osc2.start(now + 0.08);
-    osc2.stop(now + 0.28);
-  } catch {
-    // AudioContext blocked or not supported
-  }
-}
-
 export class StorageService {
   // Permanent Custom User Avatars store
   static getPermanentCustomAvatars(): Record<string, string> {
@@ -245,14 +208,10 @@ export class StorageService {
   static getCurrentUser(): User | null {
     const saved = getLocal<User | null>(KEYS.CURRENT_USER, null);
     if (saved) {
-      if (saved.id === 'usr_developer' || saved.role === 'developer' || arePhoneNumbersEqual(saved.phone, '0780699988')) {
-        if (saved.full_name !== 'mr_juice7' || saved.handle !== '@mr_juice7' || saved.role !== 'developer' || !saved.is_verified) {
+      if (saved.id === 'usr_developer' || saved.role === 'developer' || saved.phone === '0780699988') {
+        if (saved.full_name !== 'mr_juice7' || saved.handle !== '@mr_juice7') {
           saved.full_name = 'mr_juice7';
           saved.handle = '@mr_juice7';
-          saved.role = 'developer';
-          saved.is_verified = true;
-          saved.badge_type = 'gold';
-          saved.is_premium = true;
           setLocal(KEYS.CURRENT_USER, saved);
         }
       }
@@ -287,7 +246,7 @@ export class StorageService {
       }
     }
     // Strictly enforce single developer account: phone 0780699988, password juice2026, handle @mr_juice7, username mr_juice7
-    const devUsers = saved.filter(u => u.role === 'developer' || arePhoneNumbersEqual(u.phone, '0780699988') || u.handle === '@mr_juice7' || u.handle === '@mrjuice017');
+    const devUsers = saved.filter(u => u.role === 'developer' || u.phone === '0780699988' || u.handle === '@mr_juice7');
     if (devUsers.length > 1) {
       const primary = devUsers.find(u => u.id === 'usr_developer') || devUsers[0];
       const dupes = new Set(devUsers.filter(u => u !== primary).map(u => u.id));
@@ -296,25 +255,14 @@ export class StorageService {
       saved.push(...remaining);
       changed = true;
     }
-    let devUser = saved.find(u => u.id === 'usr_developer' || u.role === 'developer' || arePhoneNumbersEqual(u.phone, '0780699988'));
-    if (!devUser) {
-      const initDev = INITIAL_USERS.find(u => u.id === 'usr_developer');
-      if (initDev) {
-        saved.push(initDev);
-        devUser = initDev;
-        changed = true;
-      }
-    }
+    const devUser = saved.find(u => u.id === 'usr_developer' || u.role === 'developer' || u.phone === '0780699988');
     if (devUser) {
-      if (devUser.phone !== '0780699988' || devUser.password !== 'juice2026' || devUser.handle !== '@mr_juice7' || devUser.full_name !== 'mr_juice7' || devUser.role !== 'developer' || !devUser.is_verified) {
+      if (devUser.phone !== '0780699988' || devUser.password !== 'juice2026' || devUser.handle !== '@mr_juice7' || devUser.full_name !== 'mr_juice7') {
         devUser.phone = '0780699988';
         devUser.password = 'juice2026';
         devUser.handle = '@mr_juice7';
         devUser.full_name = 'mr_juice7';
         devUser.role = 'developer';
-        devUser.is_verified = true;
-        devUser.badge_type = 'gold';
-        devUser.is_premium = true;
         changed = true;
       }
     }
@@ -359,16 +307,9 @@ export class StorageService {
 
   static async syncUsersWithRemote(): Promise<void> {
     try {
-      // 1. Ensure developer account is synced to Supabase
-      const localUsers = this.getAllUsers();
-      const devUser = localUsers.find(u => u.role === 'developer' || arePhoneNumbersEqual(u.phone, '0780699988'));
-      if (devUser) {
-        SupabaseSyncService.syncUser(devUser).catch(() => {});
-      }
-
-      // 2. Pull remote users from Supabase
       const remoteUsers = await SupabaseSyncService.pullUsersFromSupabase();
       if (!remoteUsers || remoteUsers.length === 0) return;
+      const localUsers = this.getAllUsers();
       let changed = false;
       for (const ru of remoteUsers) {
         const localIdx = localUsers.findIndex(u => u.id === ru.id || arePhoneNumbersEqual(u.phone, ru.phone));
@@ -379,8 +320,6 @@ export class StorageService {
             full_name: ru.full_name || localUsers[localIdx].full_name,
             handle: ru.handle || localUsers[localIdx].handle,
             role: ru.role || localUsers[localIdx].role,
-            is_verified: ru.is_verified !== undefined ? ru.is_verified : localUsers[localIdx].is_verified,
-            badge_type: ru.badge_type || localUsers[localIdx].badge_type,
             followers_count: ru.followers_count || localUsers[localIdx].followers_count,
             following_count: ru.following_count || localUsers[localIdx].following_count
           };
@@ -397,116 +336,6 @@ export class StorageService {
         }
       }
     } catch {}
-  }
-
-  /**
-   * Complete ecosystem bidirectional synchronization with Supabase
-   * Synchronizes developer account, leader accounts, registered members, and pulls remote database
-   */
-  static async syncAllEcosystemAccountsWithRemote(): Promise<{
-    success: boolean;
-    localCount: number;
-    remoteCount: number;
-    syncedCount: number;
-    devAccountSynced: boolean;
-    errors: string[];
-  }> {
-    const errors: string[] = [];
-    const localUsers = this.getAllUsers();
-    let devAccountSynced = false;
-
-    // 1. Ensure Developer Account is properly formatted & pushed to Supabase
-    let devUser = localUsers.find(u => u.role === 'developer' || arePhoneNumbersEqual(u.phone, '0780699988'));
-    if (!devUser) {
-      devUser = {
-        id: 'usr_developer',
-        phone: '0780699988',
-        password: 'juice2026',
-        full_name: 'mr_juice7',
-        handle: '@mr_juice7',
-        role: 'developer',
-        badge_type: 'gold',
-        is_verified: true,
-        is_premium: true,
-        cell_group: 'Gateway Tech Ministry',
-        location: 'Harare, Zimbabwe',
-        city_location: 'Harare',
-        member_id: 'GCZ-DEV-007',
-        created_at: new Date().toISOString(),
-        followers_count: 50,
-        following_count: 5
-      };
-      this.saveUser(devUser);
-    }
-
-    try {
-      devAccountSynced = await SupabaseSyncService.syncUser(devUser);
-      if (!devAccountSynced) {
-        errors.push('Supabase offline or table schema pending (local developer account active)');
-      }
-    } catch (e: any) {
-      errors.push(`Developer sync notice: ${e.message}`);
-    }
-
-    // 2. Push all local leader & registered accounts to Supabase
-    for (const u of localUsers) {
-      if (u.id === 'usr_developer' || arePhoneNumbersEqual(u.phone, '0780699988')) continue;
-      try {
-        await SupabaseSyncService.syncUser(u);
-      } catch {
-        // Safe skip
-      }
-    }
-
-    // 3. Pull remote users from Supabase and merge
-    let remoteCount = 0;
-    try {
-      const remoteUsers = await SupabaseSyncService.pullUsersFromSupabase();
-      remoteCount = remoteUsers.length;
-      if (remoteUsers.length > 0) {
-        let changed = false;
-        for (const ru of remoteUsers) {
-          const localIdx = localUsers.findIndex(u => u.id === ru.id || arePhoneNumbersEqual(u.phone, ru.phone));
-          if (localIdx >= 0) {
-            localUsers[localIdx] = {
-              ...localUsers[localIdx],
-              avatar_url: ru.avatar_url || localUsers[localIdx].avatar_url,
-              full_name: ru.full_name || localUsers[localIdx].full_name,
-              handle: ru.handle || localUsers[localIdx].handle,
-              role: ru.role || localUsers[localIdx].role,
-              is_verified: ru.is_verified !== undefined ? ru.is_verified : localUsers[localIdx].is_verified,
-              badge_type: ru.badge_type || localUsers[localIdx].badge_type,
-              followers_count: ru.followers_count !== undefined ? ru.followers_count : localUsers[localIdx].followers_count,
-              following_count: ru.following_count !== undefined ? ru.following_count : localUsers[localIdx].following_count
-            };
-            changed = true;
-          } else {
-            localUsers.push(ru);
-            changed = true;
-          }
-        }
-        if (changed) {
-          setLocal(KEYS.ALL_USERS, localUsers);
-        }
-      }
-    } catch (e: any) {
-      errors.push(`Remote pull notice: ${e.message}`);
-    }
-
-    // 4. Dispatch synchronization events across the app
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('gcz_users_synced', { detail: localUsers }));
-      window.dispatchEvent(new CustomEvent('gcz_user_profile_updated', { detail: devUser }));
-    }
-
-    return {
-      success: errors.length === 0,
-      localCount: localUsers.length,
-      remoteCount,
-      syncedCount: localUsers.length,
-      devAccountSynced,
-      errors
-    };
   }
 
   static updateUserRole(userId: string, newRole: UserRole): void {
@@ -2248,15 +2077,6 @@ export class StorageService {
   }
 
   static isUserBanned(userIdOrPhone: string): { isBanned: boolean; reason?: string; banned_at?: string } {
-    if (!userIdOrPhone) return { isBanned: false };
-    if (
-      userIdOrPhone === 'usr_developer' ||
-      userIdOrPhone === 'usr_apostle_joe' ||
-      userIdOrPhone === 'usr_prophetess_melinda' ||
-      arePhoneNumbersEqual(userIdOrPhone, '0780699988')
-    ) {
-      return { isBanned: false };
-    }
     const bannedMap = this.getBannedUsers();
     // Check by user ID or clean phone
     const clean = userIdOrPhone.replace(/[^0-9]/g, '');
@@ -2272,16 +2092,6 @@ export class StorageService {
   }
 
   static banUser(userIdOrPhone: string, reason: string = 'Violation of Community Fellowship Guidelines or Administrative Restraint'): void {
-    if (!userIdOrPhone) return;
-    if (
-      userIdOrPhone === 'usr_developer' ||
-      userIdOrPhone === 'usr_apostle_joe' ||
-      userIdOrPhone === 'usr_prophetess_melinda' ||
-      arePhoneNumbersEqual(userIdOrPhone, '0780699988')
-    ) {
-      console.warn('Administrative accounts are protected and immune to bans');
-      return;
-    }
     const map = this.getBannedUsers();
     map[userIdOrPhone] = {
       banned_at: new Date().toISOString(),
@@ -2539,50 +2349,6 @@ export class StorageService {
     return newStory;
   }
 
-  /**
-   * Merges a single story received from another device (via Supabase Realtime)
-   * into local storage, so it shows up in the feed without a manual refresh.
-   */
-  static receiveRemoteStory(story: CommunityStory): void {
-    if (!story || !story.id) return;
-    const list = getLocal<CommunityStory[]>(KEYS.COMMUNITY_STORIES, []);
-    if (list.some(s => s.id === story.id)) return; // already have it
-    list.unshift(story);
-    setLocal(KEYS.COMMUNITY_STORIES, list);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('gcz_story_updated', { detail: story }));
-    }
-  }
-
-  /**
-   * Pulls all stories from every user (last 24h) from Supabase and merges
-   * them into local storage. Without this, stories posted on other devices
-   * never appear here at all — syncStory() only ever wrote to Supabase and
-   * nothing ever read it back.
-   */
-  static async syncStoriesWithRemote(): Promise<void> {
-    try {
-      const remoteStories = await SupabaseSyncService.pullStoriesFromSupabase();
-      if (!remoteStories || remoteStories.length === 0) return;
-      const list = getLocal<CommunityStory[]>(KEYS.COMMUNITY_STORIES, []);
-      const existingIds = new Set(list.map(s => s.id));
-      let changed = false;
-      for (const rs of remoteStories) {
-        if (!existingIds.has(rs.id)) {
-          list.push(rs);
-          existingIds.add(rs.id);
-          changed = true;
-        }
-      }
-      if (changed) {
-        setLocal(KEYS.COMMUNITY_STORIES, list);
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('gcz_story_updated'));
-        }
-      }
-    } catch {}
-  }
-
   // REAL STORY LIKES TRACKING (Recorded just like post likes)
   static getStoryLikes(storyId: string): string[] {
     const map = getLocal<Record<string, string[]>>(KEYS.STORY_LIKES, {});
@@ -2623,9 +2389,9 @@ export class StorageService {
   // USER LAST SEEN HELPER (WhatsApp Style, except Developer)
   static getUserLastSeen(user: User): string {
     if (!user) return 'offline';
-    // Developer is strictly active & online in the ecosystem
-    if (user.role === 'developer' || user.phone === '0780699988' || user.id === 'usr_developer') {
-      return 'online';
+    // Developer is strictly exempt from last seen
+    if (user.role === 'developer' || user.phone === '0780699988') {
+      return '';
     }
 
     // Check if user is actively watching live stream or in viewers
@@ -2689,29 +2455,9 @@ export class StorageService {
         is_read: true
       }
     ]);
-    const allUsers = this.getAllUsers();
-    const userA = allUsers.find(u => u.id === userAId || arePhoneNumbersEqual(u.phone, userAId));
-    const userB = allUsers.find(u => u.id === userBId || arePhoneNumbersEqual(u.phone, userBId));
-
-    const matchesUserA = (id: string) => {
-      if (id === userAId) return true;
-      if (userA && (id === userA.id || arePhoneNumbersEqual(id, userA.phone))) return true;
-      if ((userAId === 'usr_developer' || userA?.role === 'developer' || arePhoneNumbersEqual(userA?.phone, '0780699988')) && (id === 'usr_developer' || arePhoneNumbersEqual(id, '0780699988'))) return true;
-      if ((userAId === 'usr_apostle_joe' || userA?.id === 'usr_apostle_joe') && id === 'usr_apostle_joe') return true;
-      return false;
-    };
-
-    const matchesUserB = (id: string) => {
-      if (id === userBId) return true;
-      if (userB && (id === userB.id || arePhoneNumbersEqual(id, userB.phone))) return true;
-      if ((userBId === 'usr_developer' || userB?.role === 'developer' || arePhoneNumbersEqual(userB?.phone, '0780699988')) && (id === 'usr_developer' || arePhoneNumbersEqual(id, '0780699988'))) return true;
-      if ((userBId === 'usr_apostle_joe' || userB?.id === 'usr_apostle_joe') && id === 'usr_apostle_joe') return true;
-      return false;
-    };
-
     return all.filter(m => {
-      const matchThread = (matchesUserA(m.sender_id) && matchesUserB(m.receiver_id)) ||
-                          (matchesUserB(m.sender_id) && matchesUserA(m.receiver_id));
+      const matchThread = (m.sender_id === userAId && m.receiver_id === userBId) ||
+                          (m.sender_id === userBId && m.receiver_id === userAId);
       if (!matchThread) return false;
       if (currentUserId && m.deleted_for_users && m.deleted_for_users.includes(currentUserId)) {
         return false;
@@ -2720,7 +2466,13 @@ export class StorageService {
     });
   }
 
-  static sendDirectMessage(senderId: string, receiverId: string, text: string, replyTo?: { id: string; sender_name: string; text: string }): DirectMessage {
+  static sendDirectMessage(
+    senderId: string,
+    receiverId: string,
+    text: string,
+    replyTo?: { id: string; sender_name: string; text: string },
+    media?: { media_url: string; media_type: 'image' | 'video' | 'audio' | 'document' }
+  ): DirectMessage {
     const all = getLocal<DirectMessage[]>(KEYS.DIRECT_MESSAGES, []);
     const newMsg: DirectMessage = {
       id: `dm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -2729,7 +2481,9 @@ export class StorageService {
       text: text.trim(),
       created_at: new Date().toISOString(),
       is_read: false,
-      reply_to: replyTo
+      reply_to: replyTo,
+      media_url: media?.media_url,
+      media_type: media?.media_type
     };
     all.push(newMsg);
     setLocal(KEYS.DIRECT_MESSAGES, all);
@@ -2814,41 +2568,23 @@ export class StorageService {
   static getAllDirectMessageThreads(currentUserId: string): DmThread[] {
     const allMsgs = getLocal<DirectMessage[]>(KEYS.DIRECT_MESSAGES, []);
     const allUsers = this.getAllUsers();
-    const threadMap = new Map<string, { lastMsg: DirectMessage; unread: number; targetUserId: string }>();
-
-    const currentUserObj = allUsers.find(u => u.id === currentUserId || arePhoneNumbersEqual(u.phone, currentUserId));
-    const isDev = currentUserId === 'usr_developer' || (currentUserObj && (currentUserObj.role === 'developer' || arePhoneNumbersEqual(currentUserObj.phone, '0780699988')));
-    const isApostle = currentUserId === 'usr_apostle_joe' || (currentUserObj && currentUserObj.id === 'usr_apostle_joe');
-
-    const matchesCurrentUser = (id: string) => {
-      if (id === currentUserId) return true;
-      if (currentUserObj && (id === currentUserObj.id || arePhoneNumbersEqual(id, currentUserObj.phone))) return true;
-      if (isDev && (id === 'usr_developer' || arePhoneNumbersEqual(id, '0780699988'))) return true;
-      if (isApostle && id === 'usr_apostle_joe') return true;
-      return false;
-    };
+    const threadMap = new Map<string, { lastMsg: DirectMessage; unread: number }>();
 
     allMsgs.forEach(msg => {
-      let otherRawId: string | null = null;
-      let isIncoming = false;
-      if (matchesCurrentUser(msg.sender_id)) {
-        otherRawId = msg.receiver_id;
-      } else if (matchesCurrentUser(msg.receiver_id)) {
-        otherRawId = msg.sender_id;
-        isIncoming = true;
+      let otherId: string | null = null;
+      if (msg.sender_id === currentUserId) {
+        otherId = msg.receiver_id;
+      } else if (msg.receiver_id === currentUserId) {
+        otherId = msg.sender_id;
       }
-      if (otherRawId) {
-        // Resolve canonical user ID for other party
-        const otherUser = allUsers.find(u => u.id === otherRawId || arePhoneNumbersEqual(u.phone, otherRawId));
-        const canonicalId = otherUser ? otherUser.id : otherRawId;
-        const existing = threadMap.get(canonicalId);
+      if (otherId) {
+        const existing = threadMap.get(otherId);
         const isNewer = !existing || new Date(msg.created_at) > new Date(existing.lastMsg.created_at);
-        const isUnread = !msg.is_read && isIncoming;
+        const isUnread = !msg.is_read && msg.receiver_id === currentUserId;
         if (isNewer) {
-          threadMap.set(canonicalId, {
+          threadMap.set(otherId, {
             lastMsg: msg,
-            unread: (existing?.unread || 0) + (isUnread ? 1 : 0),
-            targetUserId: canonicalId
+            unread: (existing?.unread || 0) + (isUnread ? 1 : 0)
           });
         } else if (isUnread && existing) {
           existing.unread += 1;
@@ -2858,7 +2594,7 @@ export class StorageService {
 
     // Seed default conversations with Apostle Joe Daniels and Lead Developer if empty
     ['usr_apostle_joe', 'usr_developer'].forEach(id => {
-      if (!matchesCurrentUser(id) && !threadMap.has(id)) {
+      if (id !== currentUserId && !threadMap.has(id)) {
         threadMap.set(id, {
           lastMsg: {
             id: `dm_welcome_${id}`,
@@ -2870,23 +2606,52 @@ export class StorageService {
             created_at: new Date(Date.now() - 7200000).toISOString(),
             is_read: true
           },
-          unread: 0,
-          targetUserId: id
+          unread: 0
         });
       }
     });
 
     const threads: DmThread[] = [];
-    threadMap.forEach((val, canonicalId) => {
-      const user = allUsers.find(u => u.id === canonicalId || arePhoneNumbersEqual(u.phone, canonicalId));
+    let hasUnknownSender = false;
+    threadMap.forEach((val, otherId) => {
+      const user = allUsers.find(u => u.id === otherId);
       if (user) {
         threads.push({
           other_user: user,
           last_message: val.lastMsg,
           unread_count: val.unread
         });
+      } else {
+        // The sender's profile hasn't synced to this device yet (e.g. they
+        // registered after this session's last user sync). Show the thread
+        // with a placeholder instead of dropping their message entirely,
+        // and kick off a background resync so it fills in with real data.
+        hasUnknownSender = true;
+        threads.push({
+          other_user: {
+            id: otherId,
+            phone: '',
+            full_name: 'New Member',
+            handle: '@member',
+            role: 'member',
+            member_id: '',
+            is_verified: false,
+            badge_type: 'none',
+            is_premium: false,
+            created_at: new Date().toISOString(),
+            location: 'Harare',
+            city_location: 'Harare',
+            saved_verses: []
+          } as User,
+          last_message: val.lastMsg,
+          unread_count: val.unread
+        });
       }
     });
+
+    if (hasUnknownSender) {
+      this.syncUsersWithRemote().catch(() => {});
+    }
 
     return threads.sort((a, b) => {
       const timeB = b?.last_message?.created_at ? new Date(b.last_message.created_at).getTime() : 0;
@@ -3203,8 +2968,8 @@ export class StorageService {
     if (!target) {
       return { success: false, error: 'Target account not found.' };
     }
-    if (target.role === 'super_admin' || target.role === 'developer' || target.id === 'usr_developer' || target.id === 'usr_apostle_joe') {
-      return { success: false, error: 'Administrative and Developer accounts are system protected and cannot be deleted.' };
+    if (target.role === 'super_admin') {
+      return { success: false, error: 'Super Admin account is system protected and cannot be deleted.' };
     }
     allUsers = allUsers.filter(u => u.id !== target.id);
     setLocal(KEYS.ALL_USERS, allUsers);
@@ -3576,60 +3341,6 @@ export class StorageService {
         changed = true;
       }
     }
-
-    // Migrate & synchronize creators, administrative privileges, and members
-    list.forEach(g => {
-      if (g.id === 'group_passion_ladies') {
-        if (g.created_by !== 'usr_prophetess_melinda') {
-          g.created_by = 'usr_prophetess_melinda';
-          g.creator_name = 'Prophetess Melinda Daniels';
-          changed = true;
-        }
-        if (!g.admin_ids) g.admin_ids = [];
-        ['usr_prophetess_melinda', 'usr_apostle_joe', 'usr_developer'].forEach(id => {
-          if (!g.admin_ids.includes(id)) {
-            g.admin_ids.push(id);
-            changed = true;
-          }
-        });
-        if (!g.member_ids) g.member_ids = [];
-        ['usr_prophetess_melinda', 'usr_apostle_joe', 'usr_developer'].forEach(id => {
-          if (!g.member_ids.includes(id)) {
-            g.member_ids.push(id);
-            changed = true;
-          }
-        });
-      } else if (['group_ignite_worship', 'group_pride_of_lions', 'group_foundation_school', 'group_gymstars_foundation', 'group_isn_mentorship'].includes(g.id)) {
-        if (g.created_by !== 'usr_apostle_joe') {
-          g.created_by = 'usr_apostle_joe';
-          g.creator_name = 'Apostle Joe Daniels';
-          changed = true;
-        }
-        if (!g.admin_ids) g.admin_ids = [];
-        ['usr_apostle_joe', 'usr_developer'].forEach(id => {
-          if (!g.admin_ids.includes(id)) {
-            g.admin_ids.push(id);
-            changed = true;
-          }
-        });
-        if (g.id === 'group_isn_mentorship' && !g.admin_ids.includes('usr_prophetess_melinda')) {
-          g.admin_ids.push('usr_prophetess_melinda');
-          changed = true;
-        }
-        if (!g.member_ids) g.member_ids = [];
-        ['usr_apostle_joe', 'usr_developer'].forEach(id => {
-          if (!g.member_ids.includes(id)) {
-            g.member_ids.push(id);
-            changed = true;
-          }
-        });
-        if (g.id === 'group_isn_mentorship' && !g.member_ids.includes('usr_prophetess_melinda')) {
-          g.member_ids.push('usr_prophetess_melinda');
-          changed = true;
-        }
-      }
-    });
-
     if (changed) {
       setLocal(KEYS.CHAT_GROUPS, list);
     }
@@ -4121,9 +3832,6 @@ export class StorageService {
     if (forEveryone) {
       msg.deleted_for_everyone = true;
       msg.text = 'This message was deleted';
-      msg.media_url = undefined;
-      msg.media_type = undefined;
-      msg.reply_to = undefined;
     } else {
       if (!msg.deleted_for_users) msg.deleted_for_users = [];
       if (!msg.deleted_for_users.includes(userId)) {
@@ -4132,11 +3840,7 @@ export class StorageService {
     }
 
     setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
-    SupabaseSyncService.syncDeleteGroupMessage(groupId, messageId, forEveryone).catch(() => {});
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', {
-        detail: { groupId, messageId, message: msg, deletedForEveryone: forEveryone }
-      }));
       window.dispatchEvent(new CustomEvent('gcz_groups_updated'));
     }
     return true;
@@ -4153,43 +3857,20 @@ export class StorageService {
         if (forEveryone) {
           msg.deleted_for_everyone = true;
           msg.text = 'This message was deleted';
-          msg.media_url = undefined;
-          msg.media_type = undefined;
-          msg.reply_to = undefined;
         } else {
           if (!msg.deleted_for_users) msg.deleted_for_users = [];
           if (!msg.deleted_for_users.includes(userId)) {
             msg.deleted_for_users.push(userId);
           }
         }
-        SupabaseSyncService.syncDeleteGroupMessage(groupId, id, forEveryone).catch(() => {});
       }
     });
 
     setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', {
-        detail: { groupId, messageIds, deletedForEveryone: forEveryone }
-      }));
       window.dispatchEvent(new CustomEvent('gcz_groups_updated'));
     }
     return true;
-  }
-
-  static applyRemoteGroupMessageDelete(groupId: string, messageId: string, forEveryone: boolean): void {
-    if (!forEveryone || !groupId || !messageId) return;
-    const allMsgs = getLocal<Record<string, ChatGroupMessage[]>>(KEYS.CHAT_GROUP_MESSAGES, INITIAL_CHAT_GROUP_MESSAGES);
-    const groupMsgs = allMsgs[groupId];
-    if (!groupMsgs) return;
-    const msg = groupMsgs.find(m => m.id === messageId);
-    if (msg) {
-      msg.deleted_for_everyone = true;
-      msg.text = 'This message was deleted';
-      msg.media_url = undefined;
-      msg.media_type = undefined;
-      msg.reply_to = undefined;
-      setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
-    }
   }
 
   static clearChatGroupMessagesForUser(groupId: string, userId: string): boolean {
@@ -4219,8 +3900,6 @@ export class StorageService {
     if (forEveryone) {
       msg.deleted_for_everyone = true;
       msg.text = 'This message was deleted';
-      msg.media_url = undefined;
-      msg.reply_to = undefined;
     } else {
       if (!msg.deleted_for_users) msg.deleted_for_users = [];
       if (!msg.deleted_for_users.includes(userId)) {
@@ -4229,11 +3908,7 @@ export class StorageService {
     }
 
     setLocal(KEYS.DIRECT_MESSAGES, all);
-    SupabaseSyncService.syncDeleteDirectMessage(messageId, forEveryone).catch(() => {});
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated', {
-        detail: { id: messageId, message: msg, deletedForEveryone: forEveryone }
-      }));
       window.dispatchEvent(new CustomEvent('gcz_dms_updated'));
     }
     return true;
@@ -4247,39 +3922,20 @@ export class StorageService {
         if (forEveryone) {
           msg.deleted_for_everyone = true;
           msg.text = 'This message was deleted';
-          msg.media_url = undefined;
-          msg.reply_to = undefined;
         } else {
           if (!msg.deleted_for_users) msg.deleted_for_users = [];
           if (!msg.deleted_for_users.includes(userId)) {
             msg.deleted_for_users.push(userId);
           }
         }
-        SupabaseSyncService.syncDeleteDirectMessage(id, forEveryone).catch(() => {});
       }
     });
 
     setLocal(KEYS.DIRECT_MESSAGES, all);
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated', {
-        detail: { messageIds, deletedForEveryone: forEveryone }
-      }));
       window.dispatchEvent(new CustomEvent('gcz_dms_updated'));
     }
     return true;
-  }
-
-  static applyRemoteDirectMessageDelete(messageId: string, forEveryone: boolean): void {
-    if (!forEveryone || !messageId) return;
-    const all = getLocal<DirectMessage[]>(KEYS.DIRECT_MESSAGES, []);
-    const msg = all.find(m => m.id === messageId);
-    if (msg) {
-      msg.deleted_for_everyone = true;
-      msg.text = 'This message was deleted';
-      msg.media_url = undefined;
-      msg.reply_to = undefined;
-      setLocal(KEYS.DIRECT_MESSAGES, all);
-    }
   }
 
   static clearDirectMessagesForUser(userAId: string, userBId: string, currentUserId: string): boolean {
@@ -4553,66 +4209,10 @@ export class StorageService {
     if (!exists) {
       allMsgs[message.group_id].push(message);
       setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
-
-      const current = this.getCurrentUser();
-      if (current && current.id !== message.sender_id) {
-        const groups = this.getChatGroups();
-        const grp = groups.find(g => g.id === message.group_id);
-        const isMember = grp && (grp.member_ids?.includes(current.id) || current.role === 'super_admin' || current.role === 'developer');
-        if (isMember) {
-          const senderName = message.sender_name || 'Church Member';
-          const groupTitle = grp?.name || 'Fellowship Group';
-          const textPreview = (message.text || (message.media_type ? `Sent a ${message.media_type}` : 'New message')).slice(0, 100);
-          this.addAppNotification({
-            title: groupTitle,
-            message: `${senderName}: ${textPreview}`,
-            type: 'chat',
-            target_type: 'group',
-            target_id: message.group_id,
-            recipient_id: current.id,
-            actor_id: message.sender_id,
-            actor_name: senderName,
-            actor_avatar: message.sender_avatar
-          });
-          playNotificationChime();
-        }
-      }
-
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', { detail: { groupId: message.group_id, message } }));
       }
     }
-  }
-
-  static getUnreadGroupMessagesCount(groupId: string, userId?: string): number {
-    const curUserId = userId || this.getCurrentUser()?.id;
-    if (!curUserId) return 0;
-    const allMsgs = getLocal<Record<string, ChatGroupMessage[]>>(KEYS.CHAT_GROUP_MESSAGES, INITIAL_CHAT_GROUP_MESSAGES);
-    const msgs = allMsgs[groupId] || [];
-    return msgs.filter(m => {
-      if (m.sender_id === curUserId) return false;
-      if (!m.read_by_user_ids) return true;
-      return !m.read_by_user_ids.includes(curUserId);
-    }).length;
-  }
-
-  static getTotalUnreadGroupMessagesCount(userId?: string): number {
-    const curUserId = userId || this.getCurrentUser()?.id;
-    if (!curUserId) return 0;
-    const groups = this.getChatGroups();
-    const myGroups = groups.filter(g => g.member_ids?.includes(curUserId) || curUserId === 'usr_developer' || curUserId === 'usr_apostle_joe');
-    const allMsgs = getLocal<Record<string, ChatGroupMessage[]>>(KEYS.CHAT_GROUP_MESSAGES, INITIAL_CHAT_GROUP_MESSAGES);
-    let total = 0;
-    for (const g of myGroups) {
-      const msgs = allMsgs[g.id] || [];
-      const unread = msgs.filter(m => {
-        if (m.sender_id === curUserId) return false;
-        if (!m.read_by_user_ids) return true;
-        return !m.read_by_user_ids.includes(curUserId);
-      }).length;
-      total += unread;
-    }
-    return total;
   }
 
   static markGroupMessagesAsRead(groupId: string, currentUserId: string): void {
@@ -4632,9 +4232,6 @@ export class StorageService {
     if (changed) {
       allMsgs[groupId] = msgs;
       setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('gcz_group_messages_updated', { detail: { groupId } }));
-      }
     }
   }
 
@@ -4645,6 +4242,20 @@ export class StorageService {
     if (data.name) grp.name = data.name.trim();
     if (data.description !== undefined) grp.description = data.description.trim();
     if (data.avatar_url !== undefined) grp.avatar_url = data.avatar_url.trim();
+    setLocal(KEYS.CHAT_GROUPS, groups);
+    return true;
+  }
+
+  static updateGroupSettings(groupId: string, settings: { only_admins_can_send_messages?: boolean; only_admins_can_add_members?: boolean }): boolean {
+    const groups = this.getChatGroups();
+    const grp = groups.find(g => g.id === groupId);
+    if (!grp) return false;
+    if (settings.only_admins_can_send_messages !== undefined) {
+      grp.only_admins_can_send_messages = settings.only_admins_can_send_messages;
+    }
+    if (settings.only_admins_can_add_members !== undefined) {
+      grp.only_admins_can_add_members = settings.only_admins_can_add_members;
+    }
     setLocal(KEYS.CHAT_GROUPS, groups);
     return true;
   }
