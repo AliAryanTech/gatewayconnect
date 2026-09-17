@@ -165,6 +165,11 @@ const getBubbleRounding = (isMine: boolean, isFirstInGroup: boolean, isLastInGro
 };
 
 /////from copilot
+interface DirectMessagesModalProps {
+  currentUser: any; // or your User type
+  initialRecipientId?: string;
+}
+
 const { data: messages } = await supabase
   .from('direct_messages')
   .select('id, text, sender_id, receiver_id, users:sender_id (username, email)')
