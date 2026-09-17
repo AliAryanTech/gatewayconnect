@@ -165,6 +165,90 @@ const getBubbleRounding = (isMine: boolean, isFirstInGroup: boolean, isLastInGro
 };
 
 /////from copilot
+import { useEffect, useState } from 'react';
+import { supabase } from '../../supabaseClient'; // built from config.ts
+
+interface DirectMessagesModalProps {
+  currentUser: { id: string };
+  initialRecipientId?: string;
+}
+
+export const DirectMessagesModal: React.FC<DirectMessagesModalProps> = ({
+  currentUser,
+  initialRecipientId,
+}) => {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+
+  // Fetch existing messages with user info
+  useEffect(() => {
+    const fetchMessages = async () => {
+      const { data, error } = await supabase
+        .from('direct_messages')
+        .select(`
+          id, text, sender_id, receiver_id,
+          users:sender_id (full_name, phone)
+        `)
+        .or(`receiver_id.eq.${currentUser.id},sender_id.eq.${currentUser.id}`)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error(error);
+      } else {
+        setMessages(data || []);
+      }
+    };
+
+    fetchMessages();
+  }, [currentUser.id]);
+
+  // Subscribe to new messages
+  useEffect(() => {
+    const channel = supabase
+      .channel('direct_messages_channel')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'direct_messages' },
+        payload => {
+          setMessages(prev => [...prev, payload.new]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Send a new DM
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+
+    await supabase.from('direct_messages').insert({
+      sender_id: currentUser.id,
+      receiver_id: initialRecipientId,
+      text: newMessage,
+    });
+
+    setNewMessage('');
+  };
+
+  return (
+    <div>
+      {messages.map(m => (
+        <div key={m.id}>
+          <strong>{m.users?.full_name || m.sender_id}</strong>: {m.text}
+        </div>
+      ))}
+      <input
+        value={newMessage}
+        onChange={e => setNewMessage(e.target.value)}
+        placeholder="Type a message..."
+      />
+      <button onClick={handleSendMessage}>Send</button>
+    </div>
+  );
+};
 
 useEffect(() => {
   const fetchMessages = async () => {
