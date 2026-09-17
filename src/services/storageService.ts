@@ -2815,6 +2815,94 @@ export class StorageService {
     } catch {}
   }
 
+  /**
+   * Pulls posts, their comments and prayer requests from Supabase into local
+   * storage and notifies the UI. Called on boot and whenever Realtime reports a
+   * change so new members/devices see the whole community, not just mock data.
+   */
+  static async syncPostsAndPrayersWithRemote(): Promise<void> {
+    try {
+      await SupabaseSyncService.pullRemoteData();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('gcz_testimony_updated'));
+        window.dispatchEvent(new CustomEvent('gcz_prayer_updated'));
+      }
+    } catch {}
+  }
+
+  /**
+   * Pulls a member's direct-message history from Supabase into local storage.
+   * Realtime only delivers messages that arrive while you are online, so this
+   * is required for a new login/device to see existing conversations.
+   */
+  static async syncDirectMessagesWithRemote(userId: string): Promise<void> {
+    try {
+      const remote = await SupabaseSyncService.pullDirectMessagesFromSupabase(userId);
+      if (!remote.length) return;
+      const list = getLocal<DirectMessage[]>(KEYS.DIRECT_MESSAGES, []);
+      const byId = new Map<string, DirectMessage>(list.map(m => [m.id, m]));
+      let changed = false;
+      for (const m of remote) {
+        if (m && m.id && !byId.has(m.id)) {
+          byId.set(m.id, m);
+          changed = true;
+        }
+      }
+      if (changed) {
+        const merged = Array.from(byId.values()).sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        setLocal(KEYS.DIRECT_MESSAGES, merged);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('gcz_direct_messages_updated'));
+          window.dispatchEvent(new CustomEvent('gcz_dms_updated'));
+        }
+      }
+    } catch {}
+  }
+
+  /**
+   * Pulls fellowship group-chat history for the groups this user belongs to.
+   */
+  static async syncGroupMessagesWithRemote(userId: string): Promise<void> {
+    try {
+      const isPrivileged = userId === 'usr_developer' || userId === 'usr_apostle_joe';
+      const groupIds = this.getChatGroups()
+        .filter(g => isPrivileged || g.member_ids?.includes(userId))
+        .map(g => g.id);
+      if (groupIds.length === 0) return;
+
+      const remote = await SupabaseSyncService.pullGroupMessagesFromSupabase(groupIds);
+      if (!remote.length) return;
+
+      const allMsgs = getLocal<Record<string, ChatGroupMessage[]>>(KEYS.CHAT_GROUP_MESSAGES, INITIAL_CHAT_GROUP_MESSAGES);
+      const touched = new Set<string>();
+      let changed = false;
+
+      for (const m of remote) {
+        if (!m || !m.id || !m.group_id) continue;
+        if (!allMsgs[m.group_id]) allMsgs[m.group_id] = [];
+        if (allMsgs[m.group_id].some(x => x.id === m.id)) continue;
+        allMsgs[m.group_id].push(m);
+        touched.add(m.group_id);
+        changed = true;
+      }
+
+      if (changed) {
+        touched.forEach(gid => {
+          allMsgs[gid].sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        });
+        setLocal(KEYS.CHAT_GROUP_MESSAGES, allMsgs);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('gcz_group_messages_updated'));
+          window.dispatchEvent(new CustomEvent('gcz_groups_updated'));
+        }
+      }
+    } catch {}
+  }
+
   // REAL STORY LIKES TRACKING (Recorded just like post likes)
   static getStoryLikes(storyId: string): string[] {
     const map = getLocal<Record<string, string[]>>(KEYS.STORY_LIKES, {});

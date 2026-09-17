@@ -1,9 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { CONFIG } from '../../config';
 
 export default function handler(req: IncomingMessage & { method?: string }, res: ServerResponse) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('Access-Control-Allow-Origin', process.env.APP_URL || process.env.VITE_APP_URL || '*');
+  res.setHeader('Access-Control-Allow-Origin', CONFIG.APP_URL || '*');
 
   if (req.method !== 'GET') {
     res.statusCode = 405;
@@ -11,9 +12,9 @@ export default function handler(req: IncomingMessage & { method?: string }, res:
     return;
   }
 
-  const integrationId = String(process.env.PAYNOW_INTEGRATION_ID || '').trim();
-  const integrationKey = String(process.env.PAYNOW_INTEGRATION_KEY || '').trim();
-  const merchantEmail = String(process.env.PAYNOW_MERCHANT_EMAIL || '').trim();
+  const integrationId = CONFIG.PAYNOW_INTEGRATION_ID;
+  const integrationKey = CONFIG.PAYNOW_INTEGRATION_KEY;
+  const merchantEmail = CONFIG.PAYNOW_MERCHANT_EMAIL;
 
   res.statusCode = 200;
   res.end(JSON.stringify({

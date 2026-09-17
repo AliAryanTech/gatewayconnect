@@ -186,12 +186,20 @@ export default function App() {
   useEffect(() => {
     StorageService.syncUsersWithRemote().catch(() => {});
     StorageService.syncStoriesWithRemote().catch(() => {});
+    // Hydrate community posts, comments and prayers from Supabase so a fresh
+    // install / new member sees everything the church has already shared.
+    StorageService.syncPostsAndPrayersWithRemote()
+      .catch(() => {})
+      .finally(() => refreshAppData());
     if (!currentUser) {
       liveSyncService.disconnect();
       return;
     }
     if (currentUser?.id && currentUser?.role !== 'guest') {
       StorageService.hydrateFollowsFromSupabase(currentUser.id).catch(() => {});
+      // Hydrate chat history so a new login sees conversations from other devices.
+      StorageService.syncDirectMessagesWithRemote(currentUser.id).catch(() => {});
+      StorageService.syncGroupMessagesWithRemote(currentUser.id).catch(() => {});
     }
     liveSyncService.connect(currentUser);
     const unbind = liveSyncService.bindLocalEvents();
@@ -241,23 +249,33 @@ export default function App() {
       {
         directMessages: (payload) => {
           console.log('Realtime direct message:', payload);
-          refreshAppData();
+          StorageService.syncDirectMessagesWithRemote(currentUser.id)
+            .catch(() => {})
+            .finally(() => refreshAppData());
         },
         messages: (payload) => {
           console.log('Realtime group message:', payload);
-          refreshAppData();
+          StorageService.syncGroupMessagesWithRemote(currentUser.id)
+            .catch(() => {})
+            .finally(() => refreshAppData());
         },
         posts: (payload) => {
           console.log('Realtime post:', payload);
-          refreshAppData();
+          StorageService.syncPostsAndPrayersWithRemote()
+            .catch(() => {})
+            .finally(() => refreshAppData());
         },
         comments: (payload) => {
           console.log('Realtime comment:', payload);
-          refreshAppData();
+          StorageService.syncPostsAndPrayersWithRemote()
+            .catch(() => {})
+            .finally(() => refreshAppData());
         },
         prayers: (payload) => {
           console.log('Realtime prayer request:', payload);
-          refreshAppData();
+          StorageService.syncPostsAndPrayersWithRemote()
+            .catch(() => {})
+            .finally(() => refreshAppData());
         },
         liveStreams: (payload) => {
           console.log('Realtime live stream:', payload);
