@@ -63,6 +63,58 @@ import { PaynowService } from '../../services/paynowService';
 import { LocalImagePicker } from '../common/LocalImagePicker';
 import { InstagramProfileModal } from './InstagramProfileModal';
 import { GroupInfoModal } from '../chat/GroupInfoModal';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../supabaseClient'; // built from your config.ts
+
+export default function DirectMessagesModal({ targetUserId }) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+
+  // Subscribe to realtime inserts
+  useEffect(() => {
+    const channel = supabase
+      .channel('direct_messages_channel')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'direct_messages' },
+        payload => {
+          setMessages(prev => [...prev, payload.new]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Send a new DM
+  const handleSendMessage = async () => {
+    await supabase.from('direct_messages').insert({
+      sender_id: supabase.auth.getUser().data.user?.id,
+      receiver_id: targetUserId,
+      text: newMessage,
+    });
+    setNewMessage('');
+  };
+
+  return (
+    <div>
+      {messages.map(m => (
+        <div key={m.id}>
+          <strong>{m.sender_id}</strong>: {m.text}
+        </div>
+      ))}
+      <input
+        value={newMessage}
+        onChange={e => setNewMessage(e.target.value)}
+        placeholder="Type a message..."
+      />
+      <button onClick={handleSendMessage}>Send</button>
+    </div>
+  );
+}
+
 
 interface DirectMessagesModalProps {
   currentUser: User;
