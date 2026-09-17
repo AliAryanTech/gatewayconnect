@@ -164,6 +164,13 @@ const getBubbleRounding = (isMine: boolean, isFirstInGroup: boolean, isLastInGro
   }
 };
 
+/////from copilot
+const { data: messages } = await supabase
+  .from('direct_messages')
+  .select('id, text, sender_id, receiver_id, users:sender_id (username, email)')
+  .eq('receiver_id', supabase.auth.getUser().data.user?.id);
+
+
 const getSenderNameColor = (name: string, role?: string): string => {
   if (role === 'super_admin') return 'text-amber-600 dark:text-amber-400 font-bold';
   if (role === 'developer') return 'text-purple-600 dark:text-purple-400 font-bold';
