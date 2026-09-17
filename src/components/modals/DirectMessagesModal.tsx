@@ -165,6 +165,27 @@ const getBubbleRounding = (isMine: boolean, isFirstInGroup: boolean, isLastInGro
 };
 
 /////from copilot
+
+useEffect(() => {
+  const fetchMessages = async () => {
+    const { data, error } = await supabase
+      .from('direct_messages')
+      .select(`
+        id, text, sender_id,
+        users:sender_id (full_name, phone)
+      `)
+      .eq('receiver_id', currentUser.id);
+
+    if (error) {
+      console.error(error);
+    } else {
+      setMessages(data || []);
+    }
+  };
+
+  fetchMessages();
+}, [currentUser.id]);
+
 interface DirectMessagesModalProps {
   currentUser: any; // or your User type
   initialRecipientId?: string;
